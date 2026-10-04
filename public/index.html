@@ -26,7 +26,7 @@
     </section>
     <section id="record-panel" class="chat-panel" aria-label="Zapis četa" hidden><div class="panel-content"><h2>Zapis četa</h2><textarea id="record-text" rows="18" readonly aria-label="Zapis četa, samo za čitanje"></textarea><div class="settings-actions"><button data-close-panel>Zatvori</button></div></div></section>
 
-    <div id="message-selection" role="group" aria-label="Izabrane poruke" hidden><span id="selection-count"></span><button id="select-all-messages" type="button">Sve</button><label><input id="copy-chat-structure" type="checkbox" checked> Struktura</label><button id="copy-selected-messages" type="button">Kopiraj MD</button><button id="clear-message-selection" type="button" aria-label="Zatvori izbor poruka">×</button></div><div id="conversation" aria-live="polite"></div>
+    <div id="message-selection" role="group" aria-label="Izabrane poruke" hidden><span id="selection-count"></span><button id="select-all-messages" type="button">Sve</button><label><input id="copy-chat-structure" type="checkbox" checked> Struktura</label><button id="copy-selected-messages" type="button">Kopiraj MD</button><button id="clear-message-selection" type="button" aria-label="Zatvori izbor poruka">×</button></div><div id="conversation" aria-live="polite" tabindex="-1"></div>
     <div class="composer-area">
       <details id="usage-details" hidden><summary id="usage-heading">Potrošnja</summary><div id="usage-breakdown"></div></details>
       <div id="transfer-preview" aria-live="polite" hidden></div>

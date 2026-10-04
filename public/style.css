@@ -125,3 +125,5 @@ body:has(#agent-panel:not([hidden])){grid-template-rows:minmax(0,1fr) auto}#agen
 #chat-popover .chat-tools{flex-wrap:wrap}#chat-popover .chat-tools .icon-action{width:28px}
 
 .agent-tree-item{margin-left:calc(var(--tree-depth,0)*14px)}.agent-tree-item.active{background:#2b2b2b}.agent-tree-item.working.active{background:#3e3824}
+
+#conversation.selection-mode .message{cursor:pointer;user-select:none;-webkit-user-select:none}#conversation.selection-mode .message:hover{background:#ffffff0c;border-radius:5px}#conversation.selection-mode .message-selected{background:#ffffff12;box-shadow:inset 2px 0 #98cfa6}#conversation:focus{outline:none}

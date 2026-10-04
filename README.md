@@ -258,3 +258,5 @@ Agent pri svakoj novoj poruci dobija snimak strukture povezane grupe, modela i s
 Pri izboru modela automatski se bira Medium reasoning, a za GPT-6-Luna High. Modeli bez podrške za taj nivo koriste svoj CLI nivo. Ručni izbor u četu i globalna podešavanja ostaju dostupni.
 
 Izbor podagenta zadržava njegove susedne kartice u sidebaru. Izabrana kartica je označena, a njeni podagenti se prikazuju uvučeno ispod nje. Lista se ne zatvara pri izboru podagenta bez potomaka.
+
+Izbor prve poruke uključuje režim selekcije: klik bilo gde na poruku bira ili uklanja poruku; Shift+klik bira raspon. Command/Ctrl+A bira sve poruke, Command/Ctrl+C kopira izabrane kao Markdown, a Escape ili × zatvara izbor. Prečice ne preuzimaju unos teksta u poljima.
