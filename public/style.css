@@ -110,6 +110,6 @@ body:has(#agent-panel:not([hidden])){grid-template-rows:minmax(0,1fr) auto}#agen
 .chat-row{grid-template-columns:minmax(0,1fr);padding:7px 10px}.chat-item{padding:0}.chat-row[data-agent="codex"],.agent-tree-item[data-agent="codex"]{--card-color:#c7b1ec}.chat-row[data-agent="claude"],.agent-tree-item[data-agent="claude"]{--card-color:#e8a46f}.chat-row[data-agent="grok"],.agent-tree-item[data-agent="grok"]{--card-color:#eee}.chat-row[data-agent="antigravity"],.agent-tree-item[data-agent="antigravity"]{--card-color:#8dbcf0}.card-model,.card-usage{color:var(--card-color,#999)}.agent-tree-item.working{background:#3e3824}.agent-tree-item.unread{background:#243d53}
 
 /* Reserve identical title and metadata space before and during hover. */
-.chat-row,.agent-tree-item{height:64px;min-height:64px;box-sizing:border-box;padding-top:5px;padding-bottom:5px}
-.chat-item>span,.agent-card-title{height:36px;line-height:18px;overflow:hidden}
+.chat-row,.agent-tree-item{height:46px;min-height:46px;box-sizing:border-box;padding-top:5px;padding-bottom:5px}
+.chat-item>span,.agent-card-title{display:block;height:18px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card-model,.card-usage{height:16px;min-height:16px;max-height:16px;line-height:16px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:400}
