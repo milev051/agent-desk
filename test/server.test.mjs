@@ -156,6 +156,12 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     const resumed=await call(`/api/chats/${queued.id}/delegate`,'POST',{childId:child.id,task:'Nastavi proveru istog zadatka'});assert.equal(resumed.status,202);assert.equal(resumed.data.id,child.id);
     const childAfter=await done(child.id);assert.ok(childAfter.messages.at(-1).completedAt>=childAfter.messages.at(-1).createdAt);assert.match(JSON.parse(childAfter.messages.at(-1).text).input,/Snimak strukture povezanih četova/);assert.ok(JSON.parse(childAfter.messages.at(-1).text).input.includes(queued.id));assert.equal((await call('/api/chats')).data.length,beforeResume);assert.equal(childAfter.sessions.codex,childBefore.sessions.codex);assert.ok(childAfter.messages.length>childBefore.messages.length);
     assert.equal((await call(`/api/chats/${a.id}/delegate`,'POST',{childId:child.id,task:'Nedozvoljen drugi roditelj'})).status,400);
+    const extra=[];for(let i=0;i<2;i++){const response=await call(`/api/chats/${queued.id}/delegate`,'POST',{agent:'codex',name:'Dodatni '+i,task:'Zadatak '+i});assert.equal(response.status,202);extra.push(await done(response.data.id));}
+    assert.equal(extra[0].parentTurnId,childAfter.parentTurnId);assert.equal(extra[1].parentTurnId,childAfter.parentTurnId);
+    for(const c of extra)assert.equal((await call(`/api/chats/${queued.id}/delegate`,'POST',{childId:c.id,task:'WAIT'})).status,202);
+    assert.equal((await call(`/api/chats/${queued.id}/delegate`,'POST',{agent:'codex',task:'Treći dok dva rade'})).status,409);
+    await call(`/api/chats/${queued.id}/stop`,'POST',{});for(const c of extra)await done(c.id);
+    const fourth=await call(`/api/chats/${queued.id}/delegate`,'POST',{agent:'codex',task:'Sledeći nakon oslobađanja mesta'});assert.equal(fourth.status,202);const fourthDone=await done(fourth.data.id);assert.match(JSON.parse(fourthDone.messages.at(-1).text).input,/Ukupan broj podčetova po odgovoru nije ograničen/);
     const reqId='test-request-once';await call(`/api/chats/${a.id}/send`,'POST',{text:'Poruka jednom',requestId:reqId});await done(a.id);
     await call(`/api/chats/${a.id}/send`,'POST',{text:'Poruka jednom',requestId:reqId});assert.equal((await call(`/api/chats/${a.id}`)).data.messages.filter(m=>m.requestId===reqId).length,1);
     writeFileSync(path.join(temp,'preview.html'),'<html><script>example()</script></html>');

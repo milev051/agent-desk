@@ -117,7 +117,7 @@ Leva kolona je podeljena na listu četova gore i lista direktnih podagenata ispo
 
 Kopiranje linka samo kopira adresu istog četa. Pravljenje grane kopira poruke i podešavanja u zaseban čet; ne pravi kopije podčetova i ne prenosi njihovo roditeljstvo na novu granu. ID-jevi i linkovi napisani u porukama ostaju doslovno i upućuju na originalne podčetove. Za API pristup postojećem podčetu koristi njegov originalni ID.
 
-Svi zapisi su u `data/chats.json`, povezani preko `parentChatId`. Podagenti imaju zasebne native sesije, ali dele roditeljski radni folder; nema automatskih podfoldera ni izolovanih radnih kopija. Trenutno je dozvoljen jedan nivo delegiranja, do dva aktivna podagenta i do dva podčeta po odgovoru roditelja. Podagenti Agent Deska ne mogu da otvaraju svoje podagente kroz ovaj API. Native CLI subagenti su zaseban mehanizam i nisu automatski kartice Agent Deska.
+Svi zapisi su u `data/chats.json`, povezani preko `parentChatId`. Podagenti imaju zasebne native sesije, ali dele roditeljski radni folder; nema automatskih podfoldera ni izolovanih radnih kopija. Trenutno je dozvoljen jedan nivo delegiranja, do dva istovremeno aktivna podagenta. Ukupan broj podčetova po odgovoru nije ograničen; za sledeće zadatke roditelj čeka slobodno mesto i ponovo poziva delegate. Podagenti Agent Deska ne mogu da otvaraju svoje podagente kroz ovaj API. Native CLI subagenti su zaseban mehanizam i nisu automatski kartice Agent Deska.
 
 Zasebna koordinacija je uklonjena iz interfejsa i servera. Ranije poruke i postojeći `data/coordinations.json`, ako postoji, ostaju arhiva; ne pokreću se i ne menjaju.
 
@@ -268,3 +268,5 @@ Izbor prve poruke uključuje režim selekcije: klik bilo gde na poruku bira ili 
 Arhivski JSON fajlovi imaju naziv `Naslov -- ID arhive.json`. Raniji nazivi koji sadrže samo ID preimenuju se pri čitanju; format i sadržaj zapisa, veze podagenata, vraćanje i rok od 30 dana ostaju isti. Pri arhiviranju grupe koristi se naslov prvog četa.
 
 Ime korisnika (`Korisnik`) ili model odgovora prikazuje se uz vreme u podnožju poruke. Na telefonu selekcija se kopira dugmetom `Kopiraj MD` iznad razgovora; unutrašnji razmak u prikazu ne dodaje razmake u Markdown tekst.
+
+Delegiranje ne treba zaobilaziti pokretanjem `grok -p`, `claude -p` ili drugog agentskog CLI-ja van Agent Deska: takvi procesi nemaju karticu, zapis ni potrošnju u aplikaciji. Za više od dva zadatka koristi se više uzastopnih grupa kroz `/delegate`; popunjen kapacitet vraća HTTP 409.
