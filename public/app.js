@@ -6,6 +6,9 @@ const $ = s => document.querySelector(s);
 let defaults = {}, models = {}, meta, chats = [], active = localStorage.getItem('agent-desk-active'), selectedAgent = 'codex', menuChat = null, lastMessages = '', connected = true;
 let titleSettings={}, usageReport={};
 let agentPanelOpen=true;
+let mobileAutofocus=localStorage.getItem('agent-desk-mobile-autofocus')==='1';
+const linkedFiles=new Map();
+function focusPrompt(){if(!matchMedia('(max-width:650px)').matches || mobileAutofocus)$('#prompt').focus();}
 let rename = null, creating = false, submitting = false, clickTimer, holdTimer, holdStart, held = false;
 let colorMode=localStorage.getItem('agent-desk-color-mode') || 'label';
 document.body.classList.toggle('colored-responses',colorMode==='full');
@@ -50,7 +53,7 @@ function choose(id) {
   closePanels();
   if(id)localStorage.setItem('agent-desk-active',id);else localStorage.removeItem('agent-desk-active');
   if(current()){selectedAgent=current().settings.agent;markRead(current());}
-  menuChat=null;rename=null;lastMessages='';render();$('#prompt').focus();
+  menuChat=null;rename=null;lastMessages='';render();renderLinkedFiles();focusPrompt();
 }
 function putChat(chat) {if(chats.some(c=>c.id===chat.id))chats=chats.map(c=>c.id===chat.id?chat:c);else chats.unshift(chat);}
 async function create(agent=selectedAgent) {
@@ -64,16 +67,16 @@ async function create(agent=selectedAgent) {
 function modelLabel(chat) {
   const last=chat.sessions[chat.settings.agent] && [...chat.messages].reverse().find(m=>m.agent===chat.settings.agent);
   const id=chat.settings.model || (last?.configuredModel===chat.settings.model ? last.model : '');
-  return id ? models[chat.settings.agent]?.models.find(m=>m.id===id)?.name || id : 'Podrazumevani CLI model';
+  return id ? modelName(chat.settings.agent,id) : 'Podrazumevani CLI model';
 }
 const agentOrder=['codex','claude','antigravity','grok'];
 let limits={};
-function renderNewAgents() {$('#new-agents').innerHTML=agentOrder.map(id=>meta.agents.find(a=>a.id===id)).filter(Boolean).map(a=>`<button class="new-agent" data-new-agent="${a.id}" title="Novi čet · ${escape(a.name)}" aria-label="Novi čet · ${escape(a.name)}" ${!a.available?'disabled':''}><img src="${agentLogos[a.id]}" alt="" width="21" height="21"><small class="agent-limits" title="${escape(limitDescription(a.id))}">${limitDisplay(a.id)}</small></button>`).join('');}
+function renderNewAgents() {const settings=$('#defaults-open');$('#new-agents').innerHTML=agentOrder.map(id=>meta.agents.find(a=>a.id===id)).filter(Boolean).map(a=>`<button class="new-agent" data-new-agent="${a.id}" title="Novi čet · ${escape(a.name)}" aria-label="Novi čet · ${escape(a.name)}" ${!a.available?'disabled':''}><img src="${agentLogos[a.id]}" alt="" width="21" height="21"><small class="agent-limits" title="${escape(limitDescription(a.id))}">${limitDisplay(a.id)}</small></button>`).join('');$('#new-agents').append(settings);}
 let lastSidebar='', paintingSidebar=false;
 function renderSidebar() {
   const row=c=>`<div class="chat-row ${c.id===active?'active':''} ${c.running?'working':notification(c)}" data-row="${c.id}" title="${escape(c.title)} · ${escape(agentName(c.settings.agent))} · ${escape(modelLabel(c))}">
     <button class="chat-logo" data-options="${c.id}" aria-label="Opcije četa: ${escape(c.title)}" aria-expanded="${menuChat===c.id}" title="${escape(agentName(c.settings.agent))} · ${escape(modelLabel(c))}"><img src="${agentLogos[c.settings.agent]}" alt="" width="20" height="20"></button>
-    ${rename?.id===c.id?`<input class="rename-input" data-rename="${c.id}" aria-label="Naziv četa" value="${escape(rename.value)}" maxlength="100">`:`<button class="chat-item" data-chat="${c.id}" ${c.id===active?'aria-current="true"':''}><span>${escape(c.title)}</span></button>`}
+    ${rename?.id===c.id?`<input class="rename-input" data-rename="${c.id}" aria-label="Naziv četa" value="${escape(rename.value)}" maxlength="100">`:`<button class="chat-item" data-chat="${c.id}" ${c.id===active?'aria-current="true"':''}><span>${escape(c.title)}</span><small class="card-model">${escape(modelLabel(c))}</small></button>`}
   </div>`;
   const groups=sidebarGroups(chats);
   const content=groups.map(g=>{
@@ -87,13 +90,13 @@ function renderAgentPanel() {
   const visible=agentPanelOpen && children.length>0;
   $('#agent-panel').hidden=!visible;
   $('#subagents-toggle').hidden=!children.length;$('#subagents-toggle').setAttribute('aria-expanded',String(visible));$('#subagents-toggle').setAttribute('aria-label',visible?'Sakrij podagente':'Prikaži podagente');
-  $('#chat-parent').hidden=!chat?.parentChatId;
+  $('#chat-parent').hidden=!chats.some(c=>c.id===chat?.parentChatId);
   $('#chat-title').textContent=chat?.title || '';
   $('#chat-options').hidden=!chat;
   if(chat)$('#chat-options').dataset.options=chat.id;
   if(chat)$('#chat-options').innerHTML=`<img src="${agentLogos[chat.settings.agent]}" alt="" width="20" height="20">`;
-  const row=c=>`<button class="agent-tree-item" data-agent-chat="${c.id}" title="${escape(agentName(c.settings.agent))} · ${escape(modelLabel(c))}"><img src="${agentLogos[c.settings.agent]}" alt="" width="18" height="18"><span>${escape(c.title)}${agentUsageLine(c)}</span><i class="agent-state ${c.running?'working':notification(c)}" aria-label="${c.running?'Radi':notification(c)?'Nov odgovor':'Završen'}"></i></button>`;
-  const html=children.map(row).join('');
+  const row=c=>`<button class="agent-tree-item" data-agent-chat="${c.id}" title="${escape(agentName(c.settings.agent))} · ${escape(modelLabel(c))}"><img src="${agentLogos[c.settings.agent]}" alt="" width="18" height="18"><span>${escape(c.title)}<small class="card-model">${escape(modelLabel(c))}</small>${agentUsageLine(c)}</span><i class="agent-state ${c.running?'working':notification(c)}" aria-label="${c.running?'Radi':notification(c)?'Nov odgovor':'Završen'}"></i></button>`;
+  const html=children.reverse().map(row).join('');
   if($('#agent-tree').innerHTML!==html)$('#agent-tree').innerHTML=html;
 }
 function showChatList(){document.body.classList.remove('chat-view');showDefaults(false);closePanels();menuChat=null;renderPopover();const url=new URL(location.href);url.hash='';history.replaceState(history.state,'',url);}
@@ -101,21 +104,22 @@ $('#chat-back').onclick=showChatList;
 $('#subagents-toggle').onclick=()=>{agentPanelOpen=!agentPanelOpen;renderAgentPanel();};
 const mobileNavigation=()=>matchMedia('(max-width:650px)').matches;
 function keepMobileHistory(){if(mobileNavigation())history.pushState({agentDesk:true},'',location.href);}
-window.addEventListener('popstate',()=>{if(mobileNavigation()){showChatList();keepMobileHistory();}});
+window.addEventListener('popstate',()=>{if(mobileNavigation()){if(!$('#files-dialog').open && !$('#delete-dialog').open && document.body.classList.contains('chat-view') && chats.some(c=>c.id===current()?.parentChatId))choose(current().parentChatId);else{if($('#files-dialog').open)$('#files-dialog').close();if($('#delete-dialog').open)$('#delete-dialog').close();showChatList();}keepMobileHistory();}});
 
 $('#chat-parent').onclick=()=>{if(current()?.parentChatId)choose(current().parentChatId);};
 $('#chat-options').onclick=()=>{if(current()){menuChat=menuChat===active?null:active;renderPopover();}};
 const usageCount=n=>Number(n||0).toLocaleString('sr-Latn-RS');
-function usageRange(a,b){return a===b?usageCount(a):`${usageCount(a)} do ${usageCount(b)}`;}
-function apiMoney(s){if(!s?.priced)return 'API cena nije poznata';const fmt=n=>'$'+n.toFixed(n<.01?4:3);return `API ≈ ${fmt(s.costMin)}${Math.abs(s.costMax-s.costMin)>1e-9?' do '+fmt(s.costMax):''}${s.unpriced || s.missing || s.sessionUnknown?' · delimično':''}`;}
-function agentUsageLine(c){const s=c.usageSummary?.own;if(!s)return '';if(!s.records)return '<small class="agent-usage">Tokeni nisu pouzdano prijavljeni</small>';return `<small class="agent-usage">${usageRange(s.total,s.totalMax)} tokena · ${escape(apiMoney(s))}</small>`;}
-function usageTable(s){if(!s)return '';const rows=s.models || [];return `<div class="usage-table-wrap"><table class="usage-table"><thead><tr><th>Model</th><th>Ulaz¹</th><th>Izlaz</th><th>Keš</th><th>Upis keša</th><th>API USD</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${escape(r.model ? modelName(r.agent,r.model) : agentName(r.agent)+' · nepoznat model')}${r.kind==='title'?' · naslov':r.kind==='handoff'?' · predaja':''}</td><td>${r.records?usageRange(r.input,r.inputMax):'n/p'}</td><td>${r.records?usageCount(r.output):'n/p'}</td><td>${r.records?usageCount(r.cacheRead):'n/p'}</td><td>${r.records?usageCount(r.cacheWrite):'n/p'}</td><td>${escape(apiMoney(r))}</td></tr>`).join('') || '<tr><td colspan="6">Potrošnja još nije prijavljena.</td></tr>'}</tbody></table></div>${s.sessionUnknown?`<p class="usage-note">${s.sessionUnknown} starih kumulativnih zapisa nije sabrano bez pouzdane osnove.</p>`:''}${s.missing?`<p class="usage-note">Za ${s.missing} odgovora tokeni nisu prijavljeni.</p>`:''}${s.uncertain?'<p class="usage-note">Deo zapisa nema potpuno razdvojene ulazne i keširane tokene.</p>':''}`;}
+function usageRange(a,b){return a===b?usageCount(a):`${usageCount(a)}-${usageCount(b)}`;}
+function apiMoney(s){if(!s?.priced)return 'Cena nije poznata';const fmt=n=>'$'+n.toFixed(n<.01?4:3);return `≈ ${fmt(s.costMin)}${Math.abs(s.costMax-s.costMin)>1e-9?'-'+fmt(s.costMax):''}${s.unpriced || s.missing || s.sessionUnknown?' · delimično':''}`;}
+function splitUsage(s){return `${usageRange(Math.max(0,s.total-s.cacheRead),Math.max(0,s.totalMax-s.cacheRead))} novih · ${usageCount(s.cacheRead)} keširanih`;}
+function agentUsageLine(c){const s=c.usageSummary?.own;if(!s)return '';if(!s.records)return '<small class="agent-usage">Tokeni nisu pouzdano prijavljeni</small>';return `<small class="agent-usage">${splitUsage(s)} · ${escape(apiMoney(s))}</small>`;}
+function usageTable(s){if(!s)return '';const rows=s.models || [];return `<div class="usage-table-wrap"><table class="usage-table"><thead><tr><th>Model</th><th>Novi ulaz¹</th><th>Izlaz</th><th>Keš</th><th>Upis keša</th><th>$</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${escape(r.model ? modelName(r.agent,r.model) : agentName(r.agent)+' · nepoznat model')}${r.kind==='title'?' · naslov':r.kind==='handoff'?' · predaja':''}</td><td>${r.records?usageRange(Math.max(0,r.input-r.cacheRead),Math.max(0,r.inputMax-r.cacheRead)):'n/p'}</td><td>${r.records?usageCount(r.output):'n/p'}</td><td>${r.records?usageCount(r.cacheRead):'n/p'}</td><td>${r.records?usageCount(r.cacheWrite):'n/p'}</td><td>${escape(apiMoney(r))}</td></tr>`).join('') || '<tr><td colspan="6">Potrošnja još nije prijavljena.</td></tr>'}</tbody></table></div>${s.sessionUnknown?`<p class="usage-note">${s.sessionUnknown} starih kumulativnih zapisa nije sabrano bez pouzdane osnove.</p>`:''}${s.missing?`<p class="usage-note">Za ${s.missing} odgovora tokeni nisu prijavljeni.</p>`:''}${s.uncertain?'<p class="usage-note">Deo zapisa nema potpuno razdvojene ulazne i keširane tokene.</p>':''}`;}
 function renderUsage(){const c=current(),box=$('#usage-details');box.hidden=!c;if(!c)return;const u=c.usageSummary;if(!u){$('#usage-heading').textContent='Potrošnja';$('#usage-breakdown').innerHTML='';return;}
- const s=u.childCount?u.family:u.own;$('#usage-heading').textContent=`${u.childCount?'Čet i podagenti':'Čet'} · ${s.records?usageRange(s.total,s.totalMax)+' tokena':'Tokeni nisu prijavljeni'} · ${apiMoney(s)}`;
- const html=`<div class="usage-scope-label">Ovaj čet · ${escape(apiMoney(u.own))}</div>${usageTable(u.own)}${u.childCount?`<div class="usage-scope-label">Čet i podagenti · ${escape(apiMoney(u.family))}</div>${usageTable(u.family)}`:''}<div class="usage-scope-label" title="${escape(u.projectPath)}">Projekat: ${escape(u.projectPath)} · ${escape(apiMoney(u.project))}</div>${usageTable(u.project)}<p class="usage-note">¹ Ulaz uključuje keš i njegov upis. Ukupno = ulaz + izlaz; razmišljanje je deo izlaza kada ga CLI tako prijavi. API procena prema cenovniku od 04.10.2026, standardne tarife. Raspon pokriva kratki/dugi kontekst i trajanje upisa keša. Zbir sačuvanih četova. Bez naknada za alate i skladištenje. Pretplata ima sopstvene limite.</p>${u.project.legacyProject?'<p class="usage-note">Stariji odgovori bez zabeleženog foldera pripisani su sadašnjem radnom folderu četa.</p>':''}<p class="usage-note">Native podagenti koje CLI ne prijavi nisu zasebno izmereni.</p>`;
+ const s=u.childCount?u.family:u.own;$('#usage-heading').textContent=`${s.records?splitUsage(s):'Tokeni nisu prijavljeni'} · ${apiMoney(s)}`;
+ const html=`<div class="usage-scope-label">Ovaj čet · ${escape(apiMoney(u.own))}</div>${usageTable(u.own)}${u.childCount?`<div class="usage-scope-label">Čet i podagenti · ${escape(apiMoney(u.family))}</div>${usageTable(u.family)}`:''}<div class="usage-scope-label" title="${escape(u.projectPath)}">Projekat: ${escape(u.projectPath)} · ${escape(apiMoney(u.project))}</div>${usageTable(u.project)}<p class="usage-note">¹ Novi ulaz ne uključuje čitanje keša; upis keša je deo novog ulaza. Novi tokeni u sažetku uključuju i izlaz. Razmišljanje je deo izlaza kada ga CLI tako prijavi. API procena prema cenovniku od 04.10.2026, standardne tarife. Raspon pokriva kratki/dugi kontekst i trajanje upisa keša. Zbir sačuvanih četova. Bez naknada za alate i skladištenje. Pretplata ima sopstvene limite.</p>${u.project.legacyProject?'<p class="usage-note">Stariji odgovori bez zabeleženog foldera pripisani su sadašnjem radnom folderu četa.</p>':''}<p class="usage-note">Native podagenti koje CLI ne prijavi nisu zasebno izmereni.</p>`;
  if($('#usage-breakdown').innerHTML!==html)$('#usage-breakdown').innerHTML=html;
 }
-function renderProjectUsage(){const html=Object.entries(usageReport.projects || {}).map(([cwd,s])=>`<div class="usage-scope-label">${escape(cwd)} · ${usageRange(s.total,s.totalMax)} tokena · ${escape(apiMoney(s))}</div>${usageTable(s)}`).join('') || '<p class="usage-note">Nema zabeležene potrošnje.</p>';$('#project-usage-list').innerHTML=html;}
+function renderProjectUsage(){const html=Object.entries(usageReport.projects || {}).map(([cwd,s])=>`<div class="usage-scope-label">${escape(cwd)} · ${splitUsage(s)} · ${escape(apiMoney(s))}</div>${usageTable(s)}`).join('') || '<p class="usage-note">Nema zabeležene potrošnje.</p>';$('#project-usage-list').innerHTML=html;}
 $('#agent-tree').onclick=e=>{const parent=e.target.closest('[data-agent-parent]');if(parent){choose(parent.dataset.agentParent);return;}const options=e.target.closest('[data-options]');if(options){menuChat=menuChat===options.dataset.options?null:options.dataset.options;renderPopover();return;}const b=e.target.closest('[data-agent-chat]');if(!b)return;const id=b.dataset.agentChat;if(active===id){menuChat=menuChat===id?null:id;renderPopover();}else choose(id);};
 $('#agent-tree').onscroll=positionPopover;
 const storedKeyMask='••••••••';
@@ -161,7 +165,7 @@ function tokenInfo(message) {
   const count=n=>n.toLocaleString('sr-Latn-RS');
   const parts=[];
   if(u.scope==='session')parts.push('Zbir sesije');
-  if(u.input!==undefined)parts.push(`Ulaz${u.inputIncludesCache===false?' bez keša':u.inputIncludesCache===true?' sa kešom':''} ${count(u.input)}`);
+  if(u.input!==undefined)parts.push(u.inputIncludesCache!==true && u.inputIncludesCache!==false && u.cacheRead ? 'Novi ulaz nije razdvojen' : `Novi ulaz ${count(Math.max(0,u.input-(u.inputIncludesCache===true?(u.cacheRead||0):0)+(u.inputIncludesCache===false?(u.cacheWrite||0):0)))}`);
   if(u.output!==undefined)parts.push(`Izlaz ${count(u.output)}`);
   if(u.cacheRead!==undefined)parts.push(`Keš ${count(u.cacheRead)}`);
   if(u.cacheWrite)parts.push(`Upis keša ${count(u.cacheWrite)}`);
@@ -223,7 +227,7 @@ $('#chat-popover').onclick=e=>guard(async()=>{
   if(action.dataset.action==='record'){const record=await api(`/api/chats/${id}/record`,'POST',{});closePanels();$('#record-text').value=record.text;$('#record-panel').hidden=false;for(const el of [$('#conversation'),$('.composer-area'),$('#usage-details')])el.inert=true;menuChat=null;renderSidebar();$('#record-text').focus();return;}
   if(action.dataset.action==='fork'){const copy=await api(`/api/chats/${id}/fork`,'POST',{});putChat(copy);choose(copy.id);}
   if(action.dataset.action==='stop'){await api(`/api/chats/${id}/stop`,'POST');menuChat=null;renderSidebar();}
-  if(action.dataset.action==='delete' && confirm(`Obriši čet „${c.title}“?`)){await api(`/api/chats/${id}`,'DELETE');chats=chats.filter(c=>c.id!==id);menuChat=null;if(active===id)choose(chats[0]?.id || null);else render();}
+  if(action.dataset.action==='delete'){deleteTarget=id;$('#delete-title').textContent=`Obriši čet „${c.title}“?`;$('#delete-family').hidden=!chats.some(x=>x.parentChatId===id);$('#delete-dialog').showModal();}
 });
 $('#chat-popover').onchange=e=>guard(async()=>{
   const model=e.target.closest('[data-chat-model]'),effort=e.target.closest('[data-chat-effort]');if(!model && !effort)return;
@@ -232,15 +236,15 @@ $('#chat-popover').onchange=e=>guard(async()=>{
 });
 document.addEventListener('pointerdown',e=>{if(menuChat && !e.target.closest('#chat-popover,#chat-options,[data-options],[data-chat],[data-agent-chat]')){menuChat=null;renderPopover();}});
 function renderDefaults() {$('#default-agents').innerHTML=meta.agents.map(a=>{const s={agent:a.id,...defaults[a.id]};return `<div class="default-agent" data-default-agent="${a.id}"><img src="${agentLogos[a.id]}" alt="${escape(a.name)}" title="${escape(a.name)}" width="22" height="22"><select data-default-model aria-label="Podrazumevani model ${escape(a.name)}">${modelOptions(s)}</select><select data-default-effort aria-label="Podrazumevano razmišljanje ${escape(a.name)}" ${effortsFor(a.id,s.model).length?'':'disabled'}>${effortOptions(s)}</select></div>`;}).join('');}
-function showDefaults(open) {document.body.classList.toggle('settings-view',open);if(open)refreshPhone();$('#defaults').hidden=!open;for(const el of [$('#conversation'),$('.composer-area'),$('#usage-details')])el.inert=open;if(open){closePanels();$('#defaults-close').focus();}else $('#prompt').focus();}
-$('#defaults-open').onclick=()=>guard(async()=>{const form=$('#defaults');if(!form.hidden){showDefaults(false);return;}const button=$('#defaults-open');button.disabled=true;try{[defaults,models,titleSettings,usageReport]=await Promise.all([api('/api/defaults'),api('/api/models'),phoneRemote?Promise.resolve(titleSettings):api('/api/title-settings'),api('/api/usage')]);renderDefaults();fillTitleSettings();renderProjectUsage();$('#response-colors').value=colorMode;menuChat=null;renderPopover();showDefaults(true);}finally{button.disabled=false;}});
+function showDefaults(open) {document.body.classList.toggle('settings-view',open);if(open)refreshPhone();$('#defaults').hidden=!open;for(const el of [$('#conversation'),$('.composer-area'),$('#usage-details')])el.inert=open;if(open){closePanels();$('#defaults-close').focus();}else focusPrompt();}
+$('#defaults-open').onclick=()=>guard(async()=>{const form=$('#defaults');if(!form.hidden){showDefaults(false);return;}const button=$('#defaults-open');button.disabled=true;try{[defaults,models,titleSettings,usageReport]=await Promise.all([api('/api/defaults'),api('/api/models'),phoneRemote?Promise.resolve(titleSettings):api('/api/title-settings'),api('/api/usage')]);renderDefaults();fillTitleSettings();renderProjectUsage();$('#response-colors').value=colorMode;$('#mobile-autofocus').checked=mobileAutofocus;menuChat=null;renderPopover();showDefaults(true);}finally{button.disabled=false;}});
 $('#defaults-close').onclick=()=>showDefaults(false);
 $('#default-agents').onchange=e=>{const row=e.target.closest('[data-default-agent]');if(!row || !e.target.matches('[data-default-model]'))return;const s={agent:row.dataset.defaultAgent,model:e.target.value,effort:''},select=row.querySelector('[data-default-effort]');select.innerHTML=effortOptions(s);select.disabled=!effortsFor(s.agent,s.model).length;};
-$('#defaults-form').onsubmit=e=>{e.preventDefault();guard(async()=>{const next=Object.fromEntries([...$('#default-agents').querySelectorAll('[data-default-agent]')].map(row=>[row.dataset.defaultAgent,{model:row.querySelector('[data-default-model]').value,effort:row.querySelector('[data-default-effort]').value}]));if(!phoneRemote)await saveTitleSettings();defaults=await api('/api/defaults','PUT',next);colorMode=$('#response-colors').value;localStorage.setItem('agent-desk-color-mode',colorMode);document.body.classList.toggle('colored-responses',colorMode==='full');showDefaults(false);});};
+$('#defaults-form').onsubmit=e=>{e.preventDefault();guard(async()=>{const next=Object.fromEntries([...$('#default-agents').querySelectorAll('[data-default-agent]')].map(row=>[row.dataset.defaultAgent,{model:row.querySelector('[data-default-model]').value,effort:row.querySelector('[data-default-effort]').value}]));if(!phoneRemote)await saveTitleSettings();defaults=await api('/api/defaults','PUT',next);mobileAutofocus=$('#mobile-autofocus').checked;localStorage.setItem('agent-desk-mobile-autofocus',mobileAutofocus?'1':'0');colorMode=$('#response-colors').value;localStorage.setItem('agent-desk-color-mode',colorMode);document.body.classList.toggle('colored-responses',colorMode==='full');showDefaults(false);});};
 $('#conversation').onclick=e=>guard(async()=>{const button=e.target.closest('[data-copy-code],[data-copy-message]');if(!button)return;const text=button.hasAttribute('data-copy-code')?button.closest('pre').querySelector('code').textContent:current()?.messages.find(m=>m.id===button.dataset.copyMessage)?.text;if(text===undefined)return;await navigator.clipboard.writeText(text);button.textContent='✓';button.title='Kopirano';setTimeout(()=>{if(button.isConnected){button.innerHTML=copyIcon;button.title='Kopiraj';}},1500);});
 $('#composer').onsubmit=e=>{e.preventDefault();guard(async()=>{
   const input=$('#prompt'),text=input.value.trim();if(!text || current()?.running || submitting || !connected)return;submitting=true;let id;
-  try {if(!current()){const created=await create();if(!created)return;}id=active;await api(`/api/chats/${id}/send`,'POST',{text});if(active===id && input.value.trim()===text){input.value='';drafts.delete(id);resizePrompt();}input.focus();}
+  try {if(!current()){const created=await create();if(!created)return;}id=active;await api(`/api/chats/${id}/send`,'POST',{text,files:linkedFiles.get(id)||[]});if(active===id && input.value.trim()===text){input.value='';drafts.delete(id);linkedFiles.delete(id);renderLinkedFiles();resizePrompt();}input.focus();}
   finally {submitting=false;}
 });};
 function renderQueue() {
@@ -251,8 +255,8 @@ async function enqueueMessage() {
   const input=$('#prompt'),text=input.value.trim();if(!text || submitting || !connected)return;
   submitting=true;try {
     if(!current()){const created=await create();if(!created)return;}
-    const id=active,chat=await api(`/api/chats/${id}/queue`,'POST',{text});putChat(chat);
-    if(active===id && input.value.trim()===text){input.value='';drafts.delete(id);resizePrompt();}
+    const id=active,chat=await api(`/api/chats/${id}/queue`,'POST',{text,files:linkedFiles.get(id)||[]});putChat(chat);
+    if(active===id && input.value.trim()===text){input.value='';drafts.delete(id);linkedFiles.delete(id);renderLinkedFiles();resizePrompt();}
     render();input.focus();
   } finally {submitting=false;}
 }
@@ -279,7 +283,7 @@ function renderTransfer(){const chat=current(),el=$('#transfer-preview');el.hidd
 
 function closePanels(){$('#record-panel').hidden=true;for(const el of [$('#conversation'),$('.composer-area'),$('#usage-details')])el.inert=!$('#defaults').hidden;}
 for(const button of document.querySelectorAll('[data-close-panel]'))button.onclick=closePanels;
-window.addEventListener('hashchange',()=>{if(mobileNavigation())return;const id=new URLSearchParams(location.hash.slice(1)).get('chat');if(chats.some(c=>c.id===id))choose(id);});
+window.addEventListener('hashchange',()=>{const id=new URLSearchParams(location.hash.slice(1)).get('chat');if(chats.some(c=>c.id===id))choose(id);});
 
 const phoneRemote=!['127.0.0.1','localhost'].includes(location.hostname);
 let phoneTimer;
@@ -298,4 +302,23 @@ $('#phone-revoke').onclick=()=>guard(async()=>{await api('/api/phone/revoke','PO
 
 function limitDescription(id){const s=limits[id];if(!s)return 'Preostali limiti: '+(id==='grok'?'7 dana':'5 sati · 7 dana')+'; učitavam';return s.error || 'Preostalo: '+(id==='grok'?'7 dana':'5 sati · 7 dana')+(s.updatedAt?' · '+new Date(s.updatedAt).toLocaleTimeString('sr-Latn-RS'): '');}
 function limitDisplay(id){const s=limits[id];const slot=key=>{const w=s?.windows?.find(w=>w.period===key);if(!w)return '<span class="limit-unknown">?</span>';const left=Math.max(0,Math.min(100,w.remaining));return `<span class="${left>65?'limit-good':left>=35?'limit-mid':'limit-low'}">${Math.round(left)}</span>`;};return id==='grok'?slot('weekly'):slot('fiveHour')+' <span class="limit-separator">·</span> '+slot('weekly');}
-async function refreshLimits(){let wait=60000;try{const response=await api('/api/limits');limits=response.agents || {};if(response.loading)wait=5000;renderNewAgents();}catch{}setTimeout(refreshLimits,wait);}
+async function refreshLimits(){let wait=120000;try{const response=await api('/api/limits');limits=response.agents || {};if(response.loading)wait=5000;renderNewAgents();}catch{}setTimeout(refreshLimits,wait);}
+
+let fileListing,deleteTarget,undoId;
+function renderLinkedFiles(){const paths=linkedFiles.get(active)||[];$('#linked-files').innerHTML=paths.map((p,i)=>`<button type="button" data-remove-file="${i}" title="${escape(p)}">${escape(p.split('/').pop())} ×</button>`).join('');}
+$('#linked-files').onclick=e=>{const b=e.target.closest('[data-remove-file]');if(!b)return;const paths=linkedFiles.get(active)||[];paths.splice(Number(b.dataset.removeFile),1);linkedFiles.set(active,paths);renderLinkedFiles();};
+function linkFile(p){const paths=linkedFiles.get(active)||[];if(!paths.includes(p)){if(paths.length>=20)throw Error('Najviše 20 putanja.');paths.push(p);}linkedFiles.set(active,paths);renderLinkedFiles();}
+async function browseFolder(p){const id=active;const listing=await api(`/api/chats/${id}/files${p?'?path='+encodeURIComponent(p):''}`);if(active!==id)return;fileListing=listing;$('#folder-path').value=listing.path;$('#folder-parent').disabled=!listing.parent;$('#file-entries').innerHTML=listing.entries.map((e,i)=>`<button type="button" data-file-entry="${i}">${e.directory?'▸ ':''}${escape(e.name)}</button>`).join('')+(listing.truncated?'<small>Prvih 500 stavki. Otvori uži folder.</small>':'');}
+$('#files-open').onclick=()=>guard(async()=>{if(!current())await create();await browseFolder();$('#files-dialog').showModal();});
+$('#files-close').onclick=()=>$('#files-dialog').close();
+$('#folder-form').onsubmit=e=>{e.preventDefault();guard(()=>browseFolder($('#folder-path').value));};
+$('#folder-home').onclick=()=>guard(()=>browseFolder(fileListing.home));
+$('#folder-project').onclick=()=>guard(()=>browseFolder());
+$('#folder-parent').onclick=()=>guard(()=>browseFolder(fileListing.parent));
+$('#folder-select').onclick=()=>guard(()=>{linkFile(fileListing.path);$('#files-dialog').close();});
+$('#file-entries').onclick=e=>guard(async()=>{const b=e.target.closest('[data-file-entry]');if(!b)return;const entry=fileListing.entries[Number(b.dataset.fileEntry)];if(entry.directory)await browseFolder(entry.path);else{linkFile(entry.path);$('#files-dialog').close();}});
+$('#delete-cancel').onclick=()=>$('#delete-dialog').close();
+async function removeChat(children){const id=deleteTarget;const result=await api(`/api/chats/${id}${children?'?children=1':''}`,'DELETE');$('#delete-dialog').close();chats=await api('/api/chats');menuChat=null;if(result.deleted.includes(active)){if(mobileNavigation()){choose(null);showChatList();}else choose(chats[0]?.id||null);}else render();undoId=result.trashId;$('#undo-delete').hidden=false;}
+$('#delete-only').onclick=()=>guard(()=>removeChat(false));
+$('#delete-family').onclick=()=>guard(()=>removeChat(true));
+$('#undo-delete').onclick=()=>guard(async()=>{await api(`/api/trash/${undoId}/restore`,'POST',{});chats=await api('/api/chats');$('#undo-delete').hidden=true;render();});

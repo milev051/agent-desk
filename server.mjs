@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {browseFiles,withFiles} from './files.mjs';
 import {createLimits} from './limits.mjs';
 import {createPhoneAccess} from './phone-access.mjs';
 import fs from 'node:fs';
@@ -171,6 +172,13 @@ const server = http.createServer(async (req, res) => {
       return json(200,{ok:true});
     }
     if (req.method === 'GET' && url.pathname === '/api/models') return json(200, await catalog(binaries));
+    const restoreMatch=url.pathname.match(/^\/api\/trash\/([\w-]+)\/restore$/);
+    if(req.method==='POST' && restoreMatch){
+      const file=path.join(dataDir,'trash',restoreMatch[1]+'.json');if(!fs.existsSync(file))return json(404,{error:'Obrisani čet nije pronađen.'});
+      const restored=JSON.parse(fs.readFileSync(file,'utf8'));if(restored.some(c=>chats.some(x=>x.id===c.id)))throw Error('Čet je već vraćen.');
+      chats.unshift(...restored);for(const c of chats)if(restored.some(x=>x.id===c.formerParentChatId)){c.parentChatId=c.formerParentChatId;c.parentTurnId=c.formerParentTurnId;delete c.formerParentChatId;delete c.formerParentTurnId;}
+      fs.unlinkSync(file);update();return json(200,{ok:true});
+    }
     const queueMatch=url.pathname.match(/^\/api\/chats\/([\w-]+)\/queue(?:\/([\w-]+))?$/);
     if(queueMatch) {
       const chat=chats.find(c=>c.id===queueMatch[1]);if(!chat)return json(404,{error:'Čet nije pronađen.'});
@@ -178,7 +186,7 @@ const server = http.createServer(async (req, res) => {
         if(queueMatch[2]==='resume'){chat.queuePaused=false;delete chat.queueError;update();drainQueue(chat);return json(200,publicChat(chat));}
         const b=await body(req);if(typeof b.text!=='string'||!b.text.trim()||b.text.length>100000)throw new Error('Unesi poruku do 100.000 karaktera.');
         chat.queue ||= [];if(chat.queue.length>=10)throw new Error('Red čekanja je ograničen na 10 poruka.');
-        chat.queue.push({id:randomUUID(),text:b.text.trim(),createdAt:Date.now()});chat.queuePaused=false;delete chat.queueError;update();drainQueue(chat);return json(202,publicChat(chat));
+        chat.queue.push({id:randomUUID(),text:withFiles(b.text.trim(),b.files,chat.settings.cwd),createdAt:Date.now()});chat.queuePaused=false;delete chat.queueError;update();drainQueue(chat);return json(202,publicChat(chat));
       }
       if(req.method==='DELETE' && queueMatch[2]){chat.queue=(chat.queue || []).filter(m=>m.id!==queueMatch[2]);update();return json(200,publicChat(chat));}
     }
@@ -195,9 +203,10 @@ const server = http.createServer(async (req, res) => {
       validateEffort(quickCatalog(binaries), chat.settings);
       chats.unshift(chat); update(); return json(201, publicChat(chat));
     }
-    const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(send|stop|fork|delegate|reveal|record|count-tokens))?$/);
+    const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(send|stop|fork|delegate|reveal|record|count-tokens|files))?$/);
     if (match) {
       const chat = chats.find(c => c.id === match[1]); if (!chat) return json(404, { error: 'Čet nije pronađen.' });
+      if(req.method==='GET' && match[2]==='files')return json(200,browseFiles(url.searchParams.get('path'),chat.settings.cwd));
       if(req.method==='GET' && !match[2])return json(200,publicChat(chat));
       if(req.method==='POST' && match[2]==='count-tokens'){
         const b=await body(req);if(b.consent!==true)return json(400,{error:'Brojanje šalje vidljivu istoriju Google-u. Potrebna je potvrda.'});
@@ -230,7 +239,7 @@ const server = http.createServer(async (req, res) => {
 
       if (req.method === 'POST' && match[2] === 'send') {
         const b = await body(req); if (typeof b.text !== 'string' || !b.text.trim() || b.text.length > 100000) throw new Error('Unesi poruku do 100.000 karaktera.');
-        await send(chat, b.text.trim()); return json(202, { ok: true });
+        await send(chat, withFiles(b.text.trim(),b.files,chat.settings.cwd)); return json(202, { ok: true });
       }
       if(req.method==='POST' && match[2]==='fork') {
         const copy={...structuredClone(chat),id:randomUUID(),title:chat.title,createdAt:Date.now(),updatedAt:Date.now(),sessions:{},sessionOffsets:{},usageBaselines:{},queue:[],queuePaused:false,queueError:null,messages:structuredClone(chat.messages).map(m=>({...m,id:randomUUID(),usageInherited:true})),accountingEvents:(chat.accountingEvents || []).map(e=>({...e,usageInherited:true})),duplicatedFrom:chat.id};
@@ -253,7 +262,13 @@ const server = http.createServer(async (req, res) => {
         if (typeof b.title === 'string' && b.title.trim()){chat.title=b.title.trim().slice(0,100);chat.titleManual=true;}
         chat.updatedAt = Date.now(); update(); return json(200, publicChat(chat));
       }
-      if (req.method === 'DELETE' && !match[2]) { chats = chats.filter(c => c.id !== chat.id); update(); return json(200, { ok: true }); }
+      if (req.method === 'DELETE' && !match[2]) {
+        const ids=new Set([chat.id]);if(url.searchParams.get('children')==='1'){let size;do{size=ids.size;for(const c of chats)if(ids.has(c.parentChatId))ids.add(c.id);}while(size!==ids.size);}
+        if([...ids].some(id=>running.has(id)))return json(409,{error:'Zaustavi agente pre brisanja.'});
+        const trashId=randomUUID(),trashDir=path.join(dataDir,'trash');fs.mkdirSync(trashDir,{recursive:true,mode:0o700});fs.writeFileSync(path.join(trashDir,trashId+'.json'),JSON.stringify(chats.filter(c=>ids.has(c.id)),null,2),{mode:0o600});
+        chats=chats.filter(c=>!ids.has(c.id));for(const c of chats)if(ids.has(c.parentChatId)){c.formerParentChatId=c.parentChatId;c.formerParentTurnId=c.parentTurnId;delete c.parentChatId;delete c.parentTurnId;}
+        update();return json(200,{ok:true,deleted:[...ids],trashId});
+      }
     }
     const files = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/sidebar-groups.mjs': ['sidebar-groups.mjs', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/marked.js': ['../node_modules/marked/lib/marked.esm.js', 'text/javascript'], '/purify.js': ['../node_modules/dompurify/dist/purify.es.mjs', 'text/javascript'] };
     if (req.method === 'GET' && files[url.pathname]) {

@@ -3,17 +3,18 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Agent Desk</title><link rel="stylesheet" href="/style.css"><script type="module" src="/app.js"></script></head>
 <body>
   <aside class="sidebar">
-    <div class="sidebar-actions"><div id="new-agents" role="group" aria-label="Novi čet"></div><button id="defaults-open" aria-label="Podešavanja" title="Podešavanja"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="#000"/><circle cx="15" cy="17" r="3" fill="#000"/></svg></button></div>
+    <div class="sidebar-actions"><div id="new-agents" role="group" aria-label="Novi čet"><button id="defaults-open" aria-label="Podešavanja" title="Podešavanja"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="#000"/><circle cx="15" cy="17" r="3" fill="#000"/></svg></button></div></div>
     <nav id="chats" aria-label="Četovi"></nav>
   </aside>
   <aside id="agent-panel" aria-label="Pokrenuti agenti" hidden><nav id="agent-tree" aria-label="Agenti i podagenti"></nav></aside>
   <main>
-    <div id="chat-navigation"><button id="chat-back" aria-label="Lista četova">←</button><button id="chat-parent" aria-label="Roditeljski čet" hidden>↑</button><span id="chat-title"></span><button id="subagents-toggle" aria-label="Sakrij podagente" aria-expanded="true" hidden><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 14h16"/></svg></button><button id="chat-options" aria-label="Opcije otvorenog četa" hidden></button></div>
+    <div id="chat-navigation"><button id="chat-back" aria-label="Lista četova">←</button><button id="chat-parent" aria-label="Roditeljski čet" hidden>↑</button><span id="chat-title"></span><button id="chat-options" aria-label="Opcije otvorenog četa" hidden></button></div>
     <section id="defaults" aria-label="Podešavanja" hidden>
       <form id="defaults-form">
         <div class="defaults-heading"><span></span><span>Model</span><span>Razmišljanje</span></div>
         <div id="default-agents"></div>
         <label class="color-setting">Boja odgovora<select id="response-colors"><option value="label">Samo oznaka modela</option><option value="full">Oznaka i tekst odgovora</option></select></label>
+        <label class="color-setting">Tastatura pri otvaranju četa na telefonu<input id="mobile-autofocus" type="checkbox"></label>
         <fieldset class="title-settings"><legend>Naslovi četova</legend>
           <div class="title-key-row"><input id="google-title-key" type="password" autocomplete="off" aria-label="Google API ključ za naslove" placeholder="Google API ključ"><button id="title-check" type="button">Proveri</button></div>
           <small id="title-status" aria-live="polite"></small>
@@ -30,10 +31,12 @@
       <div id="transfer-preview" aria-live="polite" hidden></div>
       <div id="queue" aria-label="Red čekanja"></div>
       <span id="connection" hidden>Veza je prekinuta.</span>
-      <form id="composer"><textarea id="prompt" rows="1" placeholder="Poruka" aria-label="Poruka agentu"></textarea></form>
+      <div id="linked-files" aria-label="Povezani fajlovi"></div><form id="composer"><button id="files-open" type="button" aria-label="Fajl sa računara" title="Fajl sa računara">+</button><button id="subagents-toggle" aria-label="Sakrij podagente" aria-expanded="true" hidden><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 14h16"/></svg></button><textarea id="prompt" rows="1" placeholder="Poruka" aria-label="Poruka agentu"></textarea></form>
     </div>
   </main>
+  <dialog id="files-dialog" aria-label="Fajl sa računara"><form id="folder-form"><input id="folder-path" aria-label="Folder na računaru"><button type="submit">Otvori</button></form><div class="settings-actions"><button id="folder-home" type="button">Početni folder</button><button id="folder-project" type="button">Projekat</button><button id="folder-parent" type="button">Gore</button><button id="folder-select" type="button">Poveži folder</button></div><div id="file-entries"></div><div class="settings-actions"><button id="files-close" type="button" autofocus>Zatvori</button></div></dialog>
+  <dialog id="delete-dialog" aria-label="Obriši čet"><p id="delete-title"></p><div class="settings-actions"><button id="delete-cancel">Otkaži</button><button id="delete-only">Samo ovaj čet</button><button id="delete-family">Čet i podagenti</button></div></dialog>
   <div id="chat-popover" role="dialog" aria-label="Opcije četa" hidden></div>
-  <div id="toast" role="alert" hidden></div>
+  <div id="toast" role="alert" hidden></div><button id="undo-delete" hidden>Vrati obrisane četove</button>
 </body>
 </html>

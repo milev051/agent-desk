@@ -111,7 +111,7 @@ Polje `transferPending` je opciono. Postojeći četovi ne zahtevaju konverziju. 
 
 ## Prikaz podagenata
 
-Leva kolona je podeljena na listu četova gore i lista direktnih podagenata ispod, bez dodatnog naslova, samo kada izabrani čet ima direktne podagente. Glavni četovi i podagenti drugih četova se ne prikazuju. Kada se otvori podagent, panel prikazuje njegove podagente; ako ih nema, ceo odeljak se sakriva. Strelica u zaglavlju podčeta vraća na roditelja, a njegov logo otvara opcije. Ikonice podagenata se ne prikazuju ispod kartica u glavnoj listi. Kartica prikazuje logo levo i naslov desno, bez broja podagenata. Klik na podagenta u panelu otvara njegov čet; ponovni klik otvara opcije. Podčet čiji je roditelj obrisan ostaje samostalno dostupan. Ručno napravljene grane se ne grupišu kao podagenti.
+Leva kolona je podeljena na listu četova gore i lista direktnih podagenata ispod, bez dodatnog naslova, samo kada izabrani čet ima direktne podagente. Glavni četovi i podagenti drugih četova se ne prikazuju. Kada se otvori podagent, panel prikazuje njegove podagente; ako ih nema, ceo odeljak se sakriva. Na računaru strelica u zaglavlju podčeta vraća na roditelja, a njegov logo otvara opcije. Na telefonu nema zaglavlja; Nazad iz podčeta vraća na roditelja, a zatim na listu. Ikonice podagenata se ne prikazuju ispod kartica u glavnoj listi. Kartica prikazuje logo levo, naslov desno i model manjim slovima ispod naslova, bez broja podagenata. Klik na podagenta u panelu otvara njegov čet; ponovni klik otvara opcije. Pri brisanju samo roditelja podčet ostaje samostalno dostupan, bez nevažeće roditeljske veze. Ručno napravljene grane se ne grupišu kao podagenti.
 
 ## Kopiranje glavnog četa i organizacija podagenata
 
@@ -169,7 +169,7 @@ Računar i telefon moraju imati aktivan Tailscale. Agent Desk mora raditi na ra�
 /Applications/Tailscale.app/Contents/MacOS/Tailscale serve --bg --https=443 http://127.0.0.1:4319
 ```
 
-Ako Tailscale zatraži uključivanje HTTPS Serve-a, završi njegov zvanični postupak. Za drugi Agent Desk port gateway podrazumevano koristi `PORT + 2`; može se zadati `AGENT_DESK_PHONE_PORT`. QR koristi macOS CoreImage kroz postojeći Swift alat, bez dodatnih npm modula. Kada taj alat nije dostupan, može se koristiti privremeni link. U pregledaču telefona prvo se prikazuje lista četova; klik otvara čet, a strelica vraća na listu. URL sa `#chat=<id>` otvara određeni čet odmah.
+Ako Tailscale zatraži uključivanje HTTPS Serve-a, završi njegov zvanični postupak. Za drugi Agent Desk port gateway podrazumevano koristi `PORT + 2`; može se zadati `AGENT_DESK_PHONE_PORT`. QR koristi macOS CoreImage kroz postojeći Swift alat, bez dodatnih npm modula. Kada taj alat nije dostupan, može se koristiti privremeni link. U pregledaču telefona prvo se prikazuje lista četova; klik otvara čet, a gest ili dugme Nazad pregledača vraća na listu. URL sa `#chat=<id>` otvara određeni čet odmah.
 
 ## Brojanje istorije
 
@@ -182,10 +182,23 @@ Izvorni kod i README čuvaju se u privatnom repozitorijumu `milev051/agent-desk`
 
 ## Kartice na telefonu i pretplatnički limiti
 
-Kartice imaju diskretnu sivu pozadinu, bez desnih ivica panela i bez pretrage. Logo otvara meni kartice, gde se sada kopira adresa četa. Kopiranje adrese ne kopira poruke i ne pravi novi čet. Na telefonu dugme u zaglavlju prikazuje ili skriva podagente; lista zauzima visinu svog sadržaja, najviše 28% ekrana, a duža lista se pomera. Bez podagenata nema tog dugmeta ili panela.
+Kartice imaju diskretnu sivu pozadinu, bez desnih ivica panela i bez pretrage. Cela kartica menja nijansu na hover, dodir i izbor. Logo otvara meni kartice, gde se sada kopira adresa četa. Kopiranje adrese ne kopira poruke i ne pravi novi čet. Na telefonu dugme pored unosa prikazuje ili skriva podagente; lista zauzima visinu svog sadržaja, do približno tri reda i najviše 28% ekrana, a duža lista se pomera. Noviji podagenti su pri dnu. Bez podagenata nema tog dugmeta ili panela.
 
 Dugme Nazad u mobilnom pregledaču vraća na početnu listu. Aplikacija održava lokalni unos istorije da ponovni običan povratak ostane na listi. Pregledač i dalje može preskočiti istoriju, zatvoriti tab ili napustiti stranicu; potpuno sprečavanje izlaska nije moguće.
 
 Ispod ikonica za novi čet prikazan je **preostali procenat**, prvo za 5 sati pa za 7 dana. Grok ima samo nedeljni broj. Redosled je Codex, Claude, Antigravity, Grok. Tooltip navodi prozore i vreme očitavanja. Nedostupan podatak je `?`, bez izmišljene procene. Ovi brojevi su odvojeni od broja tokena i API procene troška.
 
-`limits-reader.swift` koristi logiku očitavanja iz projekta Limiti i postojeće CLI prijave na macOS-u. Poziva odgovarajuće servise pretplate, ne šalje razgovore. Ključevi se ne vraćaju kroz `/api/limits` i ne upisuju u četove. Swift proces očitava sva četiri izvora paralelno na približno minut; `limits.mjs` čuva samo poslednji rezultat u memoriji. Na drugim sistemima podaci nisu dostupni. `AGENT_DESK_DISABLE_LIMITS=1` isključuje očitavanje; integracioni testovi koriste tu opciju.
+`limits-reader.swift` koristi logiku očitavanja iz projekta Limiti i postojeće CLI prijave na macOS-u. Poziva odgovarajuće servise pretplate, ne šalje razgovore. Ključevi se ne vraćaju kroz `/api/limits` i ne upisuju u četove. Swift proces očitava sva četiri izvora paralelno na približno dva minuta; odgovor 429 odlaže naredni poziv tom izvoru prema Retry-After ili najmanje deset minuta kada rok nije naveden; `limits.mjs` čuva samo poslednji rezultat u memoriji. Na drugim sistemima podaci nisu dostupni. `AGENT_DESK_DISABLE_LIMITS=1` isključuje očitavanje; integracioni testovi koriste tu opciju.
+
+
+## Izbor fajlova i brisanje
+
+Dugme **+** pored poruke otvara pregled fajlova na računaru, uključujući pristup preko prijavljenog Tailscale telefona. Početni folder je radni folder četa. Moguće je otvoriti drugi folder, vratiti se na projekat ili početni korisnički folder. Klik na fajl ili **Poveži folder** dodaje uklonjivu oznaku uz sledeću poruku. Izabrane putanje su odvojene za svaki čet. I obična poruka i red čekanja šalju samo proverene putanje, bez sadržaja fajlova. Agent ih čita kada zadatak to zahteva. Ovo nije upload sa telefona.
+
+GET `/api/chats/ID/files?path=...` vraća imena običnih fajlova i foldera, najviše 500 stavki. Pregled je ograničen na korisnički i radni folder; skrivene putanje, Library, node_modules, privatni ključevi i symlink izlazi nisu dostupni. Server ponovo proverava sve putanje pri slanju, najviše 20. Ostaju postojeće Host/Origin provere i telefonska prijava.
+
+Brisanje prikazuje **Samo ovaj čet** i, kada postoje podagenti, **Čet i podagenti**. Cela grupa ne može da se obriše dok neki njen agent radi. Pri brisanju samo roditelja sačuvani podčet dobija `formerParentChatId`, a aktivna roditeljska veza se uklanja. Obrisani zapisi se čuvaju u `data/trash/`, izvan Git-a. Dugme **Vrati obrisane četove** vraća poslednje brisanje i veze; POST `/api/trash/ID/restore` omogućava vraćanje sačuvanog brisanja i posle ponovnog otvaranja aplikacije. Na telefonu brisanje otvorenog četa vraća na listu, bez otvaranja drugog razgovora.
+
+Automatska tastatura na telefonu podrazumevano je isključena. Može se uključiti u globalnim podešavanjima; izbor se pamti samo u tom pregledaču. Fokus nakon slanja ostaje u unosu. Korisničke poruke su zelene. Podešavanja su peto dugme iste grupe za pokretanje agenata.
+
+Sažetak potrošnje prikazuje nove i keširane tokene odvojeno i cenu u dolarima bez prefiksa API. Novi tokeni u sažetku uključuju novi ulaz, upis keša i izlaz; čitanje keša je izdvojeno. Kada CLI ne razdvaja preklapanje, prikazuje se raspon ili oznaka da novi ulaz nije razdvojen. Stari kumulativni zapisi i dalje imaju oznaku zbira sesije. Očitavanje pretplatničkih limita je na dva minuta; završeni odgovori ažuriraju lokalnu potrošnju kroz postojeći tok događaja, bez dodatnih poziva dobavljačima.

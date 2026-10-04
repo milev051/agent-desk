@@ -139,6 +139,15 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     const paused=(await call(`/api/chats/${b.id}`)).data;assert.equal(paused.queuePaused,true);assert.equal(paused.queue.length,1);
     await call(`/api/chats/${b.id}/queue/resume`,'POST',{});
     assert.equal((await done(b.id)).messages.at(-1).status,'done');
+    writeFileSync(path.join(temp,'primer.txt'),'sadržaj koji se ne šalje automatski');
+    const listed=await call(`/api/chats/${a.id}/files`);assert.equal(listed.status,200);assert.ok(listed.data.entries.some(e=>e.name==='primer.txt'));assert.ok(!JSON.stringify(listed.data).includes('sadržaj koji'));
+    assert.equal((await call(`/api/chats/${a.id}/send`,'POST',{text:'Koristi fajl',files:[path.join(temp,'primer.txt')]})).status,202);
+    const attached=await done(a.id);assert.match(JSON.parse(attached.messages.at(-1).text).input,/primer\.txt/);assert.ok(!JSON.parse(attached.messages.at(-1).text).input.includes('sadržaj koji se ne šalje automatski'));
+    const deleted=await call(`/api/chats/${queued.id}`,'DELETE');assert.equal(deleted.status,200);
+    const independent=(await call(`/api/chats/${child.id}`)).data;assert.equal(independent.parentChatId,undefined);assert.equal(independent.formerParentChatId,queued.id);
+    assert.equal((await call(`/api/trash/${deleted.data.trashId}/restore`,'POST',{})).status,200);assert.equal((await call(`/api/chats/${child.id}`)).data.parentChatId,queued.id);
+    const familyDeleted=await call(`/api/chats/${queued.id}?children=1`,'DELETE');assert.equal(familyDeleted.status,200);assert.ok(familyDeleted.data.deleted.includes(child.id));assert.equal((await call(`/api/chats/${child.id}`)).status,404);
+    assert.equal((await call(`/api/trash/${familyDeleted.data.trashId}/restore`,'POST',{})).status,200);assert.equal((await call(`/api/chats/${child.id}`)).data.parentChatId,queued.id);
     assert.equal((await call(`/api/chats/${a.id}`, 'DELETE')).status, 200);
   } finally { if(server.exitCode===null){server.kill('SIGTERM');await once(server,'exit');} rmSync(temp, { recursive: true, force: true }); }
 });
