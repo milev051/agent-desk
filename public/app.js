@@ -1,3 +1,4 @@
+import {advanceColumns} from './folder-columns.mjs';
 import { marked } from '/marked.js';
 import { sidebarGroups } from '/sidebar-groups.mjs';
 import DOMPurify from '/purify.js';
@@ -79,8 +80,7 @@ let limits={};
 function renderNewAgents() {const settings=$('#defaults-open');$('#new-agents').innerHTML=agentOrder.map(id=>meta.agents.find(a=>a.id===id)).filter(Boolean).map(a=>`<button class="new-agent" data-new-agent="${a.id}" title="Novi čet · ${escape(a.name)}" aria-label="Novi čet · ${escape(a.name)}" ${!a.available?'disabled':''}><img src="${agentLogos[a.id]}" alt="" width="21" height="21"><small class="agent-limits" title="${escape(limitDescription(a.id))}">${limitDisplay(a.id)}</small></button>`).join('');$('#new-agents').append(settings);}
 let lastSidebar='', paintingSidebar=false;
 function renderSidebar() {
-  const row=c=>`<div role="button" tabindex="0" aria-label="${escape(c.title)}" class="chat-row ${c.id===active?'active':''} ${c.running?'working':notification(c)}" data-row="${c.id}" title="${escape(c.title)} · ${escape(agentName(c.settings.agent))} · ${escape(modelLabel(c))}">
-    <span class="chat-logo" title="${escape(agentName(c.settings.agent))} · ${escape(modelLabel(c))}"><img src="${agentLogos[c.settings.agent]}" alt="" width="20" height="20"></span>
+  const row=c=>`<div role="button" tabindex="0" aria-label="${escape(c.title)}" class="chat-row ${c.id===active?'active':''} ${c.running?'working':notification(c)}" data-row="${c.id}" data-agent="${c.settings.agent}" title="${escape(c.title)} · ${escape(agentName(c.settings.agent))} · ${escape(modelLabel(c))}">
     <span class="chat-item"><span>${escape(c.title)}</span><small class="card-model">${escape(modelLabel(c))}</small>${cardUsage(c)}</span>
   </div>`;
   const groups=sidebarGroups(chats);
@@ -100,7 +100,7 @@ function renderAgentPanel() {
   $('#chat-options').hidden=!chat;
   if(chat)$('#chat-options').dataset.options=chat.id;
   if(chat)$('#chat-options').innerHTML=`<img src="${agentLogos[chat.settings.agent]}" alt="" width="20" height="20">`;
-  const row=c=>`<button class="agent-tree-item ${c.id===active?'active':''}" data-agent-chat="${c.id}" title="${escape(agentName(c.settings.agent))} · ${escape(modelLabel(c))}"><img src="${agentLogos[c.settings.agent]}" alt="" width="18" height="18"><span><span class="agent-card-title">${escape(c.title)}</span><small class="card-model">${escape(modelLabel(c))}</small>${cardUsage(c)}</span><i class="agent-state ${c.running?'working':notification(c)}" aria-label="${c.running?'Radi':notification(c)?'Nov odgovor':'Završen'}"></i></button>`;
+  const row=c=>`<button class="agent-tree-item ${c.id===active?'active':''} ${c.running?'working':notification(c)}" data-agent="${c.settings.agent}" data-agent-chat="${c.id}" title="${escape(agentName(c.settings.agent))} · ${escape(modelLabel(c))}"><span><span class="agent-card-title">${escape(c.title)}</span><small class="card-model">${escape(modelLabel(c))}</small>${cardUsage(c)}</span></button>`;
   const html=children.reverse().map(row).join('');
   if($('#agent-tree').innerHTML!==html)$('#agent-tree').innerHTML=html;
 }
@@ -308,7 +308,7 @@ function linkFile(p){const paths=linkedFiles.get(active)||[];if(!paths.includes(
 let filePickerClosing=false,folderRequest=0,folderColumns=[];
 async function browseFolder(p){const id=active,request=++folderRequest;const listing=await api(`/api/chats/${id}/files${p?'?path='+encodeURIComponent(p):'?place=home'}`);if(active!==id || request!==folderRequest)return;fileListing=listing;
  $('#folder-breadcrumbs').innerHTML=listing.crumbs.map((e,i)=>`<button type="button" data-folder-crumb="${i}" ${e.path===listing.path?'aria-current="location"':''}>${escape(e.name)}</button>`).join('<span aria-hidden="true">/</span>');
- const previous=folderColumns.findIndex(c=>c.path===listing.path);if(previous>=0)folderColumns=folderColumns.slice(0,previous+1);else if(folderColumns.at(-1)?.path===listing.parent)folderColumns.push(listing);else folderColumns=[listing];renderFileColumns();}
+ folderColumns=advanceColumns(folderColumns,listing);renderFileColumns();}
 function renderFileColumns(){const desktop=!mobileNavigation(),columns=desktop?folderColumns:[fileListing];$('#file-entries').classList.toggle('columns',desktop);$('#file-entries').innerHTML=columns.map(listing=>{const column=folderColumns.indexOf(listing),next=folderColumns[column+1]?.path;return `<section class="file-column" aria-label="${escape(listing.path)}">${desktop?`<small class="column-title">${escape(listing.crumbs.at(-1)?.name||'Home')}</small>`:''}${listing.entries.map((e,i)=>`<button type="button" class="file-card ${e.directory?'directory':'file'} ${next===e.path?'selected':''}" data-file-column="${column}" data-file-entry="${i}" aria-label="${e.directory?'Folder':'Fajl'}: ${escape(e.name)}">${escape(e.name)}</button>`).join('')}${listing.truncated?'<small>Prvih 500 stavki. Otvori uži folder.</small>':''}</section>`;}).join('');if(desktop)$('#file-entries').lastElementChild?.scrollIntoView({block:'nearest',inline:'end'});}
 
 function closeFilePicker(){if(!$('#files-dialog').open || filePickerClosing)return;filePickerClosing=true;history.back();}

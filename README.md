@@ -230,3 +230,6 @@ Podagenti su uz donju ivicu, sa kompaktnim karticama i skrolom za dužu listu. N
 Kada aktivni agent završi, zaustavi se ili prijavi grešku, pojavljuje se obaveštenje u gornjem desnom uglu. Klik otvara njegov čet. U podešavanjima dugme **Obaveštenja u pregledaču** traži browser dozvolu za sistemska obaveštenja, korisna kada je tab u pozadini. Dostupnost zavisi od pregledača i OS-a; obaveštenja zahtevaju otvorenu stranicu, nema push servisa za zatvoren tab.
 
 Na računaru pregled fajlova koristi kolone nalik Finderu: Home levo, ulazak u folder otvara njegov sadržaj u sledećoj koloni, horizontalni skrol za dugu putanju i zaseban vertikalni skrol u svakoj koloni. Izbor ranijeg foldera uklanja kolone desno. Telefon zadržava jednu listu kartica. Putanja pri dnu, Enter potvrda foldera i Nazad rade u oba prikaza.
+
+
+Kartice četova i podagenata nemaju ikonice. Naslov ostaje beo, a naziv modela i potrošnja na hover koriste boju agenta: Claude narandžastu, Codex ljubičastu, Grok belu i Antigravity plavu. Izbor i duži pritisak ostaju na celoj kartici. Kolone foldera pri prelasku u susedni folder zadržavaju zajedničke pretke i zamenjuju samo granu desno.

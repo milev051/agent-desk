@@ -299,7 +299,7 @@ const server = http.createServer(async (req, res) => {
         update();return json(200,{ok:true,deleted:[...ids],archiveId});
       }
     }
-    const files = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/sidebar-groups.mjs': ['sidebar-groups.mjs', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/marked.js': ['../node_modules/marked/lib/marked.esm.js', 'text/javascript'], '/purify.js': ['../node_modules/dompurify/dist/purify.es.mjs', 'text/javascript'] };
+    const files = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/sidebar-groups.mjs': ['sidebar-groups.mjs', 'text/javascript'], '/folder-columns.mjs': ['folder-columns.mjs', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/marked.js': ['../node_modules/marked/lib/marked.esm.js', 'text/javascript'], '/purify.js': ['../node_modules/dompurify/dist/purify.es.mjs', 'text/javascript'] };
     if (req.method === 'GET' && files[url.pathname]) {
       const [file, mime] = files[url.pathname];
       res.writeHead(200, { 'Content-Type': `${mime}; charset=utf-8`, 'Content-Security-Policy': "default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'", 'X-Content-Type-Options': 'nosniff' });
