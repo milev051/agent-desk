@@ -197,7 +197,7 @@ Dugme **+** desno u polju za poruku otvara pregled fajlova na računaru, uključ
 
 GET `/api/chats/ID/files?path=...` vraća imena običnih fajlova i foldera, najviše 500 stavki. Pregled je ograničen na korisnički i radni folder; skrivene putanje, Library, node_modules, privatni ključevi i symlink izlazi nisu dostupni. Server ponovo proverava sve putanje pri slanju, najviše 20. Ostaju postojeće Host/Origin provere i telefonska prijava.
 
-Brisanje prikazuje **Samo ovaj čet** i, kada postoje podagenti, **Čet i podagenti**. Cela grupa ne može da se obriše dok neki njen agent radi. Pri brisanju samo roditelja sačuvani podčet dobija `formerParentChatId`, a aktivna roditeljska veza se uklanja. Obrisani zapisi se čuvaju u `data/trash/`, izvan Git-a. Dugme **Vrati obrisane četove** vraća poslednje brisanje i veze; POST `/api/trash/ID/restore` omogućava vraćanje sačuvanog brisanja i posle ponovnog otvaranja aplikacije. Na telefonu brisanje otvorenog četa vraća na listu, bez otvaranja drugog razgovora.
+Arhiviranje prikazuje **Arhiviraj ovaj čet** i, kada postoje podagenti, **Arhiviraj čet i podagente**. Cela grupa ne može da se arhivira dok neki njen agent radi. Pri arhiviranju samo roditelja sačuvani podčet dobija `formerParentChatId`, a aktivna roditeljska veza se uklanja. Zapisi se čuvaju u `data/archive/`, izvan Git-a, sa rokom od 30 dana od arhiviranja. Podešavanja sadrže **Arhivirani četovi**, preostale dane i vraćanje u listu. GET `/api/archive` daje pregled, a POST `/api/archive/ID/restore` vraća grupu i dostupne roditeljske veze. Istekli zapisi se trajno uklanjaju pri pokretanju, najkasnije na narednoj satnoj proveri tokom rada, ili pri otvaranju arhive. Stari `data/trash/` zapisi prelaze u arhivu sa rokom računatim od vremena prethodnog upisa. Nema dugmeta za poništavanje ispod četa. Na telefonu arhiviranje otvorenog četa vraća na listu.
 
 Automatska tastatura na telefonu podrazumevano je isključena. Može se uključiti u globalnim podešavanjima; izbor se pamti samo u tom pregledaču. Fokus nakon slanja ostaje u unosu. Korisničke poruke su zelene. Podešavanja su peto dugme iste grupe za pokretanje agenata.
 
@@ -221,3 +221,12 @@ Linkovi do `/Users/...`, `/Volumes/...` i `file://...` u porukama postaju veze d
 Na ovom macOS-u Tailscale CLI iz pozadinskog servisa može vratiti poruku da GUI ne može da se pokrene. Potvrđeni privatni HTTPS origin zato je u `~/.config/agent-desk/phone-origin`, izvan Git-a. `AGENT_DESK_PHONE_ORIGIN` ima prednost. Računar i telefon i dalje moraju imati aktivan Tailscale i podešen Serve; link ne otvara javni pristup i ne menja proveru sesije, Host-a ili Origin-a. Posle promene Tailscale DNS naziva treba ažurirati sačuvanu adresu i restartovati servis.
 
 Ikonica potvrde foldera koristi jednostavan simbol Enter. Prečice za posebne foldere nisu prikazane.
+
+
+## Kartice, obaveštenja i kolone foldera
+
+Podagenti su uz donju ivicu, sa kompaktnim karticama i skrolom za dužu listu. Na hover naslov ostaje, a model zamenjuje broj novih i keširanih tokena. Isto važi za glavne kartice. Na telefonu izabrana glavna kartica prikazuje potrošnju umesto modela. Koriste se sačuvani CLI podaci, bez novih upita pretplati.
+
+Kada aktivni agent završi, zaustavi se ili prijavi grešku, pojavljuje se obaveštenje u gornjem desnom uglu. Klik otvara njegov čet. U podešavanjima dugme **Obaveštenja u pregledaču** traži browser dozvolu za sistemska obaveštenja, korisna kada je tab u pozadini. Dostupnost zavisi od pregledača i OS-a; obaveštenja zahtevaju otvorenu stranicu, nema push servisa za zatvoren tab.
+
+Na računaru pregled fajlova koristi kolone nalik Finderu: Home levo, ulazak u folder otvara njegov sadržaj u sledećoj koloni, horizontalni skrol za dugu putanju i zaseban vertikalni skrol u svakoj koloni. Izbor ranijeg foldera uklanja kolone desno. Telefon zadržava jednu listu kartica. Putanja pri dnu, Enter potvrda foldera i Nazad rade u oba prikaza.

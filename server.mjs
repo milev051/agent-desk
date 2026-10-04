@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {createArchive} from './archive.mjs';
 import {browseFiles,withFiles,filePath} from './files.mjs';
 import {createLimits} from './limits.mjs';
 import {createPhoneAccess} from './phone-access.mjs';
@@ -18,6 +19,7 @@ import { buildAccounting } from './accounting.mjs';
 const root = path.dirname(fileURLToPath(import.meta.url));
 const dataDir = process.env.AGENT_DESK_DATA || path.join(root, 'data');
 fs.mkdirSync(dataDir, { recursive: true, mode: 0o700 });
+const archive=createArchive(dataDir);archive.prune();const archiveCleanup=setInterval(()=>archive.prune(),3600000);archiveCleanup.unref();
 const dataFile = path.join(dataDir, 'chats.json');
 const defaultsFile = path.join(dataDir, 'defaults.json');
 let defaults = Object.fromEntries(Object.keys(names).map(agent => [agent, {model:'',effort:''}]));
@@ -188,12 +190,14 @@ const server = http.createServer(async (req, res) => {
       return json(200,{ok:true});
     }
     if (req.method === 'GET' && url.pathname === '/api/models') return json(200, await catalog(binaries));
-    const restoreMatch=url.pathname.match(/^\/api\/trash\/([\w-]+)\/restore$/);
+    if(req.method==='GET' && url.pathname==='/api/archive')return json(200,archive.list().map(r=>({id:r.id,archivedAt:r.archivedAt,expiresAt:r.expiresAt,chats:r.chats.map(c=>({id:c.id,title:c.title,agent:c.settings.agent,model:c.settings.model}))})));
+    const restoreMatch=url.pathname.match(/^\/api\/archive\/([\w-]+)\/restore$/);
     if(req.method==='POST' && restoreMatch){
-      const file=path.join(dataDir,'trash',restoreMatch[1]+'.json');if(!fs.existsSync(file))return json(404,{error:'Obrisani čet nije pronađen.'});
-      const restored=JSON.parse(fs.readFileSync(file,'utf8'));if(restored.some(c=>chats.some(x=>x.id===c.id)))throw Error('Čet je već vraćen.');
+      const record=archive.read(restoreMatch[1]);if(!record)return json(404,{error:'Arhivirani čet nije pronađen.'});
+      const restored=record.chats;if(restored.some(c=>chats.some(x=>x.id===c.id)))throw Error('Čet je već u listi.');
+      for(const c of restored)if(c.parentChatId && ![...chats,...restored].some(x=>x.id===c.parentChatId)){c.formerParentChatId=c.parentChatId;c.formerParentTurnId=c.parentTurnId;delete c.parentChatId;delete c.parentTurnId;}
       chats.unshift(...restored);for(const c of chats)if(restored.some(x=>x.id===c.formerParentChatId)){c.parentChatId=c.formerParentChatId;c.parentTurnId=c.formerParentTurnId;delete c.formerParentChatId;delete c.formerParentTurnId;}
-      fs.unlinkSync(file);update();return json(200,{ok:true});
+      update();archive.remove(record.id);return json(200,{ok:true});
     }
     const queueMatch=url.pathname.match(/^\/api\/chats\/([\w-]+)\/queue(?:\/([\w-]+))?$/);
     if(queueMatch) {
@@ -290,9 +294,9 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'DELETE' && !match[2]) {
         const ids=new Set([chat.id]);if(url.searchParams.get('children')==='1'){let size;do{size=ids.size;for(const c of chats)if(ids.has(c.parentChatId))ids.add(c.id);}while(size!==ids.size);}
         if([...ids].some(id=>running.has(id)))return json(409,{error:'Zaustavi agente pre brisanja.'});
-        const trashId=randomUUID(),trashDir=path.join(dataDir,'trash');fs.mkdirSync(trashDir,{recursive:true,mode:0o700});fs.writeFileSync(path.join(trashDir,trashId+'.json'),JSON.stringify(chats.filter(c=>ids.has(c.id)),null,2),{mode:0o600});
+        const archiveId=archive.add(chats.filter(c=>ids.has(c.id)));
         chats=chats.filter(c=>!ids.has(c.id));for(const c of chats)if(ids.has(c.parentChatId)){c.formerParentChatId=c.parentChatId;c.formerParentTurnId=c.parentTurnId;delete c.parentChatId;delete c.parentTurnId;}
-        update();return json(200,{ok:true,deleted:[...ids],trashId});
+        update();return json(200,{ok:true,deleted:[...ids],archiveId});
       }
     }
     const files = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/sidebar-groups.mjs': ['sidebar-groups.mjs', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/marked.js': ['../node_modules/marked/lib/marked.esm.js', 'text/javascript'], '/purify.js': ['../node_modules/dompurify/dist/purify.es.mjs', 'text/javascript'] };
@@ -305,5 +309,5 @@ const server = http.createServer(async (req, res) => {
   } catch (error) { json(400, { error: error.message }); }
 });
 server.listen(port, '127.0.0.1', () => {phone.start();limits.start();console.log(`Agent Desk: http://127.0.0.1:${port}`);});
-function shutdown() {shuttingDown=true;limits.close();phone.close();titleManager.close();for (const id of running.keys()) stop(id); setTimeout(() => process.exit(0), 2200); server.close(); }
+function shutdown() {shuttingDown=true;clearInterval(archiveCleanup);limits.close();phone.close();titleManager.close();for (const id of running.keys()) stop(id); setTimeout(() => process.exit(0), 2200); server.close(); }
 process.on('SIGINT', shutdown); process.on('SIGTERM', shutdown);

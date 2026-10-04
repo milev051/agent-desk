@@ -20,7 +20,7 @@
           <small id="title-status" aria-live="polite"></small>
         </fieldset>
         <fieldset class="phone-settings"><legend>Telefon · Tailscale</legend><small id="phone-status"></small><a id="phone-address" hidden></a><img id="phone-qr" alt="QR kod za jednokratnu prijavu" width="180" height="180" hidden><input id="phone-link" readonly aria-label="Privremeni link za telefon" hidden><div class="settings-actions"><button id="phone-copy" type="button">Kopiraj link</button><button id="phone-revoke" type="button" hidden>Odjavi telefone</button></div></fieldset>
-        <section id="project-usage"><div>Potrošnja projekata</div><div id="project-usage-list"></div></section>
+        <section class="archive-settings"><button id="archive-open" type="button">Arhivirani četovi</button><div id="archive-list" hidden></div></section><button id="notifications-enable" type="button">Obaveštenja u pregledaču</button><small id="notifications-status"></small><section id="project-usage"><div>Potrošnja projekata</div><div id="project-usage-list"></div></section>
         <div class="settings-actions"><button id="defaults-close" type="button">Zatvori</button><button type="submit">Sačuvaj</button></div>
       </form>
     </section>
@@ -37,8 +37,8 @@
   </main>
   <dialog id="files-dialog" aria-label="Fajl sa računara"><div id="file-entries"></div><footer class="folder-footer"><nav id="folder-breadcrumbs" aria-label="Putanja foldera"></nav><div class="settings-actions"><button id="folder-select" type="button" aria-label="Poveži folder" title="Poveži folder"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 10 4 15l5 5M4 15h12a4 4 0 0 0 4-4V4"/></svg></button></div></footer></dialog>
   <dialog id="local-file-dialog" aria-label="Fajl sa računara, prikaz"><iframe id="local-file-frame" title="Prikaz fajla" sandbox="allow-scripts"></iframe><button id="local-file-close" type="button">Zatvori</button></dialog>
-  <dialog id="delete-dialog" aria-label="Obriši čet"><p id="delete-title"></p><div class="settings-actions"><button id="delete-cancel">Otkaži</button><button id="delete-only">Samo ovaj čet</button><button id="delete-family">Čet i podagenti</button></div></dialog>
+  <dialog id="delete-dialog" aria-label="Arhiviraj čet"><p id="delete-title"></p><div class="settings-actions"><button id="delete-cancel">Otkaži</button><button id="delete-only">Arhiviraj ovaj čet</button><button id="delete-family">Arhiviraj čet i podagente</button></div></dialog>
   <div id="chat-popover" role="dialog" aria-label="Opcije četa" hidden></div>
-  <div id="toast" role="alert" hidden></div><button id="undo-delete" hidden>Vrati obrisane četove</button>
+  <div id="toast" role="alert" hidden></div><div id="completion-notices" aria-live="polite"></div>
 </body>
 </html>

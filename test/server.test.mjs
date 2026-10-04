@@ -145,9 +145,10 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     const attached=await done(a.id);assert.match(JSON.parse(attached.messages.at(-1).text).input,/primer\.txt/);assert.ok(!JSON.parse(attached.messages.at(-1).text).input.includes('sadržaj koji se ne šalje automatski'));
     const deleted=await call(`/api/chats/${queued.id}`,'DELETE');assert.equal(deleted.status,200);
     const independent=(await call(`/api/chats/${child.id}`)).data;assert.equal(independent.parentChatId,undefined);assert.equal(independent.formerParentChatId,queued.id);
-    assert.equal((await call(`/api/trash/${deleted.data.trashId}/restore`,'POST',{})).status,200);assert.equal((await call(`/api/chats/${child.id}`)).data.parentChatId,queued.id);
+    assert.ok((await call('/api/archive')).data.some(r=>r.id===deleted.data.archiveId && r.expiresAt>r.archivedAt));
+    assert.equal((await call(`/api/archive/${deleted.data.archiveId}/restore`,'POST',{})).status,200);assert.equal((await call(`/api/chats/${child.id}`)).data.parentChatId,queued.id);
     const familyDeleted=await call(`/api/chats/${queued.id}?children=1`,'DELETE');assert.equal(familyDeleted.status,200);assert.ok(familyDeleted.data.deleted.includes(child.id));assert.equal((await call(`/api/chats/${child.id}`)).status,404);
-    assert.equal((await call(`/api/trash/${familyDeleted.data.trashId}/restore`,'POST',{})).status,200);assert.equal((await call(`/api/chats/${child.id}`)).data.parentChatId,queued.id);
+    assert.equal((await call(`/api/archive/${familyDeleted.data.archiveId}/restore`,'POST',{})).status,200);assert.equal((await call(`/api/chats/${child.id}`)).data.parentChatId,queued.id);
     const unused=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
     assert.equal((await call(`/api/chats/${unused.id}/discard-empty`,'POST',{})).status,200);assert.equal((await call(`/api/chats/${unused.id}`)).status,404);
     assert.equal((await call(`/api/chats/${a.id}/discard-empty`,'POST',{})).status,409);
