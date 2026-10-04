@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="sr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Agent Desk</title><link rel="stylesheet" href="/style.css"><script type="module" src="/app.js"></script></head>
+<body>
+  <aside class="sidebar">
+    <div id="new-agents" role="group" aria-label="Novi čet"></div>
+    <input id="search" placeholder="Pretraži četove" aria-label="Pretraži četove">
+    <nav id="chats" aria-label="Četovi"></nav>
+    <button id="agents-open" aria-expanded="false">Agenti</button>
+    <button id="defaults-open">Podešavanja</button>
+  </aside>
+  <aside id="agent-panel" aria-label="Pokrenuti agenti" hidden><div class="agent-panel-heading">Agenti<button id="agents-close" aria-label="Sakrij agente">×</button></div><nav id="agent-tree" aria-label="Agenti i podagenti"></nav></aside>
+  <main>
+    <div id="chat-navigation"><button id="chat-back" aria-label="Lista četova">←</button><button id="chat-parent" aria-label="Roditeljski čet" hidden>↑</button><span id="chat-title"></span><button id="chat-options" aria-label="Opcije otvorenog četa" hidden></button></div>
+    <section id="defaults" aria-label="Podešavanja" hidden>
+      <form id="defaults-form">
+        <div class="defaults-heading"><span></span><span>Model</span><span>Razmišljanje</span></div>
+        <div id="default-agents"></div>
+        <label class="color-setting">Boja odgovora<select id="response-colors"><option value="label">Samo oznaka modela</option><option value="full">Oznaka i tekst odgovora</option></select></label>
+        <fieldset class="title-settings"><legend>Naslovi četova</legend>
+          <label><input id="auto-titles" type="checkbox"> Automatski naslovi</label>
+          <select id="title-model" aria-label="Model za naslove"><option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite</option><option value="gemini-3.5-flash">Gemini 3.5 Flash</option></select>
+          <div class="title-key-row"><input id="google-title-key" type="password" autocomplete="off" aria-label="Google API ključ za naslove" placeholder="Google API ključ"><button id="title-check" type="button">Proveri</button></div>
+          <small id="title-status" aria-live="polite"></small>
+        </fieldset>
+        <fieldset class="phone-settings"><legend>Telefon · Tailscale</legend><small id="phone-status"></small><img id="phone-qr" alt="QR kod za jednokratnu prijavu" width="180" height="180" hidden><input id="phone-link" readonly aria-label="Privremeni link za telefon" hidden><div class="settings-actions"><button id="phone-copy" type="button">Kopiraj link</button><button id="phone-revoke" type="button" hidden>Odjavi telefone</button></div></fieldset>
+        <details id="project-usage"><summary>Potrošnja projekata</summary><div id="project-usage-list"></div></details>
+        <div class="settings-actions"><button id="defaults-close" type="button">Zatvori</button><button type="submit">Sačuvaj</button></div>
+      </form>
+    </section>
+    <section id="record-panel" class="chat-panel" aria-label="Zapis četa" hidden><div class="panel-content"><h2>Zapis četa</h2><textarea id="record-text" rows="18" readonly aria-label="Zapis četa, samo za čitanje"></textarea><div class="settings-actions"><button data-close-panel>Zatvori</button></div></div></section>
+    <details id="usage-details" hidden><summary id="usage-heading">Potrošnja</summary><div id="usage-breakdown"></div></details>
+    <div id="conversation" aria-live="polite"></div>
+    <div class="composer-area">
+      <div id="transfer-preview" aria-live="polite" hidden></div>
+      <div id="queue" aria-label="Red čekanja"></div>
+      <span id="connection" hidden>Veza je prekinuta.</span>
+      <form id="composer"><textarea id="prompt" rows="1" placeholder="Poruka" aria-label="Poruka agentu"></textarea></form>
+    </div>
+  </main>
+  <div id="chat-popover" role="dialog" aria-label="Opcije četa" hidden></div>
+  <div id="toast" role="alert" hidden></div>
+</body>
+</html>
