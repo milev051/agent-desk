@@ -113,3 +113,5 @@ body:has(#agent-panel:not([hidden])){grid-template-rows:minmax(0,1fr) auto}#agen
 .chat-row,.agent-tree-item{height:46px;min-height:46px;box-sizing:border-box;padding-top:5px;padding-bottom:5px}
 .chat-item>span,.agent-card-title{display:block;height:18px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card-model,.card-usage{height:16px;min-height:16px;max-height:16px;line-height:16px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:400}
+
+.agent-limits.limits-stale{opacity:.6}

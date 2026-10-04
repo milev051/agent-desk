@@ -31,7 +31,7 @@ for(const chat of chats)for(const m of chat.messages)if(m.agent==='codex' && m.u
 const running = new Map(), listeners = new Set();
 let shuttingDown=false;
 const port = Number(process.env.PORT || 4317);
-const limits=createLimits({enabled:process.platform==='darwin' && process.env.AGENT_DESK_DISABLE_LIMITS!=='1'});
+const limits=createLimits({cacheFile:path.join(dataDir,'limits-cache.json'),enabled:process.platform==='darwin' && process.env.AGENT_DESK_DISABLE_LIMITS!=='1'});
 const phoneOriginFile=path.join(process.env.AGENT_DESK_CONFIG || path.join(os.homedir(),'.config','agent-desk'),'phone-origin');
 const savedPhoneOrigin=fs.existsSync(phoneOriginFile)?fs.readFileSync(phoneOriginFile,'utf8').trim():'';
 const phone=createPhoneAccess({sessionFile:path.join(path.dirname(phoneOriginFile),'phone-sessions.json'),port,gatewayPort:Number(process.env.AGENT_DESK_PHONE_PORT || port+2),origin:process.env.AGENT_DESK_PHONE_ORIGIN || savedPhoneOrigin});

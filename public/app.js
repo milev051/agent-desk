@@ -77,7 +77,7 @@ function modelLabel(chat) {
 }
 const agentOrder=['codex','claude','antigravity','grok'];
 let limits={};
-function renderNewAgents() {const settings=$('#defaults-open');$('#new-agents').innerHTML=agentOrder.map(id=>meta.agents.find(a=>a.id===id)).filter(Boolean).map(a=>`<button class="new-agent" data-new-agent="${a.id}" title="Novi čet · ${escape(a.name)}" aria-label="Novi čet · ${escape(a.name)}" ${!a.available?'disabled':''}><img src="${agentLogos[a.id]}" alt="" width="21" height="21"><small class="agent-limits" title="${escape(limitDescription(a.id))}">${limitDisplay(a.id)}</small></button>`).join('');$('#new-agents').append(settings);}
+function renderNewAgents() {const settings=$('#defaults-open');$('#new-agents').innerHTML=agentOrder.map(id=>meta.agents.find(a=>a.id===id)).filter(Boolean).map(a=>`<button class="new-agent" data-new-agent="${a.id}" title="Novi čet · ${escape(a.name)}" aria-label="Novi čet · ${escape(a.name)}" ${!a.available?'disabled':''}><img src="${agentLogos[a.id]}" alt="" width="21" height="21"><small class="agent-limits ${limits[a.id]?.stale?'limits-stale':''}" title="${escape(limitDescription(a.id))}">${limitDisplay(a.id)}</small></button>`).join('');$('#new-agents').append(settings);}
 let lastSidebar='', paintingSidebar=false;
 function renderSidebar() {
   const row=c=>`<div role="button" tabindex="0" aria-label="${escape(c.title)}" class="chat-row ${c.id===active?'active':''} ${c.running?'working':notification(c)}" data-row="${c.id}" data-agent="${c.settings.agent}" title="${escape(c.title)} · ${escape(agentName(c.settings.agent))} · ${escape(modelLabel(c))}">
@@ -297,9 +297,10 @@ async function refreshPhone(){
 $('#phone-copy').onclick=()=>guard(async()=>{await navigator.clipboard.writeText($('#phone-link').value);toast('Link je kopiran.');});
 $('#phone-revoke').onclick=()=>guard(async()=>{await api('/api/phone/revoke','POST',{});await refreshPhone();toast('Prijave telefona su odjavljene.');});
 
-function limitDescription(id){const s=limits[id];if(!s)return 'Preostali limiti: '+(id==='grok'?'7 dana':'5 sati · 7 dana')+'; učitavam';return s.error || 'Preostalo: '+(id==='grok'?'7 dana':'5 sati · 7 dana')+(s.updatedAt?' · '+new Date(s.updatedAt).toLocaleTimeString('sr-Latn-RS'): '');}
+function limitDescription(id){const s=limits[id];if(!s)return 'Preostali limiti: '+(id==='grok'?'7 dana':'5 sati · 7 dana')+'; učitavam';return (s.stale?'Poslednje uspešno očitavanje · ':'')+(s.updatedAt?new Date(s.updatedAt).toLocaleTimeString('sr-Latn-RS')+' · ':'')+(s.error || 'Preostalo: '+(id==='grok'?'7 dana':'5 sati · 7 dana'))+(s.nextAttemptAt>Date.now()?' · Sledeća provera '+new Date(s.nextAttemptAt).toLocaleTimeString('sr-Latn-RS'):'');}
+
 function limitDisplay(id){const s=limits[id];const slot=key=>{const w=s?.windows?.find(w=>w.period===key);if(!w)return '<span class="limit-unknown">?</span>';const left=Math.max(0,Math.min(100,w.remaining));return `<span class="${left>65?'limit-good':left>=35?'limit-mid':'limit-low'}">${Math.round(left)}</span>`;};return id==='grok'?slot('weekly'):slot('fiveHour')+' '+slot('weekly');}
-async function refreshLimits(){let wait=120000;try{const response=await api('/api/limits');limits=response.agents || {};if(response.loading)wait=5000;renderNewAgents();}catch{}setTimeout(refreshLimits,wait);}
+async function refreshLimits(){let wait=120000;try{const response=await api('/api/limits');limits=response.agents || {};renderNewAgents();}catch{}setTimeout(refreshLimits,wait);}
 
 let fileListing,deleteTarget;
 function renderLinkedFiles(){const paths=linkedFiles.get(active)||[];$('#linked-files').innerHTML=paths.map((p,i)=>`<button type="button" data-remove-file="${i}" title="${escape(p)}">${escape(p.split('/').pop())} ×</button>`).join('');}
