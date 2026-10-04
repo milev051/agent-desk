@@ -18,7 +18,7 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     await once(server.stdout, 'data');
     async function call(url, method = 'GET', data, origin = base) { const r = await fetch(base + url, { method, headers: { Origin: origin, 'Content-Type': 'application/json' }, body: data ? JSON.stringify(data) : undefined }); return { status: r.status, data: await r.json() }; }
     async function done(id) { for(let i=0;i<100;i++){const c=(await call('/api/chats')).data.find(c=>c.id===id);if(!c.running)return c;await new Promise(r=>setTimeout(r,30));}throw Error('CLI nije završio'); }
-    assert.equal((await call('/api/chats', 'POST', {}, 'https://example.com')).status, 403);
+    assert.equal((await call('/api/chats', 'POST', {}, 'https://example.com')).status, 403);assert.deepEqual((await call('/api/limit-history')).data,[]);
     assert.equal((await call('/api/title-settings')).data.configured,false);
     assert.equal((await call('/api/title-settings','PUT',{key:'test-only-key',enabled:false},'https://example.com')).status,403);
     const titlePrefs=(await call('/api/title-settings','PUT',{key:'test-only-key',enabled:false})).data;
@@ -154,7 +154,7 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal((await call(`/api/chats/${a.id}/discard-empty`,'POST',{})).status,409);
     const beforeResume=(await call('/api/chats')).data.length,childBefore=(await call(`/api/chats/${child.id}`)).data;
     const resumed=await call(`/api/chats/${queued.id}/delegate`,'POST',{childId:child.id,task:'Nastavi proveru istog zadatka'});assert.equal(resumed.status,202);assert.equal(resumed.data.id,child.id);
-    const childAfter=await done(child.id);assert.equal((await call('/api/chats')).data.length,beforeResume);assert.equal(childAfter.sessions.codex,childBefore.sessions.codex);assert.ok(childAfter.messages.length>childBefore.messages.length);
+    const childAfter=await done(child.id);assert.ok(childAfter.messages.at(-1).completedAt>=childAfter.messages.at(-1).createdAt);assert.match(JSON.parse(childAfter.messages.at(-1).text).input,/Snimak strukture povezanih četova/);assert.ok(JSON.parse(childAfter.messages.at(-1).text).input.includes(queued.id));assert.equal((await call('/api/chats')).data.length,beforeResume);assert.equal(childAfter.sessions.codex,childBefore.sessions.codex);assert.ok(childAfter.messages.length>childBefore.messages.length);
     assert.equal((await call(`/api/chats/${a.id}/delegate`,'POST',{childId:child.id,task:'Nedozvoljen drugi roditelj'})).status,400);
     const reqId='test-request-once';await call(`/api/chats/${a.id}/send`,'POST',{text:'Poruka jednom',requestId:reqId});await done(a.id);
     await call(`/api/chats/${a.id}/send`,'POST',{text:'Poruka jednom',requestId:reqId});assert.equal((await call(`/api/chats/${a.id}`)).data.messages.filter(m=>m.requestId===reqId).length,1);

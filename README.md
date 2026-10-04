@@ -238,3 +238,19 @@ Kartice četova i podagenata imaju istu visinu od 46 px, sa jednim redom naslova
 
 
 Limiti pretplate se osvežavaju na dva minuta; otvaranje ili osvežavanje browsera samo čita serverski snimak i ne pravi novi upit provajderu. Claude 429 poštuje dužu pauzu koju server traži. Poslednji uspešni procenti ostaju sačuvani u `data/limits-cache.json`, zatamnjeni tokom greške; hover prikazuje vreme očitavanja, razlog i sledeću proveru. Raspored u `data/limits-cache.json.schedule` preživljava restart i sprečava prerano novo očitavanje. Oba zapisa sadrže samo javne metrike i rokove, bez kredencijala. Ako uspešno očitavanje još ne postoji, ostaje `?`, bez izmišljenih procenata.
+
+
+## Izbor modela i očitane promene limita
+
+Hover na gornjoj ikonici otvara meni modela za novi čet; klik radi i na telefonu. Klik na stavku pravi čet u izabranom agentu i modelu. Stavka Podrazumevani koristi globalno podešavanje. Prazan trenutni čet može da se prenameni bez gomilanja novih četova. Arhiviranje bez aktivnih podagenata odmah sklanja čet; samo četovi sa podagentima prikazuju izbor roditelj ili cela grupa.
+
+`data/limit-history.json` čuva uzastopna uspešna očitavanja limita i njihove promene. Globalna podešavanja prikazuju poslednjih 100 promena; meni kartice poslednjih pet koje se vremenski poklapaju sa odgovorima tog četa ili njegovih podagenata. Beleže se vreme, 5h/7d procenti i ID-jevi odgovora, naslovi i modeli koji su radili u tom intervalu. Novi odgovori imaju `completedAt`, uz postojeći `createdAt`, da bi mogli da se povežu sa intervalom. Ne koristi se Gemini i nema dodatnih upita provajderima.
+
+Ovo je korelacija očitanih promena, nije obračun koliko je konkretan odgovor potrošio pretplate. Očitavanja su na dva minuta ili ređe tokom pauze, a druge CLI sesije koriste isti limit. Reset prozora, rast preostalog procenta i zastareli podaci ne računaju se kao nova potrošnja. Pad može da bude registrovan i bez prepoznatog četa. Stari odgovori bez vremena završetka ne dobijaju izmišljenu atribuciju. Precizni tokeni koje CLI prijavi i dalje se čuvaju po odgovoru i modelu.
+
+
+## Kopiranje poruka u Markdown
+
+Kvadratić pored kopiranja poruke bira tu poruku. Može se odabrati više poruka, zatim **Kopiraj MD**, ili **Sve** za ceo čet. Poruke se kopiraju redosledom iz razgovora, sa autorom, modelom i ISO UTC vremenom; njihov originalni Markdown, tabele i blokovi koda ostaju netaknuti. **Struktura** uključuje izvorni čet, radni folder, povezane agente i podagente, stanja, ID-jeve i do 20 povezanih putanja. Sadržaji fajlova i native ID-jevi sesija se ne kopiraju. Meni kartice ima **MD** za kopiranje celog četa sa ovim pregledom. Kopiranje jednog odgovora i bloka koda i dalje radi kao ranije.
+
+Agent pri svakoj novoj poruci dobija snimak strukture povezane grupe, modela i stanja podagenata, informaciju da li je sesija sačuvana, radni folder i povezane putanje. Snimak nije živo stanje tokom dugog rada, pa za promene nakon početka odgovora koristi postojeći GET API. Kopirani ID-jevi su reference na postojeće četove; eksport sam ne kreira nove podagente i ne daje kopiranom četu novu roditeljsku vezu.

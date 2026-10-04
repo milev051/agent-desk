@@ -7,3 +7,18 @@ export function sidebarGroups(chats, matches=()=>true) {
   return roots.map(chat=>{const all=children.get(chat.id)||[];return {chat,children:all.filter(c=>matches(chat)||matches(c)).sort(sort),updatedAt:Math.max(chat.updatedAt||0,...all.map(c=>c.updatedAt||0))};})
     .filter(g=>matches(g.chat)||g.children.length).sort((a,b)=>b.updatedAt-a.updatedAt);
 }
+
+// Shared context and Markdown export for the same chat tree.
+const names={codex:'Codex',claude:'Claude Code',grok:'Grok Build',antigravity:'Antigravity'};
+const md=value=>String(value||'').replace(/[\r\n]+/g,' ').replace(/[\\`*_[\]<>#]/g,'\\$&');
+export function linkedPaths(chat){const paths=new Set();for(const m of chat.messages || []){if(m.role!=='user')continue;const block=(m.text||'').split('Povezane putanje na računaru (pročitaj po potrebi):\n').slice(1);for(const b of block)for(const line of b.split('\n')){if(!line.startsWith('- '))break;try{const p=JSON.parse(line.slice(2));if(typeof p==='string')paths.add(p);}catch{break;}}}return [...paths].slice(-20);}
+export function chatStructure(chats,id,{isRunning=c=>c.running}={}){
+ const current=chats.find(c=>c.id===id);if(!current)return [];
+ let root=current;const ancestors=new Set([root.id]);while(root.parentChatId){const p=chats.find(c=>c.id===root.parentChatId);if(!p||ancestors.has(p.id))break;root=p;ancestors.add(root.id);}
+ const result=[],seen=new Set();function visit(c,depth){if(seen.has(c.id))return;seen.add(c.id);const last=[...(c.messages||[])].reverse().find(m=>m.role==='assistant');result.push({id:c.id,parentChatId:c.parentChatId || null,title:c.title,agent:c.settings.agent,model:c.settings.model || last?.model || '',status:isRunning(c)?'radi':({done:'završen',stopped:'zaustavljen',error:'greška',interrupted:'prekinut'}[last?.status] || 'nije pokrenut'),sessionSaved:!!c.sessions?.[c.settings.agent],cwd:c.settings.cwd,depth});for(const child of chats.filter(x=>x.parentChatId===c.id))visit(child,depth+1);}visit(root,0);return result;
+}
+export function exportMessages(chats,id,ids,{includeContext=true,modelName=(_agent,id)=>id}={}){
+ const chat=chats.find(c=>c.id===id);if(!chat)return '';const selected=new Set(ids);const messages=chat.messages.filter(m=>selected.has(m.id)&&m.text);if(!messages.length)return '';
+ const header=[`# ${md(chat.title)}`];if(includeContext){header.push(`Izvorni čet: ${md(chat.id)}`,`Radni folder: ${md(chat.settings.cwd)}`,'','## Struktura izvornog četa');for(const c of chatStructure(chats,id))header.push(`${'  '.repeat(c.depth)}- ${md(c.title)} (${names[c.agent]||'Agent'} · ${md(modelName(c.agent,c.model)||'podrazumevani model')} · ${c.status}; ID ${md(c.id)}${c.sessionSaved?'; sesija sačuvana':''})`);const paths=linkedPaths(chat);if(paths.length)header.push('','## Povezane putanje',...paths.map(p=>'- '+md(p)));header.push('','IDs su reference na postojeće četove, ne kopije podagenata.');}
+ return header.join('\n')+'\n\n'+messages.map(m=>`## ${m.role==='user'?'Korisnik':(names[m.agent]||'Agent')+' · '+md(modelName(m.agent,m.model)||'model nije prijavljen')} · ${Number.isFinite(m.createdAt)?new Date(m.createdAt).toISOString():'vreme nije zabeleženo'}\n\n${m.text}`).join('\n\n');
+}

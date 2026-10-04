@@ -1,6 +1,8 @@
 import http from 'node:http';
 import {createArchive} from './archive.mjs';
 import {browseFiles,withFiles,filePath} from './files.mjs';
+import {chatStructure,linkedPaths} from './public/sidebar-groups.mjs';
+import {createQuotaHistory} from './quota-history.mjs';
 import {createLimits} from './limits.mjs';
 import {createPhoneAccess} from './phone-access.mjs';
 import fs from 'node:fs';
@@ -31,7 +33,8 @@ for(const chat of chats)for(const m of chat.messages)if(m.agent==='codex' && m.u
 const running = new Map(), listeners = new Set();
 let shuttingDown=false;
 const port = Number(process.env.PORT || 4317);
-const limits=createLimits({cacheFile:path.join(dataDir,'limits-cache.json'),enabled:process.platform==='darwin' && process.env.AGENT_DESK_DISABLE_LIMITS!=='1'});
+const quotaHistory=createQuotaHistory(path.join(dataDir,'limit-history.json'),{turns:()=>chats.flatMap(c=>c.messages.filter(m=>m.role==='assistant' && m.createdAt && (m.completedAt || m.status==='running')).map(m=>({chatId:c.id,parentChatId:c.parentChatId,title:c.title,messageId:m.id,agent:m.agent,model:m.model,createdAt:m.createdAt,completedAt:m.completedAt || null})))});
+const limits=createLimits({onSample:sample=>{if(quotaHistory.observe(sample))broadcast();},cacheFile:path.join(dataDir,'limits-cache.json'),enabled:process.platform==='darwin' && process.env.AGENT_DESK_DISABLE_LIMITS!=='1'});
 const phoneOriginFile=path.join(process.env.AGENT_DESK_CONFIG || path.join(os.homedir(),'.config','agent-desk'),'phone-origin');
 const savedPhoneOrigin=fs.existsSync(phoneOriginFile)?fs.readFileSync(phoneOriginFile,'utf8').trim():'';
 const phone=createPhoneAccess({sessionFile:path.join(path.dirname(phoneOriginFile),'phone-sessions.json'),port,gatewayPort:Number(process.env.AGENT_DESK_PHONE_PORT || port+2),origin:process.env.AGENT_DESK_PHONE_ORIGIN || savedPhoneOrigin});
@@ -41,7 +44,7 @@ const historyCounts=new Map();
 const accounting=()=>usageCache ||= buildAccounting(chats);
 const historyForCount=c=>historyText(c.messages.filter(m=>m.text));
 const historyHash=text=>createHash('sha256').update(text).digest('hex');
-const publicChat = c => ({ ...c, historyTokenCount:c.historyTokenCount?.hash===historyHash(historyForCount(c))?c.historyTokenCount:null, usageSummary:accounting().chats[c.id], running: running.has(c.id), context:contextEstimate(c), transferEstimates:Object.fromEntries(Object.keys(names).map(agent=>[agent,contextEstimate(c,agent)])), transfers:Object.fromEntries(Object.keys(names).map(agent=>[agent,contextEstimate(c,agent).transfer])) });
+const publicChat = c => ({ ...c, quotaChanges:quotaHistory.forChat(c.id), historyTokenCount:c.historyTokenCount?.hash===historyHash(historyForCount(c))?c.historyTokenCount:null, usageSummary:accounting().chats[c.id], running: running.has(c.id), context:contextEstimate(c), transferEstimates:Object.fromEntries(Object.keys(names).map(agent=>[agent,contextEstimate(c,agent)])), transfers:Object.fromEntries(Object.keys(names).map(agent=>[agent,contextEstimate(c,agent).transfer])) });
 function broadcast() { const payload = `data: ${JSON.stringify(chats.map(publicChat))}\n\n`; for (const res of listeners) res.write(payload); }
 function update() { usageCache=null;save(); broadcast(); }
 const titleManager=createTitleManager({settingsFile:path.join(dataDir,'title-settings.json'),keyFile:path.join(process.env.AGENT_DESK_CONFIG || path.join(os.homedir(),'.config','agent-desk'),'google-api-key'),getChat:id=>chats.find(c=>c.id===id),changed:update});
@@ -51,7 +54,7 @@ function locate(name) {
   return null;
 }
 const binaries = { codex: locate('codex'), claude: locate('claude'), grok: locate('grok'), antigravity: locate('agy') };
-function metadata() { return { cwd: root, chatFork: true, titleSettings:titleManager.settings(), agents: Object.entries(names).map(([id, name]) => ({ id, name, available: !!binaries[id], detail: binaries[id] ? 'CLI pronađen · koristi postojeću prijavu' : 'CLI nije pronađen' })) }; }
+function metadata() { return { cwd: root, chatFork: true, limitHistory:true, titleSettings:titleManager.settings(), agents: Object.entries(names).map(([id, name]) => ({ id, name, available: !!binaries[id], detail: binaries[id] ? 'CLI pronađen · koristi postojeću prijavu' : 'CLI nije pronađen' })) }; }
 function validate(s) {
   if (!Object.hasOwn(names, s.agent)) throw new Error('Nepoznat agent.');
   if (!['full', 'read'].includes(s.access)) throw new Error('Nepoznat pristup.');
@@ -71,8 +74,8 @@ function stopRelated(id) {for(const c of chats)if(c.parentChatId===id)stop(c.id)
 function resolveLocalFile(p){for(const cwd of new Set([root,...chats.map(c=>c.settings.cwd)])){try{return filePath(p,cwd);}catch{}}throw Error('Fajl nije dostupan.');}
 function appContext(chat) {
   const address=`http://127.0.0.1:${port}`;
-  const children=chats.filter(c=>c.parentChatId===chat.id).map(c=>({id:c.id,naziv:c.title,agent:c.settings.agent,stanje:running.has(c.id)?'radi':'spreman za nastavak',sesija:!!c.sessions[c.settings.agent]}));
-  return `Postojeći podčetovi: ${JSON.stringify(children)}. Završen CLI proces ne znači da je podagent izgubljen: čet i sesija su sačuvani. Za nastavak istog zadatka koristi postojeći podčet, ne pravi zamenu. POST ${address}/api/chats/${chat.id}/delegate sa telom {"childId":"postojeći ID","task":"nastavi zadatak"} nastavlja podčet sa njegovom istorijom i sesijom. Novi podčet napravi samo za nov zadatak ili izričit zahtev korisnika.\nOkruženje: Agent Desk; čet ${chat.id}; radni folder ${chat.settings.cwd}; agent ${chat.settings.agent}; model ${chat.settings.model || 'CLI podrazumevani'}. Datumi poruka su ISO UTC.\nAko zadatak zahteva podagenta, možeš lokalnim HTTP zahtevom napraviti podčet: POST ${address}/api/chats/${chat.id}/delegate, header Origin: ${address}, Content-Type: application/json, telo {"agent":"codex","name":"Provera testova","task":"konkretan zadatak"} (agenti: codex, claude, grok, antigravity). Polje name je kratak naziv uloge ili zadatka podagenta, ne samo broj radnika. Odgovor sadrži id. GET ${address}/api/chats/ID vraća running i messages. Podčet koristi isti folder i zasebnu sesiju; rezultat pročitaj i objedini. Najviše dva aktivna podčeta, samo jedan nivo delegiranja. Ne otvaraj podčet bez potrebe za korisnikov zadatak.`;
+  const structure=chatStructure(chats,chat.id,{isRunning:c=>running.has(c.id)});const children=structure.filter(c=>c.parentChatId===chat.id);const paths=linkedPaths(chat);
+  return `Snimak strukture povezanih četova u trenutku slanja: ${JSON.stringify(structure)}. Povezane putanje (sadržaj nije učitan): ${JSON.stringify(paths)}. Stanja su snimak pri slanju; tokom rada koristi GET za aktuelno stanje.\nPostojeći podčetovi: ${JSON.stringify(children)}. Završen CLI proces ne znači da je podagent izgubljen: čet i sesija su sačuvani. Za nastavak istog zadatka koristi postojeći podčet, ne pravi zamenu. POST ${address}/api/chats/${chat.id}/delegate sa telom {"childId":"postojeći ID","task":"nastavi zadatak"} nastavlja podčet sa njegovom istorijom i sesijom. Novi podčet napravi samo za nov zadatak ili izričit zahtev korisnika.\nOkruženje: Agent Desk; čet ${chat.id}; radni folder ${chat.settings.cwd}; agent ${chat.settings.agent}; model ${chat.settings.model || 'CLI podrazumevani'}. Datumi poruka su ISO UTC.\nAko zadatak zahteva podagenta, možeš lokalnim HTTP zahtevom napraviti podčet: POST ${address}/api/chats/${chat.id}/delegate, header Origin: ${address}, Content-Type: application/json, telo {"agent":"codex","name":"Provera testova","task":"konkretan zadatak"} (agenti: codex, claude, grok, antigravity). Polje name je kratak naziv uloge ili zadatka podagenta, ne samo broj radnika. Odgovor sadrži id. GET ${address}/api/chats/ID vraća running i messages. Podčet koristi isti folder i zasebnu sesiju; rezultat pročitaj i objedini. Najviše dva aktivna podčeta, samo jedan nivo delegiranja. Ne otvaraj podčet bez potrebe za korisnikov zadatak.`;
 }
 function drainQueue(chat) {
   if(shuttingDown || chat.queuePaused || chat.queueError || running.has(chat.id) || !chat.queue?.length)return;
@@ -133,7 +136,7 @@ async function send(chat, prompt, options={}) {
   function finish(code, error) {
     if (finished) return; finished = true; clearTimeout(run.timeout); clearTimeout(run.killTimer);
     if (buffer.trim()) event(buffer);
-    running.delete(chat.id); reply.activity = '';
+    running.delete(chat.id); reply.activity = '';reply.completedAt=Date.now();
     reply.status = run.stopped ? 'stopped' : code === 0 && !error && !reply.error ? 'done' : 'error';
     if (reply.status === 'error') reply.error ||= error?.message || stderr.trim() || `Agent je završio sa kodom ${code}.`;
     if (!reply.text && reply.status === 'done') { reply.status = 'error'; reply.error = 'Agent je završio bez tekstualnog odgovora. Proveri CLI prijavu.'; }
@@ -166,6 +169,7 @@ const server = http.createServer(async (req, res) => {
       const types={'.html':'text/html','.htm':'text/html','.css':'text/css','.js':'text/javascript','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.pdf':'application/pdf'};
       res.writeHead(200,{'Content-Type':(types[path.extname(p).toLowerCase()]||'text/plain')+'; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"sandbox allow-scripts; default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'none'; frame-src 'none'; object-src 'none'"});fs.createReadStream(p).pipe(res);return;
     }
+    if(req.method==='GET' && url.pathname==='/api/limit-history')return json(200,quotaHistory.list());
     if(req.method==='GET' && url.pathname==='/api/limits')return json(200,limits.snapshot());
     if(req.method==='GET' && url.pathname==='/api/usage')return json(200,accounting());
     if (req.method === 'GET' && url.pathname === '/api/meta') return json(200, metadata());

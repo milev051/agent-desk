@@ -20,13 +20,13 @@
           <small id="title-status" aria-live="polite"></small>
         </fieldset>
         <fieldset class="phone-settings"><legend>Telefon · Tailscale</legend><small id="phone-status"></small><a id="phone-address" hidden></a><img id="phone-qr" alt="QR kod za jednokratnu prijavu" width="180" height="180" hidden><input id="phone-link" readonly aria-label="Privremeni link za telefon" hidden><div class="settings-actions"><button id="phone-copy" type="button">Kopiraj link</button><button id="phone-revoke" type="button" hidden>Odjavi telefone</button></div></fieldset>
-        <section class="archive-settings"><button id="archive-open" type="button">Arhivirani četovi</button><div id="archive-list" hidden></div></section><button id="notifications-enable" type="button">Obaveštenja u pregledaču</button><small id="notifications-status"></small><section id="project-usage"><div>Potrošnja projekata</div><div id="project-usage-list"></div></section>
+        <section><button id="quota-history-open" type="button">Promene limita</button><div id="quota-history-list" hidden></div></section><section class="archive-settings"><button id="archive-open" type="button">Arhivirani četovi</button><div id="archive-list" hidden></div></section><button id="notifications-enable" type="button">Obaveštenja u pregledaču</button><small id="notifications-status"></small><section id="project-usage"><div>Potrošnja projekata</div><div id="project-usage-list"></div></section>
         <div class="settings-actions"><button id="defaults-close" type="button">Zatvori</button><button type="submit">Sačuvaj</button></div>
       </form>
     </section>
     <section id="record-panel" class="chat-panel" aria-label="Zapis četa" hidden><div class="panel-content"><h2>Zapis četa</h2><textarea id="record-text" rows="18" readonly aria-label="Zapis četa, samo za čitanje"></textarea><div class="settings-actions"><button data-close-panel>Zatvori</button></div></div></section>
 
-    <div id="conversation" aria-live="polite"></div>
+    <div id="message-selection" role="group" aria-label="Izabrane poruke" hidden><span id="selection-count"></span><button id="select-all-messages" type="button">Sve</button><label><input id="copy-chat-structure" type="checkbox" checked> Struktura</label><button id="copy-selected-messages" type="button">Kopiraj MD</button><button id="clear-message-selection" type="button" aria-label="Zatvori izbor poruka">×</button></div><div id="conversation" aria-live="polite"></div>
     <div class="composer-area">
       <details id="usage-details" hidden><summary id="usage-heading">Potrošnja</summary><div id="usage-breakdown"></div></details>
       <div id="transfer-preview" aria-live="polite" hidden></div>
@@ -38,7 +38,7 @@
   <dialog id="files-dialog" aria-label="Fajl sa računara"><div id="file-entries"></div><footer class="folder-footer"><nav id="folder-breadcrumbs" aria-label="Putanja foldera"></nav><div class="settings-actions"><button id="folder-select" type="button" aria-label="Poveži folder" title="Poveži folder"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 10 4 15l5 5M4 15h12a4 4 0 0 0 4-4V4"/></svg></button></div></footer></dialog>
   <dialog id="local-file-dialog" aria-label="Fajl sa računara, prikaz"><iframe id="local-file-frame" title="Prikaz fajla" sandbox="allow-scripts"></iframe><button id="local-file-close" type="button">Zatvori</button></dialog>
   <dialog id="delete-dialog" aria-label="Arhiviraj čet"><p id="delete-title"></p><div class="settings-actions"><button id="delete-cancel">Otkaži</button><button id="delete-only">Arhiviraj ovaj čet</button><button id="delete-family">Arhiviraj čet i podagente</button></div></dialog>
-  <div id="chat-popover" role="dialog" aria-label="Opcije četa" hidden></div>
+  <div id="new-models" role="menu" aria-label="Model novog četa" hidden></div><div id="chat-popover" role="dialog" aria-label="Opcije četa" hidden></div>
   <div id="toast" role="alert" hidden></div><div id="completion-notices" aria-live="polite"></div>
 </body>
 </html>

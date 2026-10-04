@@ -117,3 +117,9 @@ body:has(#agent-panel:not([hidden])){grid-template-rows:minmax(0,1fr) auto}#agen
 .agent-limits.limits-stale{opacity:.6}
 
 .menu-usage{font-size:11px;color:#aaa;line-height:1.5;margin-top:10px;padding-top:10px;border-top:1px solid #333;overflow-wrap:anywhere}
+
+#new-models{position:fixed;width:242px;max-height:50dvh;overflow:auto;z-index:35;padding:5px;border:1px solid #333;border-radius:6px;background:#161616}#new-models button{display:block;width:100%;text-align:left;border:0;background:none;font-size:12px;padding:10px}#new-models button:hover{background:#303030}.quota-changes{font-size:11px;margin-top:10px;color:#999}.quota-changes summary{cursor:pointer}.quota-change{padding:8px 0;border-bottom:1px solid #292929;font-size:11px}.quota-change time,.quota-change small,.quota-changes>small{display:block;font-size:10px;color:#888;line-height:1.5}#quota-history-list{max-height:35dvh;overflow:auto;margin-top:8px}
+
+.select-message{border:0;background:none;color:#777;display:flex;align-items:center;justify-content:center;padding:5px;min-width:25px;min-height:25px}.select-message[aria-pressed="true"]{color:#98cfa6}.message-selected{background:#ffffff08;border-radius:5px}#message-selection{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 16px;border-bottom:1px solid #222;flex-shrink:0;font-size:11px}#message-selection[hidden]{display:none}#message-selection button{font-size:11px;padding:5px 7px}#message-selection label{display:flex;align-items:center;gap:4px}
+
+#chat-popover .chat-tools{flex-wrap:wrap}#chat-popover .chat-tools .icon-action{width:28px}
