@@ -71,3 +71,7 @@ body:has(#agent-panel:not([hidden])) main{grid-row:1 / 3}
  #chat-navigation,body:has(#chat-parent:not([hidden])) #chat-navigation{display:flex}#chat-back{display:block}#chat-title{font-size:14px}
  #defaults{position:absolute;inset:0;z-index:25}#chats{padding-top:8px}
 }
+
+.sidebar-actions{display:flex;align-items:center;gap:5px}.sidebar-actions #new-agents{flex:1}.sidebar-actions #defaults-open{width:36px;height:38px;padding:5px;border:0;background:none;text-align:center;font-size:23px;color:#aaa}.sidebar-actions #defaults-open:hover{background:#292929}#project-usage-list{max-height:none}#project-usage>div:first-child{margin-bottom:10px}#phone-qr{image-rendering:pixelated}
+
+.count-history{margin-top:6px;font-size:11px;padding:5px 8px;color:#aaa}

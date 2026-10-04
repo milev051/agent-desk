@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { command, parseEvent, names } from './adapters.mjs';
 import { catalog, quickCatalog, validateEffort } from './models.mjs';
@@ -31,7 +31,9 @@ const phone=createPhoneAccess({port,gatewayPort:Number(process.env.AGENT_DESK_PH
 const save = () => { fs.writeFileSync(dataFile + '.tmp', JSON.stringify(chats, null, 2), { mode: 0o600 }); fs.renameSync(dataFile + '.tmp', dataFile); };
 let usageCache;
 const accounting=()=>usageCache ||= buildAccounting(chats);
-const publicChat = c => ({ ...c, usageSummary:accounting().chats[c.id], running: running.has(c.id), context:contextEstimate(c), transferEstimates:Object.fromEntries(Object.keys(names).map(agent=>[agent,contextEstimate(c,agent)])), transfers:Object.fromEntries(Object.keys(names).map(agent=>[agent,contextEstimate(c,agent).transfer])) });
+const historyForCount=c=>historyText(c.messages.filter(m=>m.text));
+const historyHash=text=>createHash('sha256').update(text).digest('hex');
+const publicChat = c => ({ ...c, historyTokenCount:c.historyTokenCount?.hash===historyHash(historyForCount(c))?c.historyTokenCount:null, usageSummary:accounting().chats[c.id], running: running.has(c.id), context:contextEstimate(c), transferEstimates:Object.fromEntries(Object.keys(names).map(agent=>[agent,contextEstimate(c,agent)])), transfers:Object.fromEntries(Object.keys(names).map(agent=>[agent,contextEstimate(c,agent).transfer])) });
 function broadcast() { const payload = `data: ${JSON.stringify(chats.map(publicChat))}\n\n`; for (const res of listeners) res.write(payload); }
 function update() { usageCache=null;save(); broadcast(); }
 const titleManager=createTitleManager({settingsFile:path.join(dataDir,'title-settings.json'),keyFile:path.join(process.env.AGENT_DESK_CONFIG || path.join(os.homedir(),'.config','agent-desk'),'google-api-key'),getChat:id=>chats.find(c=>c.id===id),changed:update});
@@ -190,10 +192,16 @@ const server = http.createServer(async (req, res) => {
       validateEffort(quickCatalog(binaries), chat.settings);
       chats.unshift(chat); update(); return json(201, publicChat(chat));
     }
-    const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(send|stop|fork|delegate|reveal|record))?$/);
+    const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(send|stop|fork|delegate|reveal|record|count-tokens))?$/);
     if (match) {
       const chat = chats.find(c => c.id === match[1]); if (!chat) return json(404, { error: 'Čet nije pronađen.' });
       if(req.method==='GET' && !match[2])return json(200,publicChat(chat));
+      if(req.method==='POST' && match[2]==='count-tokens'){
+        const b=await body(req);if(b.consent!==true)return json(400,{error:'Brojanje šalje vidljivu istoriju Google-u. Potrebna je potvrda.'});
+        if(running.has(chat.id))return json(409,{error:'Sačekaj završetak odgovora za brojanje.'});
+        const text=historyForCount(chat),hash=historyHash(text);if(chat.historyTokenCount?.hash===hash)return json(200,publicChat(chat));
+        const result=text?await titleManager.countTokens(text):{tokens:0,model:'gemini-3.5-flash-lite',createdAt:Date.now()};chat.historyTokenCount={...result,hash};update();return json(200,publicChat(chat));
+      }
       if(['reveal','record'].includes(match[2])) {
         if(req.method!=='POST')return json(405,{error:'Koristi POST.'});
         if(!['127.0.0.1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress))return json(403,{error:'Samo 127.0.0.1.'});

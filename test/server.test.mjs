@@ -22,7 +22,7 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal((await call('/api/title-settings')).data.configured,false);
     assert.equal((await call('/api/title-settings','PUT',{key:'test-only-key',enabled:false},'https://example.com')).status,403);
     const titlePrefs=(await call('/api/title-settings','PUT',{key:'test-only-key',enabled:false})).data;
-    assert.equal(titlePrefs.configured,true);assert.ok(!JSON.stringify(titlePrefs).includes('test-only-key'));
+    assert.equal(titlePrefs.configured,true);rmSync(path.join(temp,'config','google-api-key')); assert.ok(!JSON.stringify(titlePrefs).includes('test-only-key'));
     assert.ok(!JSON.stringify((await call('/api/meta')).data).includes('test-only-key'));
     assert.equal((await call('/api/title-settings','PUT',{model:'bad-model'})).status,400);
     const prefs=(await call('/api/defaults')).data;
@@ -37,6 +37,8 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     const a = (await call('/api/chats', 'POST', { settings: { cwd: temp, instructions: 'Pravila A', access: 'read' } })).data;
     const b = (await call('/api/chats', 'POST', { settings: { cwd: temp } })).data;
     const empty=(await call('/api/chats','POST',{settings:{cwd:temp,instructions:'Kontekst projekta'}})).data;
+    assert.equal((await call(`/api/chats/${empty.id}/count-tokens`,'POST',{})).status,400);
+    const measured=(await call(`/api/chats/${empty.id}/count-tokens`,'POST',{consent:true})).data;assert.equal(measured.historyTokenCount.tokens,0);assert.equal(measured.historyTokenCount.model,'gemini-3.5-flash-lite');
     const count=(await call('/api/chats')).data.length;
     const replaced=(await call(`/api/chats/${empty.id}`,'PATCH',{settings:{agent:'claude'}})).data;
     assert.equal(replaced.id,empty.id);assert.equal(replaced.settings.agent,'claude');

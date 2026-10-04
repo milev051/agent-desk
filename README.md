@@ -111,7 +111,7 @@ Polje `transferPending` je opciono. Postojeći četovi ne zahtevaju konverziju. 
 
 ## Prikaz podagenata
 
-Panel **Agenti** prikazuje samo direktne podagente trenutno otvorenog četa. Glavni četovi i podagenti drugih četova se ne prikazuju. Kada se otvori podagent, panel prikazuje njegove podagente; ako ih nema, ostaje prazan uz kratku napomenu. Strelica u zaglavlju podčeta vraća na roditelja, a njegov logo otvara opcije. Ikonice podagenata se ne prikazuju ispod kartica u glavnoj listi. Broj uz naslov kartice pokazuje koliko ima podagenata. Klik na podagenta u panelu otvara njegov čet; ponovni klik otvara opcije. Podčet čiji je roditelj obrisan ostaje samostalno dostupan. Ručno napravljene grane se ne grupišu kao podagenti.
+Leva kolona je podeljena na listu četova gore i odeljak **Podagenti** ispod, samo kada izabrani čet ima direktne podagente. Glavni četovi i podagenti drugih četova se ne prikazuju. Kada se otvori podagent, panel prikazuje njegove podagente; ako ih nema, ceo odeljak se sakriva. Strelica u zaglavlju podčeta vraća na roditelja, a njegov logo otvara opcije. Ikonice podagenata se ne prikazuju ispod kartica u glavnoj listi. Broj uz naslov kartice pokazuje koliko ima podagenata. Klik na podagenta u panelu otvara njegov čet; ponovni klik otvara opcije. Podčet čiji je roditelj obrisan ostaje samostalno dostupan. Ručno napravljene grane se ne grupišu kao podagenti.
 
 ## Kopiranje glavnog četa i organizacija podagenata
 
@@ -135,7 +135,7 @@ Dugme **Agenti** dole levo otvara dodatni panel uz listu četova. Prikazuje samo
 
 Agenti znaju kako da pokrenu podagenta jer uz poruku dobijaju opis okruženja i lokalnog API-ja. Protokol nije zaseban alat modela: CLI agent izvršava HTTP zahtev preko svog terminala. POST `/api/chats/ID/delegate` sada prihvata opciono `name`, npr. `{"agent":"codex","name":"Provera testova","task":"Proveri ..."}`. Takav naziv se čuva i ne menja automatski. Bez naziva koristi se zadatak, a zatim Gemini naslov ako je uključen.
 
-U globalnim podešavanjima odeljak **Naslovi četova** bira automatske naslove i model. Podrazumevani model je [Gemini 3.5 Flash-Lite](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite). Dugme **Proveri** čuva ova podešavanja i proverava dostupnost modela za Google ključ. Dostupna je i opcija Gemini 3.5 Flash. [Google kvote i cene](https://ai.google.dev/gemini-api/docs/pricing) zavise od projekta i njegovog Free/Paid Tier statusa; aplikacija ne uključuje naplatu.
+Automatski naslovi su uvek uključeni kada postoji ključ. Koristi se samo [Gemini 3.5 Flash-Lite](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite). Dugme **Proveri** čuva ključ i proverava dostupnost modela. Sačuvani ključ se u polju predstavlja tačkicama, bez slanja ključa pregledaču. Klik selektuje tačkice za zamenu; prazan unos zadržava sačuvani ključ. [Google kvote i cene](https://ai.google.dev/gemini-api/docs/pricing) zavise od projekta i njegovog Free/Paid Tier statusa; aplikacija ne uključuje naplatu.
 
 Naslov nastaje u pozadini nakon prve poruke, kada postoji tema. Jedan API poziv šalje najviše 2.000 znakova zadatka i, za podagenta, najviše 160 znakova roditeljskog naslova. Ne šalje celu istoriju ili fajlove. Prepoznatljivi API ključevi iz ovog kratkog teksta se izostavljaju. Ručno preimenovanje i ime zadato podagentu uvek imaju prednost. Greška, timeout ili kvota ostavljaju postojeći naslov i ne prekidaju CLI odgovor. Stari četovi se ne preimenuju automatski. `titleGeneration` čuva status, model i prijavljenu potrošnju samo ovog poziva, odvojeno od potrošnje CLI odgovora.
 
@@ -144,7 +144,7 @@ Naslov nastaje u pozadini nakon prve poruke, kada postoji tema. Jedan API poziv 
 
 ## Potrošnja po modelu, četu i projektu
 
-Iznad poruka stoji diskretan sklopivi pregled potrošnje. Otvaranje prikazuje modele za ovaj čet, zbir sa njegovim podagentima i zbir projekta. Podagenti u panelu **Agenti** prikazuju samo ukupan broj tokena i API procenu. Keš, ulaz, izlaz i pregled modela dostupni su kada se otvore detalji potrošnje njihovog četa. Detalji su podrazumevano sklopljeni i ponovo se sklapaju pri promeni četa. Globalna podešavanja imaju **Potrošnja projekata**, za poređenje svih radnih foldera.
+Iznad poruka stoji diskretan sklopivi pregled potrošnje. Otvaranje prikazuje modele za ovaj čet, zbir sa njegovim podagentima i zbir projekta. Podagenti u panelu **Agenti** prikazuju samo ukupan broj tokena i API procenu. Keš, ulaz, izlaz i pregled modela dostupni su kada se otvore detalji potrošnje njihovog četa. Detalji su podrazumevano sklopljeni i ponovo se sklapaju pri promeni četa. Globalna podešavanja uvek prikazuju **Potrošnja projekata**, za poređenje svih radnih foldera.
 
 Projekat se određuje po `settings.cwd`, ne po naslovu ili putanjama koje se pominju u porukama. Novi odgovori čuvaju `usageCwd` pri pokretanju: kasnija promena foldera ne premešta staru potrošnju. Za starije zapise bez tog polja koristi se sadašnji folder četa, uz napomenu. Zbir obuhvata sačuvane četove; brisanje četa uklanja njegovu potrošnju iz pregleda. Nije evidencija potrošnje drugih CLI sesija van Agent Deska.
 
@@ -157,3 +157,24 @@ API vrednost je procena u USD prema **standardnim globalnim tarifama proverenim 
 Nepotvrđeni modeli i promenljivi aliasi poput `opus` nemaju izmišljenu cenu. Prikazuje se poznati deo zbira uz oznaku **delimično** kada nedostaju podaci. Uključene su potvrđene tarife aktuelnih GPT-6 modela i GPT-5.6 Sol, Claude modela iz cenovnika, Grok 4.5/4.6/4.7 i Gemini Flash modela. Ostale tarife mogu se dodati posle provere tačnog API modela. `GET /api/usage` vraća zbir četova/projekata i izvore cena, uz postojeću Host proveru. Sažeci se računaju iz originalnih podataka i ne upisuju se kao nova kopija istorije u `chats.json`.
 
 Testovi proveravaju keš, cost raspon, različite modele i foldere, kopije istorije, skrivene predaje, Gemini naslove i nepotpune podatke.
+
+
+## Telefon preko Tailscale-a
+
+Podešavanja se otvaraju zupčanikom pored četiri ikonice za novi čet. Odeljak **Telefon · Tailscale** na računaru prikazuje lokalno generisan QR i privremeni link. Link ima 256 nasumičnih bitova, važi 60 sekundi i može se iskoristiti samo jednom. Osvežava se dok su podešavanja otvorena. Uspela prijava daje sesiju do 24 sata, uz Secure/HttpOnly/SameSite=Strict cookie. **Odjavi telefone** odmah opoziva sesije i otvorene tokove događaja. Restart takođe opoziva sve prijave. Tokeni ostaju u memoriji, bez upisa u četove ili Git.
+
+Računar i telefon moraju imati aktivan Tailscale. Agent Desk mora raditi na računaru, jer CLI agenti i fajlovi ostaju na njemu. Server 4317 ostaje samo na loopback adresi. Zaseban gateway 4319 štiti sve podatke i statičke fajlove sesijom; Tailscale Serve prenosi HTTPS zahteve do njega, unutar tailnet mreže. Nije korišćen Funnel. Host mora odgovarati Tailscale DNS nazivu računara; svaki POST/PATCH/PUT/DELETE mora imati tačan HTTPS Origin. Finder, tekstualni zapis četa, konfiguracija Google ključa i izdavanje novih QR prijava ostaju dostupni samo sa računara.
+
+```sh
+/Applications/Tailscale.app/Contents/MacOS/Tailscale serve --bg --https=443 http://127.0.0.1:4319
+```
+
+Ako Tailscale zatraži uključivanje HTTPS Serve-a, završi njegov zvanični postupak. Za drugi Agent Desk port gateway podrazumevano koristi `PORT + 2`; može se zadati `AGENT_DESK_PHONE_PORT`. QR koristi macOS CoreImage kroz postojeći Swift alat, bez dodatnih npm modula. Kada taj alat nije dostupan, može se koristiti privremeni link. U pregledaču telefona prvo se prikazuje lista četova; klik otvara čet, a strelica vraća na listu. URL sa `#chat=<id>` otvara određeni čet odmah.
+
+## Brojanje istorije
+
+Raspon **Istorija ≈** je lokalna procena 2-6 znakova po tokenu. Dugme **Prebroj · Gemini** u meniju četa, nakon potvrde, šalje Google [countTokens](https://ai.google.dev/api/tokens) servisu vidljive poruke, vremena, modele i nazive aktivnosti. Sadržaji fajlova, izlazi alata i skrivena CLI sesija se ne šalju zasebno. Rezultat se čuva u novom opcionom polju `historyTokenCount` i prikazuje kao broj tokena **(Gemini)**. SHA-256 otisak teksta sprečava prikaz zastarelog broja nakon izmene istorije. Brojanje ne generiše odgovor i ne meri puni native kontekst; Claude/OpenAI mogu isti tekst tokenizovati drugačije. Nema automatskog slanja istorije Google-u.
+
+## Verzije
+
+Izvorni kod i README čuvaju se u privatnom repozitorijumu `milev051/agent-desk`. `data/`, četovi, rezervne kopije, lokalni ključevi i `node_modules/` nisu u Git-u. Git omogućava vraćanje koda; za vraćanje razgovora potrebna je zasebna lokalna rezervna kopija `data/`. Pre vraćanja koda zaustavi agente i server.

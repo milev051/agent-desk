@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-export const titleModels=['gemini-3.5-flash-lite','gemini-3.5-flash'];
+export const titleModels=['gemini-3.5-flash-lite'];
 export function cleanTitle(text){let value;try{value=JSON.parse(text).title;}catch{value=text;}return typeof value==='string'?value.split('\n')[0].replace(/^[\s`"“”']+|[\s`"“”']+$/g,'').replace(/\s+/g,' ').trim().slice(0,80):'';}
 export function titleRequest(seed,parentTitle=''){
  const redact=s=>s.replace(/(?:AIza[\w-]{20,}|AQ\.[\w-]{20,}|sk-[\w-]{20,})/g,'[ključ izostavljen]');
@@ -8,7 +8,7 @@ export function titleRequest(seed,parentTitle=''){
 }
 const providerError=status=>status===429?'Google kvota je trenutno iscrpljena.':status===401||status===403||status===400?'Google nije prihvatio ključ ili pristup projektu.':status===404?'Izabrani Gemini model nije dostupan za ovaj ključ.':`Google trenutno nije dostupan (HTTP ${status}).`;
 export function createTitleManager({settingsFile,keyFile,getChat,changed,fetchFn=fetch}){
- let prefs={enabled:false,model:titleModels[0]};if(fs.existsSync(settingsFile))prefs={...prefs,...JSON.parse(fs.readFileSync(settingsFile,'utf8'))};
+ let prefs={enabled:true,model:titleModels[0]};
  let lastError='',checked=false,queue=[],working=false,closed=false,controller;
  const key=()=>fs.existsSync(keyFile)?fs.readFileSync(keyFile,'utf8').trim():'';
  const settings=()=>({enabled:prefs.enabled,model:prefs.model,configured:!!key(),checked,lastError});
@@ -16,12 +16,12 @@ export function createTitleManager({settingsFile,keyFile,getChat,changed,fetchFn
   if(b.model!==undefined && !titleModels.includes(b.model))throw new Error('Nepoznat model za naslove.');
   if(b.enabled!==undefined && typeof b.enabled!=='boolean')throw new Error('Neispravno podešavanje naslova.');
   if(b.key!==undefined){if(typeof b.key!=='string'||b.key.length>1000||/[\r\n]/.test(b.key))throw new Error('Neispravan ključ.');if(b.key.trim()){fs.mkdirSync(path.dirname(keyFile),{recursive:true,mode:0o700});fs.chmodSync(path.dirname(keyFile),0o700);fs.writeFileSync(keyFile,b.key.trim(),{mode:0o600});fs.chmodSync(keyFile,0o600);}}
-  prefs={...prefs,...(b.model!==undefined?{model:b.model}:{}),...(b.enabled!==undefined?{enabled:b.enabled}:{})};
+  prefs={enabled:true,model:titleModels[0]};
   fs.writeFileSync(settingsFile+'.tmp',JSON.stringify(prefs,null,2),{mode:0o600});fs.renameSync(settingsFile+'.tmp',settingsFile);lastError='';checked=false;return settings();
  }
- async function call(model,request,signal){
+ async function call(model,request,signal,operation='generateContent'){
   const secret=key();if(!secret)throw new Error('Google API ključ nije podešen.');
-  const response=await fetchFn(`https://generativelanguage.googleapis.com/v1beta/models/${model}${request?':generateContent':''}`,{method:request?'POST':'GET',headers:{'x-goog-api-key':secret,'Content-Type':'application/json'},...(request?{body:JSON.stringify(request)}:{}),signal:signal || AbortSignal.timeout(15000)});
+  const response=await fetchFn(`https://generativelanguage.googleapis.com/v1beta/models/${model}${request?':'+operation:''}`,{method:request?'POST':'GET',headers:{'x-goog-api-key':secret,'Content-Type':'application/json'},...(request?{body:JSON.stringify(request)}:{}),signal:signal || AbortSignal.timeout(15000)});
   if(!response.ok)throw new Error(providerError(response.status));
   return response.json();
  }
@@ -38,5 +38,6 @@ export function createTitleManager({settingsFile,keyFile,getChat,changed,fetchFn
  function request(chat,seed,parentTitle=''){if(closed||!prefs.enabled||!key()||chat.titleManual||chat.titleGeneration || !seed?.trim())return;if(queue.length>=20)return;
   chat.titleGeneration={status:'pending',model:prefs.model,createdAt:Date.now()};queue.push({id:chat.id,seed,parentTitle,model:prefs.model,cwd:chat.settings?.cwd});changed();void drain();
  }
- return {settings,configure,verify,request,close(){closed=true;queue=[];controller?.abort();}};
+ async function countTokens(text){if(typeof text!=='string'||text.length>2000000)throw Error('Istorija je prevelika za brojanje.');const result=await call(titleModels[0],{contents:[{role:'user',parts:[{text}]}]},undefined,'countTokens');if(!Number.isSafeInteger(result.totalTokens)||result.totalTokens<0)throw Error('Google nije vratio broj tokena.');return {tokens:result.totalTokens,model:titleModels[0],createdAt:Date.now()};}
+ return {settings,configure,verify,request,countTokens,close(){closed=true;queue=[];controller?.abort();}};
 }
