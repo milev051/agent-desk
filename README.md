@@ -256,3 +256,5 @@ Kvadratić pored kopiranja poruke bira tu poruku. Može se odabrati više poruka
 Agent pri svakoj novoj poruci dobija snimak strukture povezane grupe, modela i stanja podagenata, informaciju da li je sesija sačuvana, radni folder i povezane putanje. Snimak nije živo stanje tokom dugog rada, pa za promene nakon početka odgovora koristi postojeći GET API. Kopirani ID-jevi su reference na postojeće četove; eksport sam ne kreira nove podagente i ne daje kopiranom četu novu roditeljsku vezu.
 
 Pri izboru modela automatski se bira Medium reasoning, a za GPT-6-Luna High. Modeli bez podrške za taj nivo koriste svoj CLI nivo. Ručni izbor u četu i globalna podešavanja ostaju dostupni.
+
+Izbor podagenta zadržava njegove susedne kartice u sidebaru. Izabrana kartica je označena, a njeni podagenti se prikazuju uvučeno ispod nje. Lista se ne zatvara pri izboru podagenta bez potomaka.

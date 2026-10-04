@@ -22,3 +22,12 @@ export function exportMessages(chats,id,ids,{includeContext=true,modelName=(_age
  const header=[`# ${md(chat.title)}`];if(includeContext){header.push(`Izvorni čet: ${md(chat.id)}`,`Radni folder: ${md(chat.settings.cwd)}`,'','## Struktura izvornog četa');for(const c of chatStructure(chats,id))header.push(`${'  '.repeat(c.depth)}- ${md(c.title)} (${names[c.agent]||'Agent'} · ${md(modelName(c.agent,c.model)||'podrazumevani model')} · ${c.status}; ID ${md(c.id)}${c.sessionSaved?'; sesija sačuvana':''})`);const paths=linkedPaths(chat);if(paths.length)header.push('','## Povezane putanje',...paths.map(p=>'- '+md(p)));header.push('','IDs su reference na postojeće četove, ne kopije podagenata.');}
  return header.join('\n')+'\n\n'+messages.map(m=>`## ${m.role==='user'?'Korisnik':(names[m.agent]||'Agent')+' · '+md(modelName(m.agent,m.model)||'model nije prijavljen')} · ${Number.isFinite(m.createdAt)?new Date(m.createdAt).toISOString():'vreme nije zabeleženo'}\n\n${m.text}`).join('\n\n');
 }
+
+export function sidebarBranch(chats, id) {
+  let root=chats.find(c=>c.id===id);if(!root)return [];
+  const expanded=new Set([id]);
+  while(root.parentChatId){const parent=chats.find(c=>c.id===root.parentChatId);if(!parent || expanded.has(parent.id))break;expanded.add(parent.id);root=parent;}
+  const rows=[],seen=new Set([root.id]);
+  function visit(parent,depth){for(const chat of chats.filter(c=>c.parentChatId===parent.id).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)||a.id.localeCompare(b.id))){if(seen.has(chat.id))continue;seen.add(chat.id);rows.push({chat,depth});if(expanded.has(chat.id))visit(chat,depth+1);}}
+  visit(root,0);return rows;
+}
