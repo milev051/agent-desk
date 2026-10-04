@@ -1,3 +1,4 @@
+import {preferredEffort} from '../public/reasoning.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { codexModels, grokModels, normalizeAionCatalog, claudeModels, effortsFor, validateEffort, antigravityModels } from '../models.mjs';
@@ -46,4 +47,9 @@ test('Antigravity native NDJSON prompt i nastavak sesije',()=>{
   assert.equal(JSON.parse(spec.input).event,'user');assert.match(JSON.parse(spec.input).message.content,/Test/);
   if(resume)assert.equal(spec.args[spec.args.indexOf('--conversation')+1],'session-a');
  }
+});
+
+test('automatski reasoning bira Medium, GPT-6-Luna High, a nepodržane nivoe preskače',()=>{
+ const catalog={codex:{defaultModel:'gpt-6-sol',models:['gpt-6-sol','gpt-6-luna','gpt-5.6-luna'].map(id=>({id,efforts:[{id:'medium'},{id:'high'}]}))},claude:{models:[{id:'default',efforts:[{id:'medium'}]},{id:'haiku',efforts:[]}]}};
+ assert.equal(preferredEffort(catalog,'codex','gpt-6-luna'),'high');assert.equal(preferredEffort(catalog,'codex','gpt-5.6-luna'),'medium');assert.equal(preferredEffort(catalog,'codex',''),'medium');assert.equal(preferredEffort(catalog,'claude',''),'medium');assert.equal(preferredEffort(catalog,'claude','haiku'),'');
 });

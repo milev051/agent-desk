@@ -1,3 +1,4 @@
+import {preferredEffort} from './public/reasoning.mjs';
 import http from 'node:http';
 import {createArchive} from './archive.mjs';
 import {browseFiles,withFiles,filePath} from './files.mjs';
@@ -224,6 +225,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/api/chats') {
       const b = await body(req);
       const chat = { id: randomUUID(), title: 'Novi čet', ephemeral:true, createdAt: Date.now(), updatedAt: Date.now(), settings: validate({ agent: 'codex', model: '', access: 'full', cwd: root, instructions: '', effort: '', ...defaults[b.settings?.agent || 'codex'], ...b.settings }), sessions: {}, sessionOffsets:{}, messages: [] };
+      if(b.settings?.model!==undefined && b.settings.effort===undefined)chat.settings.effort=preferredEffort(quickCatalog(binaries),chat.settings.agent,chat.settings.model);
       validateEffort(quickCatalog(binaries), chat.settings);
       chats.unshift(chat); update(); return json(201, publicChat(chat));
     }
@@ -289,7 +291,7 @@ const server = http.createServer(async (req, res) => {
         }
         if (b.settings) {
           const next = validate({ ...chat.settings, ...b.settings });
-          if (b.settings.model !== undefined && b.settings.model !== chat.settings.model && b.settings.effort === undefined) next.effort = '';
+          if (b.settings.model !== undefined && b.settings.model !== chat.settings.model && b.settings.effort === undefined) next.effort = preferredEffort(quickCatalog(binaries),next.agent,next.model);
           chat.settings = validateEffort(quickCatalog(binaries), next);
         }
         if (typeof b.title === 'string' && b.title.trim()){chat.title=b.title.trim().slice(0,100);chat.titleManual=true;}
@@ -303,7 +305,7 @@ const server = http.createServer(async (req, res) => {
         update();return json(200,{ok:true,deleted:[...ids],archiveId});
       }
     }
-    const files = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/sidebar-groups.mjs': ['sidebar-groups.mjs', 'text/javascript'], '/folder-columns.mjs': ['folder-columns.mjs', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/marked.js': ['../node_modules/marked/lib/marked.esm.js', 'text/javascript'], '/purify.js': ['../node_modules/dompurify/dist/purify.es.mjs', 'text/javascript'] };
+    const files = { '/reasoning.mjs':['reasoning.mjs','text/javascript'], '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/sidebar-groups.mjs': ['sidebar-groups.mjs', 'text/javascript'], '/folder-columns.mjs': ['folder-columns.mjs', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/marked.js': ['../node_modules/marked/lib/marked.esm.js', 'text/javascript'], '/purify.js': ['../node_modules/dompurify/dist/purify.es.mjs', 'text/javascript'] };
     if (req.method === 'GET' && files[url.pathname]) {
       const [file, mime] = files[url.pathname];
       res.writeHead(200, { 'Content-Type': `${mime}; charset=utf-8`, 'Content-Security-Policy': "default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'", 'X-Content-Type-Options': 'nosniff' });
