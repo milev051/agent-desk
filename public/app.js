@@ -66,15 +66,16 @@ function modelLabel(chat) {
   const id=chat.settings.model || (last?.configuredModel===chat.settings.model ? last.model : '');
   return id ? models[chat.settings.agent]?.models.find(m=>m.id===id)?.name || id : 'Podrazumevani CLI model';
 }
-function renderNewAgents() {$('#new-agents').innerHTML=meta.agents.map(a=>`<button class="new-agent" data-new-agent="${a.id}" title="Novi čet · ${escape(a.name)}" aria-label="Novi čet · ${escape(a.name)}" ${!a.available?'disabled':''}><img src="${agentLogos[a.id]}" alt="" width="21" height="21"></button>`).join('');}
+const agentOrder=['codex','claude','antigravity','grok'];
+let limits={};
+function renderNewAgents() {$('#new-agents').innerHTML=agentOrder.map(id=>meta.agents.find(a=>a.id===id)).filter(Boolean).map(a=>`<button class="new-agent" data-new-agent="${a.id}" title="Novi čet · ${escape(a.name)}" aria-label="Novi čet · ${escape(a.name)}" ${!a.available?'disabled':''}><img src="${agentLogos[a.id]}" alt="" width="21" height="21"><small class="agent-limits" title="${escape(limitDescription(a.id))}">${limitDisplay(a.id)}</small></button>`).join('');}
 let lastSidebar='', paintingSidebar=false;
 function renderSidebar() {
-  const term=$('#search').value.toLowerCase();
-  const row=(c,childCount=0)=>`<div class="chat-row ${childCount?'has-children':''} ${c.id===active?'active':''} ${c.running?'working':notification(c)}" data-row="${c.id}" title="${escape(c.title)} · ${escape(agentName(c.settings.agent))} · ${escape(modelLabel(c))}">
-    ${rename?.id===c.id ? `<input class="rename-input" data-rename="${c.id}" aria-label="Naziv četa" value="${escape(rename.value)}" maxlength="100">` : `<button class="chat-item" data-chat="${c.id}" ${c.id===active?'aria-current="true"':''}><span>${c.parentChatId?'<span class="copy-mark" title="Podčet">↳</span>':c.duplicatedFrom?'<span class="copy-mark" title="Grana četa">⧉</span>':''}${escape(c.title)}${childCount?` <small class="child-count" title="Podagenti: ${childCount}" aria-label="Podagenti: ${childCount}">${childCount}</small>`:''}</span></button>`}
-    <button class="chat-link" data-copy-link="${c.id}" aria-label="Kopiraj adresu četa" title="Kopiraj adresu četa">${copyIcon}</button><button class="chat-logo" data-options="${c.id}" aria-label="Opcije četa: ${escape(c.title)}" aria-expanded="${menuChat===c.id}" title="${escape(agentName(c.settings.agent))} · ${escape(modelLabel(c))}"><img src="${agentLogos[c.settings.agent]}" alt="" width="20" height="20"></button>
+  const row=c=>`<div class="chat-row ${c.id===active?'active':''} ${c.running?'working':notification(c)}" data-row="${c.id}" title="${escape(c.title)} · ${escape(agentName(c.settings.agent))} · ${escape(modelLabel(c))}">
+    <button class="chat-logo" data-options="${c.id}" aria-label="Opcije četa: ${escape(c.title)}" aria-expanded="${menuChat===c.id}" title="${escape(agentName(c.settings.agent))} · ${escape(modelLabel(c))}"><img src="${agentLogos[c.settings.agent]}" alt="" width="20" height="20"></button>
+    ${rename?.id===c.id?`<input class="rename-input" data-rename="${c.id}" aria-label="Naziv četa" value="${escape(rename.value)}" maxlength="100">`:`<button class="chat-item" data-chat="${c.id}" ${c.id===active?'aria-current="true"':''}><span>${escape(c.title)}</span></button>`}
   </div>`;
-  const groups=sidebarGroups(chats,c=>`${c.title} ${agentName(c.settings.agent)} ${modelLabel(c)}`.toLowerCase().includes(term));
+  const groups=sidebarGroups(chats);
   const content=groups.map(g=>{
     return `<div class="chat-group ${g.children.some(c=>c.id===active)?'has-active-child':''}">${row(g.chat,g.children.length)}</div>`;
   }).join('');
@@ -85,6 +86,7 @@ function renderAgentPanel() {
   const chat=current(),children=chats.filter(c=>c.parentChatId===active && c.id!==active).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
   const visible=agentPanelOpen && children.length>0;
   $('#agent-panel').hidden=!visible;
+  $('#subagents-toggle').hidden=!children.length;$('#subagents-toggle').setAttribute('aria-expanded',String(visible));$('#subagents-toggle').setAttribute('aria-label',visible?'Sakrij podagente':'Prikaži podagente');
   $('#chat-parent').hidden=!chat?.parentChatId;
   $('#chat-title').textContent=chat?.title || '';
   $('#chat-options').hidden=!chat;
@@ -94,7 +96,13 @@ function renderAgentPanel() {
   const html=children.map(row).join('');
   if($('#agent-tree').innerHTML!==html)$('#agent-tree').innerHTML=html;
 }
-$('#chat-back').onclick=()=>{document.body.classList.remove('chat-view');showDefaults(false);};
+function showChatList(){document.body.classList.remove('chat-view');showDefaults(false);closePanels();menuChat=null;renderPopover();const url=new URL(location.href);url.hash='';history.replaceState(history.state,'',url);}
+$('#chat-back').onclick=showChatList;
+$('#subagents-toggle').onclick=()=>{agentPanelOpen=!agentPanelOpen;renderAgentPanel();};
+const mobileNavigation=()=>matchMedia('(max-width:650px)').matches;
+function keepMobileHistory(){if(mobileNavigation())history.pushState({agentDesk:true},'',location.href);}
+window.addEventListener('popstate',()=>{if(mobileNavigation()){showChatList();keepMobileHistory();}});
+
 $('#chat-parent').onclick=()=>{if(current()?.parentChatId)choose(current().parentChatId);};
 $('#chat-options').onclick=()=>{if(current()){menuChat=menuChat===active?null:active;renderPopover();}};
 const usageCount=n=>Number(n||0).toLocaleString('sr-Latn-RS');
@@ -127,7 +135,7 @@ function renderPopover() {
   const pop=$('#chat-popover'), c=chats.find(c=>c.id===menuChat);if(!c){pop.hidden=true;return;}
   const busy=c.running;
   const tool=(action,label,icon,disabled=false)=>`<button class="icon-action ${action==='delete'?'delete-chat':action==='stop'?'stop-chat':''}" data-action="${action}" data-id="${c.id}" aria-label="${escape(label)}" title="${escape(label)}" ${disabled?'disabled':''}>${icon}</button>`;
-  const content=`<div class="menu-agents" role="group" aria-label="Izaberi agenta">${meta.agents.filter(a=>a.id!==c.settings.agent).map(a=>`<button class="menu-agent" data-card-agent="${a.id}" data-agent-source="${c.id}" aria-label="Promeni agenta · ${escape(a.name)}" title="${escape(a.name)} · prenos ${tokenRange(c.transfers?.[a.id])} tokena, procena; keš nije garantovan" ${!a.available || busy?'disabled':''}><img src="${agentLogos[a.id]}" alt="" width="21" height="21"></button>`).join('')}</div><div class="chat-tools" role="group" aria-label="Radnje četa">${tool('fork','Napravi granu četa',forkIcon,busy)}${tool('delete','Obriši čet',trashIcon,busy)}${tool('reveal','Prikaži u Finderu',folderIcon)}${tool('record','Otvori zapis četa',recordIcon)}${busy?tool('stop','Zaustavi',stopIcon):''}</div><label class="model-choice">Model<select data-chat-model="${c.id}" aria-label="Model četa" ${busy?'disabled':''}>${modelOptions(c.settings)}</select></label>${effortsFor(c.settings.agent,c.settings.model).length?`<label class="model-choice">Razmišljanje<select data-chat-effort="${c.id}" aria-label="Nivo razmišljanja" ${busy?'disabled':''}>${effortOptions(c.settings)}</select></label>`:''}<div class="context-info" title="Gruba procena vidljivih poruka: 2–6 znakova po tokenu. Native kontekst sadrži i alate, fajlove i sistemska uputstva i nije izmeren ovim brojem. Hover na agentu prikazuje procenu dopune njegove sesije. Cena i keš zavise od pretplate i ciljnog modela.">${c.historyTokenCount?'Istorija · '+usageCount(c.historyTokenCount.tokens)+' tokena (Gemini)':'Istorija ≈ '+tokenRange(c.context?.history)+' tokena'}</div><button class="count-history" data-count-history="${c.id}" ${busy?'disabled':''} title="Šalje vidljive poruke i nazive aktivnosti Google-u za brojanje; nije broj tokena Claude/OpenAI tokenizatora.">Prebroj · Gemini</button>`;
+  const content=`<div class="menu-agents" role="group" aria-label="Izaberi agenta">${agentOrder.map(id=>meta.agents.find(a=>a.id===id)).filter(a=>a && a.id!==c.settings.agent).map(a=>`<button class="menu-agent" data-card-agent="${a.id}" data-agent-source="${c.id}" aria-label="Promeni agenta · ${escape(a.name)}" title="${escape(a.name)} · prenos ${tokenRange(c.transfers?.[a.id])} tokena, procena; keš nije garantovan" ${!a.available || busy?'disabled':''}><img src="${agentLogos[a.id]}" alt="" width="21" height="21"></button>`).join('')}</div><div class="chat-tools" role="group" aria-label="Radnje četa">${tool('link','Kopiraj adresu četa',copyIcon)}${tool('fork','Napravi granu četa',forkIcon,busy)}${tool('delete','Obriši čet',trashIcon,busy)}${tool('reveal','Prikaži u Finderu',folderIcon)}${tool('record','Otvori zapis četa',recordIcon)}${busy?tool('stop','Zaustavi',stopIcon):''}</div><label class="model-choice">Model<select data-chat-model="${c.id}" aria-label="Model četa" ${busy?'disabled':''}>${modelOptions(c.settings)}</select></label>${effortsFor(c.settings.agent,c.settings.model).length?`<label class="model-choice">Razmišljanje<select data-chat-effort="${c.id}" aria-label="Nivo razmišljanja" ${busy?'disabled':''}>${effortOptions(c.settings)}</select></label>`:''}<div class="context-info" title="Gruba procena vidljivih poruka: 2–6 znakova po tokenu. Native kontekst sadrži i alate, fajlove i sistemska uputstva i nije izmeren ovim brojem. Hover na agentu prikazuje procenu dopune njegove sesije. Cena i keš zavise od pretplate i ciljnog modela.">${c.historyTokenCount?'Istorija · '+usageCount(c.historyTokenCount.tokens)+' tokena (Gemini)':'Istorija ≈ '+tokenRange(c.context?.history)+' tokena'}</div><button class="count-history" data-count-history="${c.id}" ${busy?'disabled':''} title="Šalje vidljive poruke i nazive aktivnosti Google-u za brojanje; nije broj tokena Claude/OpenAI tokenizatora.">Prebroj · Gemini</button>`;
   const extras=`<div class="transfer-estimate">${transferLabel(c.context)}</div>`;
   if(pop.innerHTML!==content+extras)pop.innerHTML=content+extras;pop.hidden=false;
   positionPopover();
@@ -183,10 +191,8 @@ async function saveRename() {
   renderSidebar();
 }
 $('#new-agents').onclick=e=>guard(async()=>{const button=e.target.closest('[data-new-agent]');if(button)await create(button.dataset.newAgent);});
-$('#search').oninput=renderSidebar;
 $('#chats').onclick=e=>{
   if(held){held=false;return;}
-  const link=e.target.closest('[data-copy-link]');if(link){guard(async()=>{await navigator.clipboard.writeText(`${location.origin}/#chat=${encodeURIComponent(link.dataset.copyLink)}`);link.textContent='✓';setTimeout(()=>{if(link.isConnected)link.innerHTML=copyIcon;},1500);});return;}
   const logo=e.target.closest('[data-options]');if(logo){clearTimeout(clickTimer);menuChat=menuChat===logo.dataset.options?null:logo.dataset.options;renderSidebar();return;}
   const item=e.target.closest('[data-chat]');if(!item)return;
   if(menuChat===item.dataset.chat){beginRename(item.dataset.chat);return;}
@@ -212,6 +218,7 @@ $('#chat-popover').onclick=e=>guard(async()=>{
     switchingChats.add(id);try{const copy=await api(`/api/chats/${id}`,'PATCH',{settings:{agent}});putChat(copy);choose(copy.id);}finally{switchingChats.delete(id);}return;
   }
   const action=e.target.closest('[data-action]');if(!action)return;const id=action.dataset.id,c=chats.find(c=>c.id===id);if(!c)return;
+  if(action.dataset.action==='link'){await navigator.clipboard.writeText(`${location.origin}/#chat=${encodeURIComponent(id)}`);action.innerHTML='✓';action.title='Adresa četa je kopirana';setTimeout(()=>{if(action.isConnected)action.innerHTML=copyIcon;},1500);return;}
   if(action.dataset.action==='reveal'){await api(`/api/chats/${id}/reveal`,'POST',{});return;}
   if(action.dataset.action==='record'){const record=await api(`/api/chats/${id}/record`,'POST',{});closePanels();$('#record-text').value=record.text;$('#record-panel').hidden=false;for(const el of [$('#conversation'),$('.composer-area'),$('#usage-details')])el.inert=true;menuChat=null;renderSidebar();$('#record-text').focus();return;}
   if(action.dataset.action==='fork'){const copy=await api(`/api/chats/${id}/fork`,'POST',{});putChat(copy);choose(copy.id);}
@@ -262,7 +269,8 @@ document.onkeydown=e=>{if($('#defaults').hidden && (e.metaKey || e.ctrlKey) && e
 try {
   [meta,chats,defaults]=await Promise.all([api('/api/meta'),api('/api/chats'),api('/api/defaults')]);const linked=new URLSearchParams(location.hash.slice(1)).get('chat');if(linked && chats.some(c=>c.id===linked))active=linked;if(!current())active=null;else selectedAgent=current().settings.agent;
   document.body.classList.toggle('chat-view',!!linked && !!current());for(const c of chats)if(!Object.hasOwn(seen,c.id))markRead(c);
-  render();resizePrompt();api('/api/models').then(value=>{models=value;lastMessages='';render();}).catch(()=>{});
+  if(mobileNavigation()){const entry=new URL(location.href);entry.hash='';history.replaceState({agentDesk:true},'',entry);history.pushState({agentDesk:true},'',linked && current()?location.origin+'/#chat='+encodeURIComponent(active):entry.href);}
+  render();resizePrompt();refreshLimits();api('/api/models').then(value=>{models=value;lastMessages='';render();}).catch(()=>{});
   const events=new EventSource('/api/events');events.onmessage=e=>{chats=JSON.parse(e.data);connected=true;if(active && !current())choose(null);else render();};events.onerror=()=>{connected=false;render();};
 } catch(e){toast(`Aplikacija nije dostupna: ${e.message}`);}
 
@@ -271,7 +279,7 @@ function renderTransfer(){const chat=current(),el=$('#transfer-preview');el.hidd
 
 function closePanels(){$('#record-panel').hidden=true;for(const el of [$('#conversation'),$('.composer-area'),$('#usage-details')])el.inert=!$('#defaults').hidden;}
 for(const button of document.querySelectorAll('[data-close-panel]'))button.onclick=closePanels;
-window.addEventListener('hashchange',()=>{const id=new URLSearchParams(location.hash.slice(1)).get('chat');if(chats.some(c=>c.id===id))choose(id);});
+window.addEventListener('hashchange',()=>{if(mobileNavigation())return;const id=new URLSearchParams(location.hash.slice(1)).get('chat');if(chats.some(c=>c.id===id))choose(id);});
 
 const phoneRemote=!['127.0.0.1','localhost'].includes(location.hostname);
 let phoneTimer;
@@ -287,3 +295,7 @@ async function refreshPhone(){
 }
 $('#phone-copy').onclick=()=>guard(async()=>{await navigator.clipboard.writeText($('#phone-link').value);toast('Link je kopiran.');});
 $('#phone-revoke').onclick=()=>guard(async()=>{await api('/api/phone/revoke','POST',{});await refreshPhone();toast('Prijave telefona su odjavljene.');});
+
+function limitDescription(id){const s=limits[id];if(!s)return 'Preostali limiti: '+(id==='grok'?'7 dana':'5 sati · 7 dana')+'; učitavam';return s.error || 'Preostalo: '+(id==='grok'?'7 dana':'5 sati · 7 dana')+(s.updatedAt?' · '+new Date(s.updatedAt).toLocaleTimeString('sr-Latn-RS'): '');}
+function limitDisplay(id){const s=limits[id];const slot=key=>{const w=s?.windows?.find(w=>w.period===key);if(!w)return '<span class="limit-unknown">?</span>';const left=Math.max(0,Math.min(100,w.remaining));return `<span class="${left>65?'limit-good':left>=35?'limit-mid':'limit-low'}">${Math.round(left)}</span>`;};return id==='grok'?slot('weekly'):slot('fiveHour')+' <span class="limit-separator">·</span> '+slot('weekly');}
+async function refreshLimits(){let wait=60000;try{const response=await api('/api/limits');limits=response.agents || {};if(response.loading)wait=5000;renderNewAgents();}catch{}setTimeout(refreshLimits,wait);}

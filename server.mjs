@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {createLimits} from './limits.mjs';
 import {createPhoneAccess} from './phone-access.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -27,6 +28,7 @@ for(const chat of chats)for(const m of chat.messages)if(m.agent==='codex' && m.u
 const running = new Map(), listeners = new Set();
 let shuttingDown=false;
 const port = Number(process.env.PORT || 4317);
+const limits=createLimits({enabled:process.platform==='darwin' && process.env.AGENT_DESK_DISABLE_LIMITS!=='1'});
 const phone=createPhoneAccess({port,gatewayPort:Number(process.env.AGENT_DESK_PHONE_PORT || port+2),origin:process.env.AGENT_DESK_PHONE_ORIGIN});
 const save = () => { fs.writeFileSync(dataFile + '.tmp', JSON.stringify(chats, null, 2), { mode: 0o600 }); fs.renameSync(dataFile + '.tmp', dataFile); };
 let usageCache;
@@ -145,6 +147,7 @@ const server = http.createServer(async (req, res) => {
     if(url.pathname.startsWith('/api/phone')){if(!['127.0.0.1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress))return json(403,{error:'Samo lokalni pristup.'});if(req.method==='GET' && url.pathname==='/api/phone')return json(200,await phone.info());if(req.method==='GET' && url.pathname==='/api/phone/qr'){const png=await phone.qr();res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'no-store'});return res.end(png);}if(req.method==='POST' && url.pathname==='/api/phone/revoke'){phone.revoke();return json(200,{ok:true});}return json(404,{error:'Nije pronađeno.'});}
     if(url.pathname==='/api/title-settings'){if(req.method==='GET')return json(200,titleManager.settings());if(req.method==='PUT'){if(!['127.0.0.1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress))return json(403,{error:'Samo lokalni pristup.'});return json(200,titleManager.configure(await body(req)));}}
     if(req.method==='POST' && url.pathname==='/api/title-settings/check')return json(200,await titleManager.verify());
+    if(req.method==='GET' && url.pathname==='/api/limits')return json(200,limits.snapshot());
     if(req.method==='GET' && url.pathname==='/api/usage')return json(200,accounting());
     if (req.method === 'GET' && url.pathname === '/api/meta') return json(200, metadata());
     if (req.method === 'GET' && url.pathname === '/api/defaults') return json(200, defaults);
@@ -261,6 +264,6 @@ const server = http.createServer(async (req, res) => {
     json(404, { error: 'Nije pronađeno.' });
   } catch (error) { json(400, { error: error.message }); }
 });
-server.listen(port, '127.0.0.1', () => {phone.start();console.log(`Agent Desk: http://127.0.0.1:${port}`);});
-function shutdown() {shuttingDown=true;phone.close();titleManager.close();for (const id of running.keys()) stop(id); setTimeout(() => process.exit(0), 2200); server.close(); }
+server.listen(port, '127.0.0.1', () => {phone.start();limits.start();console.log(`Agent Desk: http://127.0.0.1:${port}`);});
+function shutdown() {shuttingDown=true;limits.close();phone.close();titleManager.close();for (const id of running.keys()) stop(id); setTimeout(() => process.exit(0), 2200); server.close(); }
 process.on('SIGINT', shutdown); process.on('SIGTERM', shutdown);

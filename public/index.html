@@ -3,13 +3,12 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Agent Desk</title><link rel="stylesheet" href="/style.css"><script type="module" src="/app.js"></script></head>
 <body>
   <aside class="sidebar">
-    <div class="sidebar-actions"><div id="new-agents" role="group" aria-label="Novi čet"></div><button id="defaults-open" aria-label="Podešavanja" title="Podešavanja">⚙</button></div>
-    <input id="search" placeholder="Pretraži četove" aria-label="Pretraži četove">
+    <div class="sidebar-actions"><div id="new-agents" role="group" aria-label="Novi čet"></div><button id="defaults-open" aria-label="Podešavanja" title="Podešavanja"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="#000"/><circle cx="15" cy="17" r="3" fill="#000"/></svg></button></div>
     <nav id="chats" aria-label="Četovi"></nav>
   </aside>
-  <aside id="agent-panel" aria-label="Pokrenuti agenti" hidden><div class="agent-panel-heading">Podagenti</div><nav id="agent-tree" aria-label="Agenti i podagenti"></nav></aside>
+  <aside id="agent-panel" aria-label="Pokrenuti agenti" hidden><nav id="agent-tree" aria-label="Agenti i podagenti"></nav></aside>
   <main>
-    <div id="chat-navigation"><button id="chat-back" aria-label="Lista četova">←</button><button id="chat-parent" aria-label="Roditeljski čet" hidden>↑</button><span id="chat-title"></span><button id="chat-options" aria-label="Opcije otvorenog četa" hidden></button></div>
+    <div id="chat-navigation"><button id="chat-back" aria-label="Lista četova">←</button><button id="chat-parent" aria-label="Roditeljski čet" hidden>↑</button><span id="chat-title"></span><button id="subagents-toggle" aria-label="Sakrij podagente" aria-expanded="true" hidden><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 14h16"/></svg></button><button id="chat-options" aria-label="Opcije otvorenog četa" hidden></button></div>
     <section id="defaults" aria-label="Podešavanja" hidden>
       <form id="defaults-form">
         <div class="defaults-heading"><span></span><span>Model</span><span>Razmišljanje</span></div>

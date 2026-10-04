@@ -17,7 +17,7 @@ Na macOS-u možeš dvokliknuti `Pokreni Agent Desk.command`. Terminal ostaje otv
 
 ## Uključeno
 
-- Kreiranje, pretraga, preimenovanje i brisanje četova.
+- Kreiranje, preimenovanje i brisanje četova.
 - Izbor agenta, modela i nivoa razmišljanja u popup-u četa; globalna podešavanja određuju podrazumevane vrednosti. API zadržava radni folder, pristup i dodatna uputstva po četu.
 - Full access je podrazumevan: agent može da pokreće komande i menja lokalne fajlove bez potvrde.
 - Codex i Claude nude samo čitanje. Grok adapter trenutno podržava samo Full access.
@@ -89,7 +89,7 @@ Agent dobija kratak opis Agent Desk okruženja, ID četa, radni folder i lokalni
 
 Popup prikazuje grubu veličinu vidljive istorije. Hover na drugom agentu prikazuje procenu dopune njegove sesije i dodatnih chat uputstava. Koristi se raspon 2–6 znakova po tokenu, bez ciljnih tokenizera; raspon nije garantovana granica. Native pročitani fajlovi, alati, sistemska uputstva i novi odgovor nisu izmereni ovim brojem. Nije prikaz veličine native context window-a. Keš se ne može unapred garantovati. Pretplate nemaju jedinstvenu cenu u dolarima po tokenu, pa UI ne prikazuje izmišljenu novčanu cenu prenosa.
 
-Mobilni pristup i Google Drive sinhronizacija još nisu uključeni. Predložena arhitektura je telefon kao browser klijent istog servera preko autentifikovane privatne veze; CLI-jevi, projekti i native sesije ostaju na računaru. Drive bi čuvao arhivu vidljivih poruka i metadata, bez credentials. Za nastavak na drugom računaru potrebni su i projektni fajlovi i kompatibilne native sesije; sama JSON arhiva ih ne zamenjuje. Provider prompt cache je serverski podatak i ne prenosi se kroz Drive.
+Mobilni pristup radi preko Tailscale prijave opisane ispod. Google Drive sinhronizacija nije uključena. Telefon je browser klijent istog servera preko autentifikovane privatne veze; CLI-jevi, projekti i native sesije ostaju na računaru. Drive bi čuvao arhivu vidljivih poruka i metadata, bez credentials. Za nastavak na drugom računaru potrebni su i projektni fajlovi i kompatibilne native sesije; sama JSON arhiva ih ne zamenjuje. Provider prompt cache je serverski podatak i ne prenosi se kroz Drive.
 
 ## Prenos konteksta
 
@@ -101,7 +101,7 @@ Samo u tekstu za prenos, pre poslednjih šest poruka, zatvoreni fenced blokovi s
 
 ## Linkovi, zapis i kopiranje
 
-- Ikonica za kopiranje na kartici kopira adresu `/#chat=<id>`. Otvaranje linka ili promena hash-a bira konkretan čet.
+- Ikonica za kopiranje u meniju kartice kopira adresu `/#chat=<id>`. Otvaranje linka ili promena hash-a bira konkretan čet.
 - **Prikaži u Finderu** poziva `/usr/bin/open -R` za `data/chats.json` na macOS-u.
 - **Otvori zapis četa** prikazuje JSON samo tog četa u tekstualnom polju koje je samo za čitanje.
 - Obe serverske radnje zahtevaju POST, lokalnu adresu klijenta `127.0.0.1`, dozvoljen Host i odgovarajući Origin. Klijent ne prosleđuje putanju do fajla.
@@ -111,7 +111,7 @@ Polje `transferPending` je opciono. Postojeći četovi ne zahtevaju konverziju. 
 
 ## Prikaz podagenata
 
-Leva kolona je podeljena na listu četova gore i odeljak **Podagenti** ispod, samo kada izabrani čet ima direktne podagente. Glavni četovi i podagenti drugih četova se ne prikazuju. Kada se otvori podagent, panel prikazuje njegove podagente; ako ih nema, ceo odeljak se sakriva. Strelica u zaglavlju podčeta vraća na roditelja, a njegov logo otvara opcije. Ikonice podagenata se ne prikazuju ispod kartica u glavnoj listi. Broj uz naslov kartice pokazuje koliko ima podagenata. Klik na podagenta u panelu otvara njegov čet; ponovni klik otvara opcije. Podčet čiji je roditelj obrisan ostaje samostalno dostupan. Ručno napravljene grane se ne grupišu kao podagenti.
+Leva kolona je podeljena na listu četova gore i lista direktnih podagenata ispod, bez dodatnog naslova, samo kada izabrani čet ima direktne podagente. Glavni četovi i podagenti drugih četova se ne prikazuju. Kada se otvori podagent, panel prikazuje njegove podagente; ako ih nema, ceo odeljak se sakriva. Strelica u zaglavlju podčeta vraća na roditelja, a njegov logo otvara opcije. Ikonice podagenata se ne prikazuju ispod kartica u glavnoj listi. Kartica prikazuje logo levo i naslov desno, bez broja podagenata. Klik na podagenta u panelu otvara njegov čet; ponovni klik otvara opcije. Podčet čiji je roditelj obrisan ostaje samostalno dostupan. Ručno napravljene grane se ne grupišu kao podagenti.
 
 ## Kopiranje glavnog četa i organizacija podagenata
 
@@ -161,7 +161,7 @@ Testovi proveravaju keš, cost raspon, različite modele i foldere, kopije istor
 
 ## Telefon preko Tailscale-a
 
-Podešavanja se otvaraju zupčanikom pored četiri ikonice za novi čet. Odeljak **Telefon · Tailscale** na računaru prikazuje lokalno generisan QR i privremeni link. Link ima 256 nasumičnih bitova, važi 60 sekundi i može se iskoristiti samo jednom. Osvežava se dok su podešavanja otvorena. Uspela prijava daje sesiju do 24 sata, uz Secure/HttpOnly/SameSite=Strict cookie. **Odjavi telefone** odmah opoziva sesije i otvorene tokove događaja. Restart takođe opoziva sve prijave. Tokeni ostaju u memoriji, bez upisa u četove ili Git.
+Podešavanja se otvaraju ikonicom klizača pored četiri ikonice za novi čet. Odeljak **Telefon · Tailscale** na računaru prikazuje lokalno generisan QR i privremeni link. Link ima 256 nasumičnih bitova, važi 60 sekundi i može se iskoristiti samo jednom. Osvežava se dok su podešavanja otvorena. Uspela prijava daje sesiju do 24 sata, uz Secure/HttpOnly/SameSite=Strict cookie. **Odjavi telefone** odmah opoziva sesije i otvorene tokove događaja. Restart takođe opoziva sve prijave. Tokeni ostaju u memoriji, bez upisa u četove ili Git.
 
 Računar i telefon moraju imati aktivan Tailscale. Agent Desk mora raditi na računaru, jer CLI agenti i fajlovi ostaju na njemu. Server 4317 ostaje samo na loopback adresi. Zaseban gateway 4319 štiti sve podatke i statičke fajlove sesijom; Tailscale Serve prenosi HTTPS zahteve do njega, unutar tailnet mreže. Nije korišćen Funnel. Host mora odgovarati Tailscale DNS nazivu računara; svaki POST/PATCH/PUT/DELETE mora imati tačan HTTPS Origin. Finder, tekstualni zapis četa, konfiguracija Google ključa i izdavanje novih QR prijava ostaju dostupni samo sa računara.
 
@@ -178,3 +178,14 @@ Raspon **Istorija ≈** je lokalna procena 2-6 znakova po tokenu. Dugme **Prebro
 ## Verzije
 
 Izvorni kod i README čuvaju se u privatnom repozitorijumu `milev051/agent-desk`. `data/`, četovi, rezervne kopije, lokalni ključevi i `node_modules/` nisu u Git-u. Git omogućava vraćanje koda; za vraćanje razgovora potrebna je zasebna lokalna rezervna kopija `data/`. Pre vraćanja koda zaustavi agente i server.
+
+
+## Kartice na telefonu i pretplatnički limiti
+
+Kartice imaju diskretnu sivu pozadinu, bez desnih ivica panela i bez pretrage. Logo otvara meni kartice, gde se sada kopira adresa četa. Kopiranje adrese ne kopira poruke i ne pravi novi čet. Na telefonu dugme u zaglavlju prikazuje ili skriva podagente; lista zauzima visinu svog sadržaja, najviše 28% ekrana, a duža lista se pomera. Bez podagenata nema tog dugmeta ili panela.
+
+Dugme Nazad u mobilnom pregledaču vraća na početnu listu. Aplikacija održava lokalni unos istorije da ponovni običan povratak ostane na listi. Pregledač i dalje može preskočiti istoriju, zatvoriti tab ili napustiti stranicu; potpuno sprečavanje izlaska nije moguće.
+
+Ispod ikonica za novi čet prikazan je **preostali procenat**, prvo za 5 sati pa za 7 dana. Grok ima samo nedeljni broj. Redosled je Codex, Claude, Antigravity, Grok. Tooltip navodi prozore i vreme očitavanja. Nedostupan podatak je `?`, bez izmišljene procene. Ovi brojevi su odvojeni od broja tokena i API procene troška.
+
+`limits-reader.swift` koristi logiku očitavanja iz projekta Limiti i postojeće CLI prijave na macOS-u. Poziva odgovarajuće servise pretplate, ne šalje razgovore. Ključevi se ne vraćaju kroz `/api/limits` i ne upisuju u četove. Swift proces očitava sva četiri izvora paralelno na približno minut; `limits.mjs` čuva samo poslednji rezultat u memoriji. Na drugim sistemima podaci nisu dostupni. `AGENT_DESK_DISABLE_LIMITS=1` isključuje očitavanje; integracioni testovi koriste tu opciju.
