@@ -32,7 +32,7 @@ const port = Number(process.env.PORT || 4317);
 const limits=createLimits({enabled:process.platform==='darwin' && process.env.AGENT_DESK_DISABLE_LIMITS!=='1'});
 const phoneOriginFile=path.join(process.env.AGENT_DESK_CONFIG || path.join(os.homedir(),'.config','agent-desk'),'phone-origin');
 const savedPhoneOrigin=fs.existsSync(phoneOriginFile)?fs.readFileSync(phoneOriginFile,'utf8').trim():'';
-const phone=createPhoneAccess({port,gatewayPort:Number(process.env.AGENT_DESK_PHONE_PORT || port+2),origin:process.env.AGENT_DESK_PHONE_ORIGIN || savedPhoneOrigin});
+const phone=createPhoneAccess({sessionFile:path.join(path.dirname(phoneOriginFile),'phone-sessions.json'),port,gatewayPort:Number(process.env.AGENT_DESK_PHONE_PORT || port+2),origin:process.env.AGENT_DESK_PHONE_ORIGIN || savedPhoneOrigin});
 const save = () => { fs.writeFileSync(dataFile + '.tmp', JSON.stringify(chats, null, 2), { mode: 0o600 }); fs.renameSync(dataFile + '.tmp', dataFile); };
 let usageCache;
 const historyCounts=new Map();
@@ -226,7 +226,7 @@ const server = http.createServer(async (req, res) => {
     const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(send|stop|fork|delegate|reveal|record|count-tokens|files))?$/);
     if (match) {
       const chat = chats.find(c => c.id === match[1]); if (!chat) return json(404, { error: 'Čet nije pronađen.' });
-      if(req.method==='GET' && match[2]==='files'){const place=url.searchParams.get('place');let target=url.searchParams.get('path');if(place==='desktop')target=fs.existsSync(path.join(os.homedir(),'Desktop'))?path.join(os.homedir(),'Desktop'):os.homedir();return json(200,browseFiles(target,chat.settings.cwd));}
+      if(req.method==='GET' && match[2]==='files'){const place=url.searchParams.get('place');let target=url.searchParams.get('path');if(place==='home')target=os.homedir();if(place==='desktop')target=fs.existsSync(path.join(os.homedir(),'Desktop'))?path.join(os.homedir(),'Desktop'):os.homedir();return json(200,browseFiles(target,chat.settings.cwd));}
       if(req.method==='GET' && !match[2])return json(200,publicChat(chat));
       if(req.method==='POST' && match[2]==='count-tokens'){
         const b=await body(req);if(b.consent!==true)return json(400,{error:'Brojanje šalje vidljivu istoriju Google-u. Potrebna je potvrda.'});
