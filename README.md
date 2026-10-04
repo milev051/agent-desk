@@ -13,7 +13,7 @@ npm start
 
 Otvori http://127.0.0.1:4317. Za drugi port: `PORT=4318 npm start`.
 
-Na macOS-u možeš dvokliknuti `Pokreni Agent Desk.command`. Terminal ostaje otvoren dok aplikacija radi. Ctrl+C zaustavlja server i aktivne CLI procese.
+Na macOS-u dvoklikni `Agent Desk.app` u folderu aplikacije. Launcher pokreće server u pozadini bez Terminal prozora i otvara browser. Server ostaje uključen nakon zatvaranja taba. Launcher se pravi komandom `./launcher/build.sh`, bez dodatnih modula; `Pokreni Agent Desk.command` otvara isti launcher.
 
 ## Uključeno
 
@@ -52,9 +52,9 @@ Codex povezivanje se zasniva na lokalnom `codex exec --help` i [zvaničnoj dokum
 
 Na vrhu leve strane su četiri ikonice za novi čet. Ako je aktivni čet prazan i nema CLI sesiju, izbor drugog agenta menja taj čet i zadržava nacrt poruke. Svaki čet zauzima jedan red sa naslovom i logom aktivnog agenta. Hover prikazuje agenta i izabrani podmodel; ako CLI model još nije poznat, prikazuje „Podrazumevani CLI model“.
 
-Klik na logo otvara popup centriran uz karticu, sa ostala tri agenta, kantom, modelom i podržanim reasoning nivoima. Uz ivice ekrana položaj se prilagođava dostupnom prostoru. Klik na drugog agenta menja isti čet, bez kopiranja. Dugme za grananje pored kante pravi zasebnu kopiju sa vidljivim porukama i novom CLI sesijom. Red čekanja se ne kopira. Promena podmodela unutar istog agenta čuva native sesiju i važi za sledeću poruku. Promene modela su blokirane dok agent radi.
+Duži pritisak na karticu otvara popup centriran uz karticu, sa ostala tri agenta, kantom, modelom i podržanim reasoning nivoima. Uz ivice ekrana položaj se prilagođava dostupnom prostoru. Klik na drugog agenta menja isti čet, bez kopiranja. Dugme za grananje pored kante pravi zasebnu kopiju sa vidljivim porukama i novom CLI sesijom. Red čekanja se ne kopira. Promena podmodela unutar istog agenta čuva native sesiju i važi za sledeću poruku. Promene modela su blokirane dok agent radi.
 
-Dvoklik ili dug pritisak na naslov otvara preimenovanje. Kada je popup otvoren, dovoljan je jedan klik na naslov. Enter ili izlazak iz polja čuva naziv; Escape odustaje.
+Običan klik bilo gde na kartici, uključujući logo i padding, otvara čet. Duži pritisak od 600 ms otvara meni i na telefonu i na računaru. Preimenovanje je ikonica u meniju; Enter čuva naziv. Dvoklik više ne otvara preimenovanje.
 
 Kartica je žuta dok agent radi i plava kada postoji nepročitan terminalni odgovor. Otvaranje četa uklanja obaveštenje. Nema rotirajućih oznaka. Novo stanje odgovora u aktivnom vidljivom četu smatra se pročitanim.
 
@@ -111,7 +111,7 @@ Polje `transferPending` je opciono. Postojeći četovi ne zahtevaju konverziju. 
 
 ## Prikaz podagenata
 
-Leva kolona je podeljena na listu četova gore i lista direktnih podagenata ispod, bez dodatnog naslova, samo kada izabrani čet ima direktne podagente. Glavni četovi i podagenti drugih četova se ne prikazuju. Kada se otvori podagent, panel prikazuje njegove podagente; ako ih nema, ceo odeljak se sakriva. Na računaru strelica u zaglavlju podčeta vraća na roditelja, a njegov logo otvara opcije. Na telefonu nema zaglavlja; Nazad iz podčeta vraća na roditelja, a zatim na listu. Ikonice podagenata se ne prikazuju ispod kartica u glavnoj listi. Kartica prikazuje logo levo, naslov desno i model manjim slovima ispod naslova, bez broja podagenata. Klik na podagenta u panelu otvara njegov čet; ponovni klik otvara opcije. Pri brisanju samo roditelja podčet ostaje samostalno dostupan, bez nevažeće roditeljske veze. Ručno napravljene grane se ne grupišu kao podagenti.
+Leva kolona je podeljena na listu četova gore i lista direktnih podagenata ispod, bez dodatnog naslova, samo kada izabrani čet ima direktne podagente. Glavni četovi i podagenti drugih četova se ne prikazuju. Kada se otvori podagent, panel prikazuje njegove podagente; ako ih nema, ceo odeljak se sakriva. Na računaru strelica u zaglavlju podčeta vraća na roditelja, a njegov logo otvara opcije. Na telefonu nema zaglavlja; Nazad iz podčeta vraća na roditelja, a zatim na listu. Ikonice podagenata se ne prikazuju ispod kartica u glavnoj listi. Kartica prikazuje logo levo, naslov desno i model manjim slovima ispod naslova, bez broja podagenata. Klik na podagenta u panelu otvara njegov čet; duži pritisak otvara opcije. Pri brisanju samo roditelja podčet ostaje samostalno dostupan, bez nevažeće roditeljske veze. Ručno napravljene grane se ne grupišu kao podagenti.
 
 ## Kopiranje glavnog četa i organizacija podagenata
 
@@ -173,7 +173,7 @@ Ako Tailscale zatraži uključivanje HTTPS Serve-a, završi njegov zvanični pos
 
 ## Brojanje istorije
 
-Raspon **Istorija ≈** je lokalna procena 2-6 znakova po tokenu. Dugme **Prebroj · Gemini** u meniju četa, nakon potvrde, šalje Google [countTokens](https://ai.google.dev/api/tokens) servisu vidljive poruke, vremena, modele i nazive aktivnosti. Sadržaji fajlova, izlazi alata i skrivena CLI sesija se ne šalju zasebno. Rezultat se čuva u novom opcionom polju `historyTokenCount` i prikazuje kao broj tokena **(Gemini)**. SHA-256 otisak teksta sprečava prikaz zastarelog broja nakon izmene istorije. Brojanje ne generiše odgovor i ne meri puni native kontekst; Claude/OpenAI mogu isti tekst tokenizovati drugačije. Nema automatskog slanja istorije Google-u.
+Raspon **Istorija ≈** je lokalna procena 2-6 znakova po tokenu. Otvaranje menija četa automatski šalje Google [countTokens](https://ai.google.dev/api/tokens) servisu vidljive poruke, vremena, modele i nazive aktivnosti. Sadržaji fajlova, izlazi alata i skrivena CLI sesija se ne šalju zasebno. Rezultat se čuva u novom opcionom polju `historyTokenCount` i prikazuje kao broj tokena **(Gemini)**. SHA-256 otisak teksta sprečava prikaz zastarelog broja nakon izmene istorije. Brojanje ne generiše odgovor i ne meri puni native kontekst; Claude/OpenAI mogu isti tekst tokenizovati drugačije. Automatsko brojanje je uključeno na zahtev korisnika. Bez Google ključa ostaje lokalna procena. Brojanje čeka završetak odgovora, koristi sačuvani rezultat dok se istorija ne promeni i spaja istovremene zahteve za isti otisak. Posle greške ne ponavlja isti poziv najmanje dva minuta.
 
 ## Verzije
 
@@ -193,7 +193,7 @@ Ispod ikonica za novi čet prikazan je **preostali procenat**, prvo za 5 sati pa
 
 ## Izbor fajlova i brisanje
 
-Dugme **+** pored poruke otvara pregled fajlova na računaru, uključujući pristup preko prijavljenog Tailscale telefona. Početni folder je radni folder četa. Moguće je otvoriti drugi folder, vratiti se na projekat ili početni korisnički folder. Klik na fajl ili **Poveži folder** dodaje uklonjivu oznaku uz sledeću poruku. Izabrane putanje su odvojene za svaki čet. I obična poruka i red čekanja šalju samo proverene putanje, bez sadržaja fajlova. Agent ih čita kada zadatak to zahteva. Ovo nije upload sa telefona.
+Dugme **+** desno u polju za poruku otvara pregled fajlova na računaru, uključujući pristup preko prijavljenog Tailscale telefona. Pregled se otvara preko celog browsera, počevši od Desktopa. Putanja pri dnu ima klikabilne delove. Prečice Home i Downloads su ikonice pri dnu; Poveži folder i Zatvori su pored njih. Putanja se ne unosi ručno. Klik na fajl ili **Poveži folder** dodaje uklonjivu oznaku uz sledeću poruku. Izabrane putanje su odvojene za svaki čet. I obična poruka i red čekanja šalju samo proverene putanje, bez sadržaja fajlova. Agent ih čita kada zadatak to zahteva. Ovo nije upload sa telefona.
 
 GET `/api/chats/ID/files?path=...` vraća imena običnih fajlova i foldera, najviše 500 stavki. Pregled je ograničen na korisnički i radni folder; skrivene putanje, Library, node_modules, privatni ključevi i symlink izlazi nisu dostupni. Server ponovo proverava sve putanje pri slanju, najviše 20. Ostaju postojeće Host/Origin provere i telefonska prijava.
 
@@ -202,3 +202,22 @@ Brisanje prikazuje **Samo ovaj čet** i, kada postoje podagenti, **Čet i podage
 Automatska tastatura na telefonu podrazumevano je isključena. Može se uključiti u globalnim podešavanjima; izbor se pamti samo u tom pregledaču. Fokus nakon slanja ostaje u unosu. Korisničke poruke su zelene. Podešavanja su peto dugme iste grupe za pokretanje agenata.
 
 Sažetak potrošnje prikazuje nove i keširane tokene odvojeno i cenu u dolarima bez prefiksa API. Novi tokeni u sažetku uključuju novi ulaz, upis keša i izlaz; čitanje keša je izdvojeno. Kada CLI ne razdvaja preklapanje, prikazuje se raspon ili oznaka da novi ulaz nije razdvojen. Stari kumulativni zapisi i dalje imaju oznaku zbira sesije. Očitavanje pretplatničkih limita je na dva minuta; završeni odgovori ažuriraju lokalnu potrošnju kroz postojeći tok događaja, bez dodatnih poziva dobavljačima.
+
+
+## Trenutna potvrda slanja, prazni četovi i nastavak rada
+
+Enter odmah prazni unos i prikazuje poruku uz oznaku **Šalje se…**. Server čuva opcioni `requestId`; isti zahtev se ne izvršava dvaput. Kada stigne potvrda kroz tok događaja, privremena poruka se zameni sačuvanom bez dupliranja. Ako slanje nije prihvaćeno, tekst i povezane putanje se vraćaju u nacrt. Polje je niže, a ikonice su vertikalno centrirane. Potrošnja četa stoji neposredno iznad unosa.
+
+Novi čet ima opciono `ephemeral:true`. Pri odlasku u drugi čet ili na listu briše se ako nema poruka, sesija, reda čekanja ili podagenata. POST `/api/chats/ID/discard-empty` ponovo proverava prazninu na serveru; čet koji je u međuvremenu dobio poruku ostaje sačuvan. Prvo prihvaćeno slanje uklanja oznaku. Postojeće razgovore ne menjamo u prazne privremene četove.
+
+Agent uz zadatak dobija ID-jeve, nazive i stanje postojećih direktnih podčetova. Završetak ili restart CLI procesa ne briše njihovu sesiju. POST `/api/chats/RODITELJ/delegate` sa `{"childId":"POSTOJEĆI_ID","task":"Nastavi..."}` šalje novu poruku istom podagentu, sa njegovom istorijom i native sesijom. Proverava se roditeljstvo i da podagent već ne radi. Za isti zadatak agent dobija instrukciju da nastavi postojeći podčet; novi podčet ostaje moguć za nov zadatak. Native CLI podagenti nisu isto što i podčetovi Agent Deska.
+
+## Lokalni linkovi i pozadinsko pokretanje
+
+Linkovi do `/Users/...`, `/Volumes/...` i `file://...` u porukama postaju veze do lokalnih fajlova. Na računaru klik poziva lokalni POST `/api/open-file`, pa macOS otvara originalni fajl. Na telefonu se fajl prikazuje u izolovanom iframe-u. `/files/Users/...` služi fajl sa postojećim Host proverama i telefonskom prijavom; stari pogrešni HTTP link `/Users/...` sada takođe radi. HTML ima sandbox CSP i ne može pristupiti četu ili Google ključu; neki programi koji zahtevaju localStorage ili mrežne pozive neće imati sve funkcije u telefonskom pregledu. Izbor putanje ima ista ograničenja kao pregled foldera, a fajl je ograničen na 20 MB. Otvaranje preko macOS-a ostaje blokirano telefonskom gateway-u.
+
+`Agent Desk.app` koristi korisnički launchd servis `local.agent-desk.server`. Konfiguracija je u `~/.config/agent-desk/server-launch.plist`, dnevnik u `data/server.log`; nema automatskog gašenja pri zatvaranju taba. Servis se ne registruje u folder za automatski start pri prijavi. Zaustavljanje: `launchctl kill SIGTERM gui/$(id -u)/local.agent-desk.server`; ponovno pokretanje kroz launcher.
+
+Na ovom macOS-u Tailscale CLI iz pozadinskog servisa može vratiti poruku da GUI ne može da se pokrene. Potvrđeni privatni HTTPS origin zato je u `~/.config/agent-desk/phone-origin`, izvan Git-a. `AGENT_DESK_PHONE_ORIGIN` ima prednost. Računar i telefon i dalje moraju imati aktivan Tailscale i podešen Serve; link ne otvara javni pristup i ne menja proveru sesije, Host-a ili Origin-a. Posle promene Tailscale DNS naziva treba ažurirati sačuvanu adresu i restartovati servis.
+
+Ikonice prečica su Lucide `house` i `download` iz [Icônes](https://icones.js.org/collection/lucide), preko [Iconify](https://api.iconify.design/). Licenca je u `public/icons/lucide-LICENSE.txt`.

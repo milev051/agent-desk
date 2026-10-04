@@ -1,5 +1,5 @@
 import http from 'node:http';
-import {browseFiles,withFiles} from './files.mjs';
+import {browseFiles,withFiles,filePath} from './files.mjs';
 import {createLimits} from './limits.mjs';
 import {createPhoneAccess} from './phone-access.mjs';
 import fs from 'node:fs';
@@ -30,9 +30,12 @@ const running = new Map(), listeners = new Set();
 let shuttingDown=false;
 const port = Number(process.env.PORT || 4317);
 const limits=createLimits({enabled:process.platform==='darwin' && process.env.AGENT_DESK_DISABLE_LIMITS!=='1'});
-const phone=createPhoneAccess({port,gatewayPort:Number(process.env.AGENT_DESK_PHONE_PORT || port+2),origin:process.env.AGENT_DESK_PHONE_ORIGIN});
+const phoneOriginFile=path.join(process.env.AGENT_DESK_CONFIG || path.join(os.homedir(),'.config','agent-desk'),'phone-origin');
+const savedPhoneOrigin=fs.existsSync(phoneOriginFile)?fs.readFileSync(phoneOriginFile,'utf8').trim():'';
+const phone=createPhoneAccess({port,gatewayPort:Number(process.env.AGENT_DESK_PHONE_PORT || port+2),origin:process.env.AGENT_DESK_PHONE_ORIGIN || savedPhoneOrigin});
 const save = () => { fs.writeFileSync(dataFile + '.tmp', JSON.stringify(chats, null, 2), { mode: 0o600 }); fs.renameSync(dataFile + '.tmp', dataFile); };
 let usageCache;
+const historyCounts=new Map();
 const accounting=()=>usageCache ||= buildAccounting(chats);
 const historyForCount=c=>historyText(c.messages.filter(m=>m.text));
 const historyHash=text=>createHash('sha256').update(text).digest('hex');
@@ -63,9 +66,11 @@ async function body(req) {
 }
 function stop(id) { const run = running.get(id); if (run) { run.stopped = true; try { process.kill(-run.child.pid, 'SIGTERM'); } catch {} run.killTimer = setTimeout(() => { try { process.kill(-run.child.pid, 'SIGKILL'); } catch {} }, 2000); run.killTimer.unref(); } }
 function stopRelated(id) {for(const c of chats)if(c.parentChatId===id)stop(c.id);stop(id);}
+function resolveLocalFile(p){for(const cwd of new Set([root,...chats.map(c=>c.settings.cwd)])){try{return filePath(p,cwd);}catch{}}throw Error('Fajl nije dostupan.');}
 function appContext(chat) {
   const address=`http://127.0.0.1:${port}`;
-  return `Okruženje: Agent Desk; čet ${chat.id}; radni folder ${chat.settings.cwd}; agent ${chat.settings.agent}; model ${chat.settings.model || 'CLI podrazumevani'}. Datumi poruka su ISO UTC.\nAko zadatak zahteva podagenta, možeš lokalnim HTTP zahtevom napraviti podčet: POST ${address}/api/chats/${chat.id}/delegate, header Origin: ${address}, Content-Type: application/json, telo {"agent":"codex","name":"Provera testova","task":"konkretan zadatak"} (agenti: codex, claude, grok, antigravity). Polje name je kratak naziv uloge ili zadatka podagenta, ne samo broj radnika. Odgovor sadrži id. GET ${address}/api/chats/ID vraća running i messages. Podčet koristi isti folder i zasebnu sesiju; rezultat pročitaj i objedini. Najviše dva aktivna podčeta, samo jedan nivo delegiranja. Ne otvaraj podčet bez potrebe za korisnikov zadatak.`;
+  const children=chats.filter(c=>c.parentChatId===chat.id).map(c=>({id:c.id,naziv:c.title,agent:c.settings.agent,stanje:running.has(c.id)?'radi':'spreman za nastavak',sesija:!!c.sessions[c.settings.agent]}));
+  return `Postojeći podčetovi: ${JSON.stringify(children)}. Završen CLI proces ne znači da je podagent izgubljen: čet i sesija su sačuvani. Za nastavak istog zadatka koristi postojeći podčet, ne pravi zamenu. POST ${address}/api/chats/${chat.id}/delegate sa telom {"childId":"postojeći ID","task":"nastavi zadatak"} nastavlja podčet sa njegovom istorijom i sesijom. Novi podčet napravi samo za nov zadatak ili izričit zahtev korisnika.\nOkruženje: Agent Desk; čet ${chat.id}; radni folder ${chat.settings.cwd}; agent ${chat.settings.agent}; model ${chat.settings.model || 'CLI podrazumevani'}. Datumi poruka su ISO UTC.\nAko zadatak zahteva podagenta, možeš lokalnim HTTP zahtevom napraviti podčet: POST ${address}/api/chats/${chat.id}/delegate, header Origin: ${address}, Content-Type: application/json, telo {"agent":"codex","name":"Provera testova","task":"konkretan zadatak"} (agenti: codex, claude, grok, antigravity). Polje name je kratak naziv uloge ili zadatka podagenta, ne samo broj radnika. Odgovor sadrži id. GET ${address}/api/chats/ID vraća running i messages. Podčet koristi isti folder i zasebnu sesiju; rezultat pročitaj i objedini. Najviše dva aktivna podčeta, samo jedan nivo delegiranja. Ne otvaraj podčet bez potrebe za korisnikov zadatak.`;
 }
 function drainQueue(chat) {
   if(shuttingDown || chat.queuePaused || chat.queueError || running.has(chat.id) || !chat.queue?.length)return;
@@ -86,7 +91,8 @@ async function send(chat, prompt, options={}) {
   const spec = command(chat,`${appContext(chat)}\n\n${history}`, binaries[agent]);
   const child = spawn(spec.executable, spec.args, { cwd: chat.settings.cwd, env: { ...process.env, NO_COLOR: '1' }, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
   const reply = { id: randomUUID(), role: 'assistant', agent, model: chat.settings.model || '', configuredModel: chat.settings.model || '', historyTransferred, usageTracked:true, usageCwd:chat.settings.cwd, text: '', status: 'running', activity: 'Pokrećem agenta…', createdAt: Date.now() };
-  chat.messages.push({ id: randomUUID(), role: 'user', text: prompt, createdAt,sentAt,origin:options.origin || 'user' }, reply);
+  delete chat.ephemeral;
+  chat.messages.push({ id: randomUUID(), role: 'user', text: prompt, createdAt,sentAt,origin:options.origin || 'user',...(options.requestId?{requestId:options.requestId}:{}) }, reply);
   if (chat.title === 'Novi čet') chat.title = prompt.slice(0, 52);
   chat.updatedAt = Date.now();
   const run = { child, stopped: false }; run.done = new Promise(resolve=>run.resolve=resolve); running.set(chat.id, run); update();
@@ -148,6 +154,16 @@ const server = http.createServer(async (req, res) => {
     if(url.pathname.startsWith('/api/phone')){if(!['127.0.0.1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress))return json(403,{error:'Samo lokalni pristup.'});if(req.method==='GET' && url.pathname==='/api/phone')return json(200,await phone.info());if(req.method==='GET' && url.pathname==='/api/phone/qr'){const png=await phone.qr();res.writeHead(200,{'Content-Type':'image/png','Cache-Control':'no-store'});return res.end(png);}if(req.method==='POST' && url.pathname==='/api/phone/revoke'){phone.revoke();return json(200,{ok:true});}return json(404,{error:'Nije pronađeno.'});}
     if(url.pathname==='/api/title-settings'){if(req.method==='GET')return json(200,titleManager.settings());if(req.method==='PUT'){if(!['127.0.0.1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress))return json(403,{error:'Samo lokalni pristup.'});return json(200,titleManager.configure(await body(req)));}}
     if(req.method==='POST' && url.pathname==='/api/title-settings/check')return json(200,await titleManager.verify());
+    if(req.method==='POST' && url.pathname==='/api/open-file'){
+      if(!['127.0.0.1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress))return json(403,{error:'Samo lokalni pristup.'});
+      const b=await body(req),p=resolveLocalFile(b.path);if(process.platform!=='darwin')throw Error('Otvaranje fajla je dostupno na macOS-u.');
+      await new Promise((resolve,reject)=>{const child=spawn('/usr/bin/open',[p]);child.on('error',reject);child.on('close',code=>code===0?resolve():reject(Error('Fajl nije otvoren.')));});return json(200,{ok:true});
+    }
+    if(req.method==='GET' && (url.pathname.startsWith('/files/')||url.pathname.startsWith('/Users/')||url.pathname.startsWith('/Volumes/'))){
+      const p=resolveLocalFile(decodeURIComponent(url.pathname.startsWith('/files/')?url.pathname.slice(6):url.pathname));const stat=fs.statSync(p);if(!stat.isFile()||stat.size>20000000)throw Error('Izaberi fajl do 20 MB.');
+      const types={'.html':'text/html','.htm':'text/html','.css':'text/css','.js':'text/javascript','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.pdf':'application/pdf'};
+      res.writeHead(200,{'Content-Type':(types[path.extname(p).toLowerCase()]||'text/plain')+'; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"sandbox allow-scripts; default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'none'; frame-src 'none'; object-src 'none'"});fs.createReadStream(p).pipe(res);return;
+    }
     if(req.method==='GET' && url.pathname==='/api/limits')return json(200,limits.snapshot());
     if(req.method==='GET' && url.pathname==='/api/usage')return json(200,accounting());
     if (req.method === 'GET' && url.pathname === '/api/meta') return json(200, metadata());
@@ -199,20 +215,26 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && url.pathname === '/api/chats') {
       const b = await body(req);
-      const chat = { id: randomUUID(), title: 'Novi čet', createdAt: Date.now(), updatedAt: Date.now(), settings: validate({ agent: 'codex', model: '', access: 'full', cwd: root, instructions: '', effort: '', ...defaults[b.settings?.agent || 'codex'], ...b.settings }), sessions: {}, sessionOffsets:{}, messages: [] };
+      const chat = { id: randomUUID(), title: 'Novi čet', ephemeral:true, createdAt: Date.now(), updatedAt: Date.now(), settings: validate({ agent: 'codex', model: '', access: 'full', cwd: root, instructions: '', effort: '', ...defaults[b.settings?.agent || 'codex'], ...b.settings }), sessions: {}, sessionOffsets:{}, messages: [] };
       validateEffort(quickCatalog(binaries), chat.settings);
       chats.unshift(chat); update(); return json(201, publicChat(chat));
     }
+    const emptyMatch=url.pathname.match(/^\/api\/chats\/([\w-]+)\/discard-empty$/);
+    if(req.method==='POST' && emptyMatch){const chat=chats.find(c=>c.id===emptyMatch[1]);if(!chat)return json(200,{ok:true});
+      if(running.has(chat.id)||chat.messages.length||chat.queue?.length||Object.keys(chat.sessions).length||chats.some(c=>c.parentChatId===chat.id))return json(409,{error:'Čet više nije prazan.'});
+      chats=chats.filter(c=>c.id!==chat.id);update();return json(200,{ok:true});}
     const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(send|stop|fork|delegate|reveal|record|count-tokens|files))?$/);
     if (match) {
       const chat = chats.find(c => c.id === match[1]); if (!chat) return json(404, { error: 'Čet nije pronađen.' });
-      if(req.method==='GET' && match[2]==='files')return json(200,browseFiles(url.searchParams.get('path'),chat.settings.cwd));
+      if(req.method==='GET' && match[2]==='files'){const place=url.searchParams.get('place');let target=url.searchParams.get('path');if(place==='desktop')target=fs.existsSync(path.join(os.homedir(),'Desktop'))?path.join(os.homedir(),'Desktop'):os.homedir();return json(200,browseFiles(target,chat.settings.cwd));}
       if(req.method==='GET' && !match[2])return json(200,publicChat(chat));
       if(req.method==='POST' && match[2]==='count-tokens'){
         const b=await body(req);if(b.consent!==true)return json(400,{error:'Brojanje šalje vidljivu istoriju Google-u. Potrebna je potvrda.'});
         if(running.has(chat.id))return json(409,{error:'Sačekaj završetak odgovora za brojanje.'});
         const text=historyForCount(chat),hash=historyHash(text);if(chat.historyTokenCount?.hash===hash)return json(200,publicChat(chat));
-        const result=text?await titleManager.countTokens(text):{tokens:0,model:'gemini-3.5-flash-lite',createdAt:Date.now()};chat.historyTokenCount={...result,hash};update();return json(200,publicChat(chat));
+        const key=chat.id+':'+hash;let request=historyCounts.get(key);if(!request){request=text?titleManager.countTokens(text):Promise.resolve({tokens:0,model:'gemini-3.5-flash-lite',createdAt:Date.now()});historyCounts.set(key,request);}
+        let result;try{result=await request;}finally{if(historyCounts.get(key)===request)historyCounts.delete(key);}
+        if(chats.includes(chat) && historyHash(historyForCount(chat))===hash){chat.historyTokenCount={...result,hash};update();}return json(200,publicChat(chat));
       }
       if(['reveal','record'].includes(match[2])) {
         if(req.method!=='POST')return json(405,{error:'Koristi POST.'});
@@ -227,19 +249,22 @@ const server = http.createServer(async (req, res) => {
         if(chat.parentChatId)throw new Error('Podčet ne može da kreira novi nivo podčetova.');
         if(chats.filter(c=>c.parentChatId===chat.id && running.has(c.id)).length>=2)throw new Error('Najviše dva aktivna podčeta.');
         const parentTurnId=chat.messages.at(-1)?.id || 'manual';
-        if(chats.filter(c=>c.parentChatId===chat.id && c.parentTurnId===parentTurnId).length>=2)throw new Error('Najviše dva podčeta po odgovoru roditeljskog agenta.');
+
         const b=await body(req);if(typeof b.task!=='string'||!b.task.trim()||b.task.length>10000)throw new Error('Unesi konkretan zadatak do 10.000 karaktera.');
+        if(b.childId!==undefined){const child=chats.find(c=>c.id===b.childId && c.parentChatId===chat.id);if(!child)throw Error('Izaberi postojeći podčet ovog roditelja.');if(running.has(child.id))return json(409,{error:'Podagent već radi.'});await send(child,b.task.trim(),{origin:'delegate'});return json(202,publicChat(child));}
+        if(chats.filter(c=>c.parentChatId===chat.id && c.parentTurnId===parentTurnId).length>=2)throw new Error('Najviše dva podčeta po odgovoru roditeljskog agenta.');
         if(b.name!==undefined && (typeof b.name!=='string'||!b.name.trim()||b.name.length>80))throw new Error('Naziv podagenta mora imati 1-80 znakova.');
         const agent=b.agent || chat.settings.agent;if(!binaries[agent])throw new Error('Agent nije povezan.');
         const child={id:randomUUID(),title:b.name?.trim() || b.task.slice(0,52),...(b.name?{agentRole:b.name.trim(),titleManual:true}:{}),parentChatId:chat.id,parentTurnId,createdAt:Date.now(),updatedAt:Date.now(),settings:validateEffort(quickCatalog(binaries),validate({...chat.settings,agent,...defaults[agent]})),sessions:{},sessionOffsets:{},messages:[]};
         chats.unshift(child);update();await send(child,`Podzadatak iz četa ${chat.title}.\n\n${b.task}`,{origin:'delegate'});return json(202,publicChat(child));
       }
       if(req.method==='POST' && match[2]==='stop'){chat.queuePaused=true;stopRelated(chat.id);update();return json(200,{ok:true});}
+      if(req.method==='POST' && match[2]==='send'){const b=await body(req);req.sendBody=b;if(b.requestId!==undefined && (typeof b.requestId!=='string'||!/^[-a-zA-Z0-9]{1,80}$/.test(b.requestId)))throw Error('Neispravan ID poruke.');if(b.requestId && chat.messages.some(m=>m.requestId===b.requestId))return json(202,{ok:true});}
       if (running.has(chat.id) && !(req.method === 'PATCH' && !match[2])) return json(409, { error: 'Sačekaj odgovor ili zaustavi agenta.' });
 
       if (req.method === 'POST' && match[2] === 'send') {
-        const b = await body(req); if (typeof b.text !== 'string' || !b.text.trim() || b.text.length > 100000) throw new Error('Unesi poruku do 100.000 karaktera.');
-        await send(chat, withFiles(b.text.trim(),b.files,chat.settings.cwd)); return json(202, { ok: true });
+        const b = req.sendBody; if (typeof b.text !== 'string' || !b.text.trim() || b.text.length > 100000) throw new Error('Unesi poruku do 100.000 karaktera.');
+        await send(chat, withFiles(b.text.trim(),b.files,chat.settings.cwd),{requestId:b.requestId}); return json(202, { ok: true });
       }
       if(req.method==='POST' && match[2]==='fork') {
         const copy={...structuredClone(chat),id:randomUUID(),title:chat.title,createdAt:Date.now(),updatedAt:Date.now(),sessions:{},sessionOffsets:{},usageBaselines:{},queue:[],queuePaused:false,queueError:null,messages:structuredClone(chat.messages).map(m=>({...m,id:randomUUID(),usageInherited:true})),accountingEvents:(chat.accountingEvents || []).map(e=>({...e,usageInherited:true})),duplicatedFrom:chat.id};

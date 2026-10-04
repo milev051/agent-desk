@@ -15,7 +15,9 @@ export function browseFiles(value,cwd,home=os.homedir()){
  const dir=filePath(value || cwd,cwd,home);if(!fs.statSync(dir).isDirectory())throw Error('Izaberi folder.');
  const entries=fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>{try{const p=filePath(path.join(dir,e.name),cwd,home);return [{name:e.name,path:p,directory:fs.statSync(p).isDirectory()}];}catch{return [];}}).sort((a,b)=>Number(b.directory)-Number(a.directory)||a.name.localeCompare(b.name));
  let parent=null;try{parent=filePath(path.dirname(dir),cwd,home);if(parent===dir)parent=null;}catch{}
- return {path:dir,parent,home:fs.realpathSync(home),entries:entries.slice(0,500),truncated:entries.length>500};
+ const shortcuts=[['home','Home',home],['desktop','Desktop',path.join(home,'Desktop')],['documents','Documents',path.join(home,'Documents')],['downloads','Downloads',path.join(home,'Downloads')]].flatMap(([id,name,p])=>{try{const real=filePath(p,cwd,home);return fs.statSync(real).isDirectory()?[{id,name,path:real}]:[];}catch{return [];}});
+ const crumbs=[];let current=dir;while(true){try{filePath(current,cwd,home);crumbs.unshift({name:current===fs.realpathSync(home)?'Home':path.basename(current),path:current});}catch{}const next=path.dirname(current);if(next===current)break;current=next;}
+ return {path:dir,parent,home:fs.realpathSync(home),shortcuts,crumbs,entries:entries.slice(0,500),truncated:entries.length>500};
 }
 export function withFiles(text,files,cwd){
  if(files===undefined)return text;

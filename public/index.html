@@ -25,16 +25,18 @@
       </form>
     </section>
     <section id="record-panel" class="chat-panel" aria-label="Zapis četa" hidden><div class="panel-content"><h2>Zapis četa</h2><textarea id="record-text" rows="18" readonly aria-label="Zapis četa, samo za čitanje"></textarea><div class="settings-actions"><button data-close-panel>Zatvori</button></div></div></section>
-    <details id="usage-details" hidden><summary id="usage-heading">Potrošnja</summary><div id="usage-breakdown"></div></details>
+
     <div id="conversation" aria-live="polite"></div>
     <div class="composer-area">
+      <details id="usage-details" hidden><summary id="usage-heading">Potrošnja</summary><div id="usage-breakdown"></div></details>
       <div id="transfer-preview" aria-live="polite" hidden></div>
       <div id="queue" aria-label="Red čekanja"></div>
       <span id="connection" hidden>Veza je prekinuta.</span>
-      <div id="linked-files" aria-label="Povezani fajlovi"></div><form id="composer"><button id="files-open" type="button" aria-label="Fajl sa računara" title="Fajl sa računara">+</button><button id="subagents-toggle" aria-label="Sakrij podagente" aria-expanded="true" hidden><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 14h16"/></svg></button><textarea id="prompt" rows="1" placeholder="Poruka" aria-label="Poruka agentu"></textarea></form>
+      <div id="linked-files" aria-label="Povezani fajlovi"></div><form id="composer"><button id="subagents-toggle" aria-label="Sakrij podagente" aria-expanded="true" hidden><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 14h16"/></svg></button><textarea id="prompt" rows="1" placeholder="Poruka" aria-label="Poruka agentu"></textarea><button id="files-open" type="button" aria-label="Fajl sa računara" title="Fajl sa računara">+</button></form>
     </div>
   </main>
-  <dialog id="files-dialog" aria-label="Fajl sa računara"><form id="folder-form"><input id="folder-path" aria-label="Folder na računaru"><button type="submit">Otvori</button></form><div class="settings-actions"><button id="folder-home" type="button">Početni folder</button><button id="folder-project" type="button">Projekat</button><button id="folder-parent" type="button">Gore</button><button id="folder-select" type="button">Poveži folder</button></div><div id="file-entries"></div><div class="settings-actions"><button id="files-close" type="button" autofocus>Zatvori</button></div></dialog>
+  <dialog id="files-dialog" aria-label="Fajl sa računara"><div id="file-entries"></div><footer class="folder-footer"><nav id="folder-shortcuts" aria-label="Folderi"></nav><nav id="folder-breadcrumbs" aria-label="Putanja foldera"></nav><div class="settings-actions"><button id="folder-select" type="button">Poveži folder</button><button id="files-close" type="button" autofocus>Zatvori</button></div></footer></dialog>
+  <dialog id="local-file-dialog" aria-label="Fajl sa računara, prikaz"><iframe id="local-file-frame" title="Prikaz fajla" sandbox="allow-scripts"></iframe><button id="local-file-close" type="button">Zatvori</button></dialog>
   <dialog id="delete-dialog" aria-label="Obriši čet"><p id="delete-title"></p><div class="settings-actions"><button id="delete-cancel">Otkaži</button><button id="delete-only">Samo ovaj čet</button><button id="delete-family">Čet i podagenti</button></div></dialog>
   <div id="chat-popover" role="dialog" aria-label="Opcije četa" hidden></div>
   <div id="toast" role="alert" hidden></div><button id="undo-delete" hidden>Vrati obrisane četove</button>

@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {once} from 'node:events';
-import {createPhoneAuth,createPhoneAccess} from '../phone-access.mjs';
+import {parseTailscaleStatus,createPhoneAuth,createPhoneAccess} from '../phone-access.mjs';
 
 test('jednokratna predaja pristupa: rotacija, rokovi, sesije i opoziv',()=>{
  let time=1000;const a=createPhoneAuth({now:()=>time,lifetime:60000,sessionLifetime:100000});
@@ -31,8 +31,10 @@ test('gateway štiti podatke, proverava Host/Origin i blokira radnje sa računar
  const set=login.headers['set-cookie'][0];assert.match(set,/HttpOnly/);assert.match(set,/Secure/);assert.match(set,/SameSite=Strict/);const cookie=set.split(';')[0];
  assert.equal((await request('/api/phone/login',{method:'POST',headers:{Origin:origin},data:{token}})).status,401);
  const accepted=await request('/api/chats',{method:'POST',headers:{Origin:origin,Cookie:cookie,'X-Forwarded-For':'127.0.0.1'}});assert.equal(accepted.status,200);const result=JSON.parse(accepted.body);assert.equal(result.host,`127.0.0.1:${upstream.address().port}`);assert.equal(result.origin,`http://127.0.0.1:${upstream.address().port}`);assert.equal(result.cookie,undefined);assert.equal(result.forwarded,undefined);
- for(const path of ['/api/phone','/api/phone/qr','/api/title-settings','/api/title-settings/check','/api/chats/test/reveal','/api/chats/test/record','/api/antigravity/login'])assert.equal((await request(path,{headers:{Cookie:cookie}})).status,403,path);
+ for(const path of ['/api/phone','/api/phone/qr','/api/title-settings','/api/title-settings/check','/api/chats/test/reveal','/api/chats/test/record','/api/antigravity/login','/api/open-file'])assert.equal((await request(path,{headers:{Cookie:cookie}})).status,403,path);
  assert.equal((await request('/api/chats',{method:'POST',headers:{Cookie:cookie,Origin:'https://evil.test'}})).status,403);
  access.revoke();assert.equal((await request('/api/chats',{headers:{Cookie:cookie}})).status,401);
  }finally{access.close();upstream.closeAllConnections();await new Promise(resolve=>upstream.close(resolve));}
 });
+
+test('Tailscale stanje se čita i sa preambulumom ili iz stderr-a',()=>{const text=JSON.stringify({BackendState:'Running',Self:{DNSName:'example.test.'}});assert.equal(parseTailscaleStatus('poruka\n'+text).BackendState,'Running');assert.equal(parseTailscaleStatus('',text).Self.DNSName,'example.test.');assert.throws(()=>parseTailscaleStatus('bez JSON-a'));});

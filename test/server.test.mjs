@@ -148,6 +148,18 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal((await call(`/api/trash/${deleted.data.trashId}/restore`,'POST',{})).status,200);assert.equal((await call(`/api/chats/${child.id}`)).data.parentChatId,queued.id);
     const familyDeleted=await call(`/api/chats/${queued.id}?children=1`,'DELETE');assert.equal(familyDeleted.status,200);assert.ok(familyDeleted.data.deleted.includes(child.id));assert.equal((await call(`/api/chats/${child.id}`)).status,404);
     assert.equal((await call(`/api/trash/${familyDeleted.data.trashId}/restore`,'POST',{})).status,200);assert.equal((await call(`/api/chats/${child.id}`)).data.parentChatId,queued.id);
+    const unused=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
+    assert.equal((await call(`/api/chats/${unused.id}/discard-empty`,'POST',{})).status,200);assert.equal((await call(`/api/chats/${unused.id}`)).status,404);
+    assert.equal((await call(`/api/chats/${a.id}/discard-empty`,'POST',{})).status,409);
+    const beforeResume=(await call('/api/chats')).data.length,childBefore=(await call(`/api/chats/${child.id}`)).data;
+    const resumed=await call(`/api/chats/${queued.id}/delegate`,'POST',{childId:child.id,task:'Nastavi proveru istog zadatka'});assert.equal(resumed.status,202);assert.equal(resumed.data.id,child.id);
+    const childAfter=await done(child.id);assert.equal((await call('/api/chats')).data.length,beforeResume);assert.equal(childAfter.sessions.codex,childBefore.sessions.codex);assert.ok(childAfter.messages.length>childBefore.messages.length);
+    assert.equal((await call(`/api/chats/${a.id}/delegate`,'POST',{childId:child.id,task:'Nedozvoljen drugi roditelj'})).status,400);
+    const reqId='test-request-once';await call(`/api/chats/${a.id}/send`,'POST',{text:'Poruka jednom',requestId:reqId});await done(a.id);
+    await call(`/api/chats/${a.id}/send`,'POST',{text:'Poruka jednom',requestId:reqId});assert.equal((await call(`/api/chats/${a.id}`)).data.messages.filter(m=>m.requestId===reqId).length,1);
+    writeFileSync(path.join(temp,'preview.html'),'<html><script>example()</script></html>');
+    const localFile=await fetch(base+'/files'+path.join(temp,'preview.html'));assert.equal(localFile.status,200);assert.match(localFile.headers.get('Content-Security-Policy'),/sandbox/);assert.match(await localFile.text(),/example/);
+    assert.equal((await call('/api/open-file','POST',{path:path.join(temp,'preview.html')},'https://example.com')).status,403);
     assert.equal((await call(`/api/chats/${a.id}`, 'DELETE')).status, 200);
   } finally { if(server.exitCode===null){server.kill('SIGTERM');await once(server,'exit');} rmSync(temp, { recursive: true, force: true }); }
 });

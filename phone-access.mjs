@@ -3,6 +3,7 @@ import {randomBytes, createHash} from 'node:crypto';
 import {execFile, spawn} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 
+export function parseTailscaleStatus(stdout,stderr=''){for(const output of [stdout,stderr]){const start=output.indexOf('{'),end=output.lastIndexOf('}');if(start<0||end<start)continue;try{const status=JSON.parse(output.slice(start,end+1));if(typeof status.BackendState==='string')return status;}catch{}}throw Error('Tailscale nije vratio JSON stanje.');}
 const hash=value=>createHash('sha256').update(value).digest('hex');
 export function createPhoneAuth({now=Date.now, lifetime=60000, sessionLifetime=86400000}={}) {
  let pairing=null;const sessions=new Map();
@@ -16,9 +17,9 @@ export function createPhoneAuth({now=Date.now, lifetime=60000, sessionLifetime=8
  };
 }
 export function createPhoneAccess({port, gatewayPort=port+2, origin:configuredOrigin, tailscale='/Applications/Tailscale.app/Contents/MacOS/Tailscale'}={}) {
- const auth=createPhoneAuth();const active=new Map();let origin=configuredOrigin || '', lastDiscovery=0, qrCache=null;
- async function discover(){if(configuredOrigin || Date.now()-lastDiscovery<15000)return origin;lastDiscovery=Date.now();try {const output=await new Promise((resolve,reject)=>execFile(tailscale,['status','--json'],{timeout:4000,maxBuffer:1000000},(e,s)=>e?reject(e):resolve(s)));const s=JSON.parse(output);origin=s.BackendState==='Running' && s.Self?.DNSName?'https://'+s.Self.DNSName.replace(/\.$/,''):'';}catch{origin='';}return origin;}
- const info=async()=>{await discover();const p=auth.pairing();return {origin,gatewayPort,url:origin?origin+'/login#pair='+p.token:'',expiresAt:p.expiresAt,sessions:auth.count};};
+ const auth=createPhoneAuth();const active=new Map();let origin=configuredOrigin || '', lastDiscovery=0, qrCache=null,discoveryError='' ;
+ async function discover(){if(configuredOrigin || Date.now()-lastDiscovery<15000)return origin;lastDiscovery=Date.now();try {const output=await new Promise((resolve,reject)=>execFile(tailscale,['status','--json'],{timeout:4000,maxBuffer:1000000},(e,s,err)=>e?reject(e):resolve({stdout:s,stderr:err})));const s=parseTailscaleStatus(output.stdout,output.stderr);origin=s.BackendState==='Running' && s.Self?.DNSName?'https://'+s.Self.DNSName.replace(/\.$/,''):'';discoveryError='';}catch(e){origin='';discoveryError='Tailscale provera nije uspela ('+(e.code||e.name||'greška')+').';}return origin;}
+ const info=async()=>{await discover();const p=auth.pairing();return {origin,discoveryError,gatewayPort,url:origin?origin+'/login#pair='+p.token:'',expiresAt:p.expiresAt,sessions:auth.count};};
  async function qr(){const p=await info();if(!p.url)throw Error('Tailscale nije povezan.');if(qrCache?.url===p.url)return qrCache.png;
  const png=await new Promise((resolve,reject)=>{const child=spawn('/usr/bin/swift',[fileURLToPath(new URL('./phone-qr.swift',import.meta.url))],{stdio:['pipe','pipe','pipe']});let data=[],size=0;const timer=setTimeout(()=>{child.kill();reject(Error('QR nije dostupan. Koristi link.'));},30000);child.stdout.on('data',b=>{size+=b.length;if(size<1000000)data.push(b);});child.on('error',reject);child.on('close',code=>{clearTimeout(timer);code===0?resolve(Buffer.concat(data)):reject(Error('QR nije dostupan. Koristi link.'));});child.stdin.on('error',()=>{});child.stdin.end(p.url);});qrCache={url:p.url,png};return png;}
  const server=http.createServer(async(req,res)=>{
@@ -40,7 +41,7 @@ export function createPhoneAccess({port, gatewayPort=port+2, origin:configuredOr
   if(!auth.valid(cookie)){if(req.method==='GET' && url.pathname==='/'){res.writeHead(302,{Location:'/login'});return res.end();}return json(401,{error:'Prijavi se novim QR kodom sa računara.'});}
   active.set(res,cookie);res.on('close',()=>active.delete(res));
   // Local desktop actions never reach the loopback API through this gateway.
-  if(/^\/api\/(phone(?:\/|$)|title-settings(?:\/|$)|antigravity\/login)/.test(url.pathname) || /\/api\/chats\/[^/]+\/(reveal|record)$/.test(url.pathname))return json(403,{error:'Ova radnja je dostupna samo na računaru.'});
+  if(/^\/api\/(phone(?:\/|$)|title-settings(?:\/|$)|antigravity\/login|open-file(?:\/|$))/.test(url.pathname) || /\/api\/chats\/[^/]+\/(reveal|record)$/.test(url.pathname))return json(403,{error:'Ova radnja je dostupna samo na računaru.'});
   const headers={...req.headers,host:`127.0.0.1:${port}`};delete headers.cookie;for(const k of Object.keys(headers))if(k.startsWith('tailscale-')||k.startsWith('x-forwarded-'))delete headers[k];if(headers.origin)headers.origin=`http://127.0.0.1:${port}`;
   const upstream=http.request({hostname:'127.0.0.1',port,path:req.url,method:req.method,headers},response=>{res.writeHead(response.statusCode,{...response.headers,'Cache-Control':'no-store','Referrer-Policy':'no-referrer'});response.pipe(res);});
   upstream.on('error',()=>{if(!res.headersSent)json(502,{error:'Server nije dostupan.'});else res.destroy();});req.pipe(upstream);res.on('close',()=>upstream.destroy());
