@@ -225,16 +225,16 @@ Ikonica potvrde foldera koristi jednostavan simbol Enter. Prečice za posebne fo
 
 ## Kartice, obaveštenja i kolone foldera
 
-Podagenti su uz donju ivicu, sa kompaktnim karticama i skrolom za dužu listu. Na hover naslov ostaje, a model zamenjuje broj novih i keširanih tokena. Isto važi za glavne kartice. Na telefonu izabrana glavna kartica prikazuje potrošnju umesto modela. Koriste se sačuvani CLI podaci, bez novih upita pretplati.
+Podagenti su uz donju ivicu, sa kompaktnim karticama i skrolom za dužu listu. Model ostaje vidljiv na karticama, uključujući hover i izabranu karticu na telefonu. Potrošnja četa dostupna je u meniju kartice. Koriste se sačuvani CLI podaci, bez novih upita pretplati.
 
 Kada aktivni agent završi, zaustavi se ili prijavi grešku, pojavljuje se obaveštenje u gornjem desnom uglu. Klik otvara njegov čet. U podešavanjima dugme **Obaveštenja u pregledaču** traži browser dozvolu za sistemska obaveštenja, korisna kada je tab u pozadini. Dostupnost zavisi od pregledača i OS-a; obaveštenja zahtevaju otvorenu stranicu, nema push servisa za zatvoren tab.
 
 Na računaru pregled fajlova koristi kolone nalik Finderu: Home levo, ulazak u folder otvara njegov sadržaj u sledećoj koloni, horizontalni skrol za dugu putanju i zaseban vertikalni skrol u svakoj koloni. Izbor ranijeg foldera uklanja kolone desno. Telefon zadržava jednu listu kartica. Putanja pri dnu, Enter potvrda foldera i Nazad rade u oba prikaza.
 
 
-Kartice četova i podagenata nemaju ikonice. Naslov ostaje beo, a naziv modela i potrošnja na hover koriste boju agenta: Claude narandžastu, Codex ljubičastu, Grok belu i Antigravity plavu. Izbor i duži pritisak ostaju na celoj kartici. Kolone foldera pri prelasku u susedni folder zadržavaju zajedničke pretke i zamenjuju samo granu desno.
+Kartice četova i podagenata nemaju ikonice. Naslov ostaje beo, a naziv modela koristi boju agenta: Claude narandžastu, Codex ljubičastu, Grok belu i Antigravity plavu. Izbor i duži pritisak ostaju na celoj kartici. Kolone foldera pri prelasku u susedni folder zadržavaju zajedničke pretke i zamenjuju samo granu desno.
 
-Kartice četova i podagenata imaju istu visinu od 46 px, sa jednim redom naslova i jednim redom za model ili potrošnju. Potrošnja u tom redu piše kratko: `20.723n 37.970k`, gde n označava nove tokene, a k keširane. Hover menja samo sadržaj tog reda, bez pomeranja kartica.
+Kartice četova i podagenata imaju istu visinu od 46 px, sa jednim redom naslova i jednim redom za model. Potrošnja u meniju kartice piše kratko: `20.723n 37.970k`, gde n označava nove tokene, a k keširane. Hover menja samo pozadinu kartice, bez zamene modela ili pomeranja kartica.
 
 
 Limiti pretplate se osvežavaju na dva minuta; otvaranje ili osvežavanje browsera samo čita serverski snimak i ne pravi novi upit provajderu. Claude 429 poštuje dužu pauzu koju server traži. Poslednji uspešni procenti ostaju sačuvani u `data/limits-cache.json`, zatamnjeni tokom greške; hover prikazuje vreme očitavanja, razlog i sledeću proveru. Raspored u `data/limits-cache.json.schedule` preživljava restart i sprečava prerano novo očitavanje. Oba zapisa sadrže samo javne metrike i rokove, bez kredencijala. Ako uspešno očitavanje još ne postoji, ostaje `?`, bez izmišljenih procenata.
