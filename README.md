@@ -233,3 +233,5 @@ Na računaru pregled fajlova koristi kolone nalik Finderu: Home levo, ulazak u f
 
 
 Kartice četova i podagenata nemaju ikonice. Naslov ostaje beo, a naziv modela i potrošnja na hover koriste boju agenta: Claude narandžastu, Codex ljubičastu, Grok belu i Antigravity plavu. Izbor i duži pritisak ostaju na celoj kartici. Kolone foldera pri prelasku u susedni folder zadržavaju zajedničke pretke i zamenjuju samo granu desno.
+
+Kartice četova i podagenata imaju istu visinu od 64 px, sa rezervisana dva reda naslova i jednim redom za model ili potrošnju. Hover menja samo sadržaj tog reda, bez pomeranja kartica.
