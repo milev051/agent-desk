@@ -1,3 +1,4 @@
+import {createChatFiles} from './chat-files.mjs';
 import {preferredEffort} from './public/reasoning.mjs';
 import http from 'node:http';
 import {createArchive} from './archive.mjs';
@@ -39,7 +40,12 @@ const limits=createLimits({onSample:sample=>{if(quotaHistory.observe(sample))bro
 const phoneOriginFile=path.join(process.env.AGENT_DESK_CONFIG || path.join(os.homedir(),'.config','agent-desk'),'phone-origin');
 const savedPhoneOrigin=fs.existsSync(phoneOriginFile)?fs.readFileSync(phoneOriginFile,'utf8').trim():'';
 const phone=createPhoneAccess({sessionFile:path.join(path.dirname(phoneOriginFile),'phone-sessions.json'),port,gatewayPort:Number(process.env.AGENT_DESK_PHONE_PORT || port+2),origin:process.env.AGENT_DESK_PHONE_ORIGIN || savedPhoneOrigin});
-const save = () => { fs.writeFileSync(dataFile + '.tmp', JSON.stringify(chats, null, 2), { mode: 0o600 }); fs.renameSync(dataFile + '.tmp', dataFile); };
+const chatFiles=createChatFiles(dataDir);
+let chatFilesTimer;
+function syncChatFiles(){clearTimeout(chatFilesTimer);chatFilesTimer=null;try{chatFiles.sync(chats);}catch(error){console.error('Čitljivi zapisi četova:',error.message);}}
+syncChatFiles();
+function scheduleChatFiles(){if(!chatFilesTimer){chatFilesTimer=setTimeout(syncChatFiles,1000);chatFilesTimer.unref();}}
+const save = () => { fs.writeFileSync(dataFile + '.tmp', JSON.stringify(chats, null, 2), { mode: 0o600 }); fs.renameSync(dataFile + '.tmp', dataFile);scheduleChatFiles(); };
 let usageCache;
 const historyCounts=new Map();
 const accounting=()=>usageCache ||= buildAccounting(chats);
@@ -250,8 +256,8 @@ const server = http.createServer(async (req, res) => {
         if(req.method!=='POST')return json(405,{error:'Koristi POST.'});
         if(!['127.0.0.1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress))return json(403,{error:'Samo 127.0.0.1.'});
         if(match[2]==='record')return json(200,{text:JSON.stringify(chat,null,2)});
-        if(process.platform!=='darwin')throw new Error('Finder je dostupan samo na macOS-u.');
-        await new Promise((resolve,reject)=>{const child=spawn('/usr/bin/open',['-R',dataFile]);child.once('error',reject);child.once('close',code=>code===0?resolve():reject(new Error('Finder nije otvoren.')));});
+        if(process.platform!=='darwin')throw new Error('Finder je dostupan samo na macOS-u.');syncChatFiles();
+        await new Promise((resolve,reject)=>{const child=spawn('/usr/bin/open',['-R',fs.existsSync(chatFiles.file(chat))?chatFiles.file(chat):dataFile]);child.once('error',reject);child.once('close',code=>code===0?resolve():reject(new Error('Finder nije otvoren.')));});
         return json(200,{ok:true});
       }
 
@@ -315,5 +321,5 @@ const server = http.createServer(async (req, res) => {
   } catch (error) { json(400, { error: error.message }); }
 });
 server.listen(port, '127.0.0.1', () => {phone.start();limits.start();console.log(`Agent Desk: http://127.0.0.1:${port}`);});
-function shutdown() {shuttingDown=true;clearInterval(archiveCleanup);limits.close();phone.close();titleManager.close();for (const id of running.keys()) stop(id); setTimeout(() => process.exit(0), 2200); server.close(); }
+function shutdown() {syncChatFiles();shuttingDown=true;clearInterval(archiveCleanup);limits.close();phone.close();titleManager.close();for (const id of running.keys()) stop(id); setTimeout(() => process.exit(0), 2200); server.close(); }
 process.on('SIGINT', shutdown); process.on('SIGTERM', shutdown);

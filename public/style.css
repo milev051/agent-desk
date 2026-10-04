@@ -127,3 +127,6 @@ body:has(#agent-panel:not([hidden])){grid-template-rows:minmax(0,1fr) auto}#agen
 .agent-tree-item{margin-left:calc(var(--tree-depth,0)*14px)}.agent-tree-item.active{background:#2b2b2b}.agent-tree-item.working.active{background:#3e3824}
 
 #conversation.selection-mode .message{cursor:pointer;user-select:none;-webkit-user-select:none}#conversation.selection-mode .message:hover{background:#ffffff0c;border-radius:5px}#conversation.selection-mode .message-selected{background:#ffffff12;box-shadow:inset 2px 0 #98cfa6}#conversation:focus{outline:none}
+
+.message{padding:8px 12px;box-sizing:border-box}.message-footer{flex-wrap:wrap;gap:5px 8px}.message-meta{display:inline-flex;align-items:center;gap:7px;min-width:0;white-space:nowrap}.message-meta .response-model{margin:0;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}.message.user .response-model{color:#98cfa6}.message-footer .select-message{flex-shrink:0}
+@media(max-width:650px){.message{padding:7px 9px}.message-footer .token-info{order:2;flex-basis:100%}.message-meta .response-model{max-width:160px}#message-selection{gap:5px;padding:5px 10px}#message-selection button{min-height:34px}#message-selection label{min-height:34px}.select-message{min-width:32px;min-height:32px}}

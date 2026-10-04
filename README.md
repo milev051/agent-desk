@@ -102,7 +102,7 @@ Samo u tekstu za prenos, pre poslednjih šest poruka, zatvoreni fenced blokovi s
 ## Linkovi, zapis i kopiranje
 
 - Ikonica za kopiranje u meniju kartice kopira adresu `/#chat=<id>`. Otvaranje linka ili promena hash-a bira konkretan čet.
-- **Prikaži u Finderu** poziva `/usr/bin/open -R` za `data/chats.json` na macOS-u.
+- **Prikaži u Finderu** poziva `/usr/bin/open -R` za čitljiv Markdown zapis tog četa u `data/cetovi` na macOS-u; za prazan čet pokazuje `data/chats.json`.
 - **Otvori zapis četa** prikazuje JSON samo tog četa u tekstualnom polju koje je samo za čitanje.
 - Obe serverske radnje zahtevaju POST, lokalnu adresu klijenta `127.0.0.1`, dozvoljen Host i odgovarajući Origin. Klijent ne prosleđuje putanju do fajla.
 - Svaki Markdown blok koda ima kopiranje u gornjem desnom uglu: kopira samo sadržaj, bez ograde i jezika, uz kratku potvrdu. Kopiranje cele poruke ostaje dostupno.
@@ -260,3 +260,11 @@ Pri izboru modela automatski se bira Medium reasoning, a za GPT-6-Luna High. Mod
 Izbor podagenta zadržava njegove susedne kartice u sidebaru. Izabrana kartica je označena, a njeni podagenti se prikazuju uvučeno ispod nje. Lista se ne zatvara pri izboru podagenta bez potomaka.
 
 Izbor prve poruke uključuje režim selekcije: klik bilo gde na poruku bira ili uklanja poruku; Shift+klik bira raspon. Command/Ctrl+A bira sve poruke, Command/Ctrl+C kopira izabrane kao Markdown, a Escape ili × zatvara izbor. Prečice ne preuzimaju unos teksta u poljima.
+
+## Čitljivi fajlovi četova
+
+`data/chats.json` ostaje glavni zapis aplikacije. U `data/cetovi` se automatski čuvaju Markdown kopije pojedinačnih četova, sa autorima, modelima, vremenom, strukturom podagenata i povezanim putanjama. Naziv je `Naslov -- ID.md`; postojeći Gemini ili ručni naslov se koristi bez dodatnog poziva. Preimenovanje četa menja naziv kopije, a ID ostaje isti. Zapis se osvežava najviše jednom u sekundi tokom odgovora. Prazni četovi nemaju Markdown kopiju. Ručne izmene kopija se ne uvoze u aplikaciju.
+
+Arhivski JSON fajlovi imaju naziv `Naslov -- ID arhive.json`. Raniji nazivi koji sadrže samo ID preimenuju se pri čitanju; format i sadržaj zapisa, veze podagenata, vraćanje i rok od 30 dana ostaju isti. Pri arhiviranju grupe koristi se naslov prvog četa.
+
+Ime korisnika (`Korisnik`) ili model odgovora prikazuje se uz vreme u podnožju poruke. Na telefonu selekcija se kopira dugmetom `Kopiraj MD` iznad razgovora; unutrašnji razmak u prikazu ne dodaje razmake u Markdown tekst.
