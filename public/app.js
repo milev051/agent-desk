@@ -25,7 +25,7 @@ let mobileAutofocus=localStorage.getItem('agent-desk-mobile-autofocus')==='1';
 const linkedFiles=new Map();
 const pendingMessages=new Map(),newEmptyChats=new Set(),historyCounts=new Map();
 function focusPrompt(){if(!matchMedia('(max-width:650px)').matches || mobileAutofocus)$('#prompt').focus();}
-let rename = null, creating = false, submitting = false, clickTimer, holdTimer, holdStart, held = false, suppressClickUntil=0;
+let rename = null, creating = false, submitting = false, uploading = false, clickTimer, holdTimer, holdStart, held = false, suppressClickUntil=0;
 let colorMode=localStorage.getItem('agent-desk-color-mode') || 'label';
 document.body.classList.toggle('colored-responses',colorMode==='full');
 const selectedMessages=new Set();
@@ -352,7 +352,7 @@ function localSpeechLabel(){const time=new Date().toISOString().replace(/\.\d{3}
 async function playSpeech(){try{await speechAudio.play();}catch(error){if(error.name==='NotSupportedError')throw new Error('Snimak se ne može pustiti u pregledaču.');if(error.name==='NotAllowedError')throw new Error('Pregledač je blokirao zvuk. Pritisni pusti na traci.');throw error;}}
 async function speakMessage(messageId,selectedText=''){if(speechClip?.chatId===active && speechClip.messageId===messageId && (speechClip.selectedText || '')===selectedText){if(speechClip.loading){speechAbort?.abort();return;}if(speechAudio.paused){await playSpeech();return;}speechAudio.pause();return;}speechAbort?.abort();const chatId=active,abort=new AbortController();speechAbort=abort;speechAudio.pause();releaseSpeechUrl();speechClip={chatId,messageId,selectedText,loading:true,label:'Priprema čitanja…'};lastMessages='';render();renderSpeechBar();try{const response=await fetch(`/api/chats/${chatId}/speak`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messageId,offset:0,...(selectedText?{selectedText}:{})}),signal:abort.signal});if(!response.ok){const data=await response.json().catch(()=>({}));throw Error(data.error||'Čitanje nije uspelo.');}const type=response.headers.get('content-type')||'';if(type.includes('application/json')){const data=await response.json();if(abort.signal.aborted || active!==chatId)return;if(selectedText && !data.selected)throw Error('Za čitanje izbora je potrebno ponovno pokretanje Agent Deska.');if(!data.id)throw Error('Snimak nije sačuvan.');speechClip={chatId,messageId,selectedText,id:data.id,label:data.label,loading:false};const src=`/api/chats/${chatId}/speech/${data.id}`;if(speechAudio.src!==new URL(src,location.href).href){speechAudio.src=src;speechAudio.load();}}else if(type.startsWith('audio/')){if(selectedText)throw Error('Za čitanje izbora je potrebno ponovno pokretanje Agent Deska.');const parts=[await response.arrayBuffer()];let offset=Number(response.headers.get('X-Speech-Next')||0);while(offset && !abort.signal.aborted){const next=await fetch(`/api/chats/${chatId}/speak`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messageId,offset}),signal:abort.signal});if(!next.ok){const data=await next.json().catch(()=>({}));throw Error(data.error||'Čitanje nije uspelo.');}parts.push(await next.arrayBuffer());offset=Number(next.headers.get('X-Speech-Next')||0);}if(abort.signal.aborted || active!==chatId)return;let wav;try{wav=joinWavs(parts);}catch{throw Error('Zvuk koji je stigao nije ispravan.');}const url=URL.createObjectURL(new Blob([wav],{type:'audio/wav'}));speechClip={chatId,messageId,selectedText,label:localSpeechLabel(),loading:false,url};speechAudio.src=url;speechAudio.load();}else throw Error('Odgovor za čitanje nije zvuk.');renderSpeechBar();await playSpeech();}catch(error){if(speechClip?.messageId===messageId && speechClip.chatId===chatId && speechClip.loading){speechClip=null;renderSpeechBar();}if(error.name!=='AbortError')throw error;}finally{if(speechAbort===abort)speechAbort=null;lastMessages='';if(appReady)render();}}
 $('#composer').onsubmit=e=>{e.preventDefault();guard(async()=>{
-  const input=$('#prompt'),text=input.value.trim();if(!text || current()?.running || submitting || !connected)return;submitting=true;
+  const input=$('#prompt'),text=input.value.trim() || ((linkedFiles.get(active)||[]).length?'Pogledaj priložene fajlove.':'');if(!text || current()?.running || submitting || uploading || !connected)return;submitting=true;
   const files=[...(linkedFiles.get(active)||[])],requestId=crypto.randomUUID();input.value='';drafts.delete(active);linkedFiles.delete(active);renderLinkedFiles();resizePrompt();input.focus();
   let id=active;pendingMessages.set(id,{id:requestId,requestId,role:'user',text,status:'sending',createdAt:Date.now()});lastMessages='';render();
   try{if(!current()){const created=await create();if(!created)return;pendingMessages.delete(id);id=created.id;pendingMessages.set(id,{id:requestId,requestId,role:'user',text,status:'sending',createdAt:Date.now()});render();}newEmptyChats.delete(id);await api(`/api/chats/${id}/send`,'POST',{text,files,requestId});pendingMessages.delete(id);}
@@ -364,11 +364,11 @@ function renderQueue() {
   $('#queue').innerHTML=(chat?.queue || []).map(m=>`<div class="queued-message"><span title="${escape(m.text)}">${escape(m.text)}</span><button type="button" data-unqueue="${m.id}" aria-label="Ukloni iz reda čekanja">×</button></div>`).join('')+((chat?.queuePaused || chat?.queueError) && chat?.queue?.length?`<button class="resume-queue" type="button" data-resume-queue>Nastavi red čekanja</button>${chat.queueError?`<div class="error">${escape(chat.queueError)}</div>`:''}`:'');
 }
 async function enqueueMessage() {
-  const input=$('#prompt'),text=input.value.trim();if(!text || submitting || !connected)return;
+  const input=$('#prompt'),draft=input.value.trim(),text=draft || ((linkedFiles.get(active)||[]).length?'Pogledaj priložene fajlove.':'');if(!text || submitting || uploading || !connected)return;
   submitting=true;try {
     if(!current()){const created=await create();if(!created)return;}
     const id=active,chat=await api(`/api/chats/${id}/queue`,'POST',{text,files:linkedFiles.get(id)||[]});putChat(chat);
-    if(active===id && input.value.trim()===text){input.value='';drafts.delete(id);linkedFiles.delete(id);renderLinkedFiles();resizePrompt();}
+    if(active===id && input.value.trim()===draft){input.value='';drafts.delete(id);linkedFiles.delete(id);renderLinkedFiles();resizePrompt();}
     render();input.focus();
   } finally {submitting=false;}
 }
@@ -511,19 +511,27 @@ async function browseFolder(p){const id=active,request=++folderRequest;const lis
 function renderFileColumns(){const desktop=!mobileNavigation(),columns=desktop?folderColumns:[fileListing];$('#file-entries').classList.toggle('columns',desktop);$('#file-entries').innerHTML=columns.map(listing=>{const column=folderColumns.indexOf(listing),next=folderColumns[column+1]?.path;return `<section class="file-column" aria-label="${escape(listing.path)}">${desktop?`<small class="column-title">${escape(listing.crumbs.at(-1)?.name||'Home')}</small>`:''}${listing.entries.map((e,i)=>`<button type="button" class="file-card ${e.directory?'directory':'file'} ${next===e.path?'selected':''}" data-file-column="${column}" data-file-entry="${i}" aria-label="${e.directory?'Folder':'Fajl'}: ${escape(e.name)}">${escape(e.name)}</button>`).join('')}${listing.truncated?'<small>Prvih 500 stavki. Otvori uži folder.</small>':''}</section>`;}).join('');if(desktop)$('#file-entries').lastElementChild?.scrollIntoView({block:'nearest',inline:'end'});}
 
 function closeFilePicker(){if(!$('#files-dialog').open || filePickerClosing)return;filePickerClosing=true;history.back();}
-$('#files-open').onclick=e=>{e.stopPropagation();$('#attach-menu').hidden=!$('#attach-menu').hidden;};
+$('#files-open').onclick=e=>{e.stopPropagation();if(uploading)return;if(mobileNavigation() || matchMedia('(pointer:coarse)').matches){$('#attach-menu').hidden=true;$('#device-files').click();return;}$('#attach-menu').hidden=!$('#attach-menu').hidden;};
 document.addEventListener('click',e=>{if(!e.target.closest('#attach-menu'))$('#attach-menu').hidden=true;});
 $('#attach-menu').onclick=e=>{const choice=e.target.closest('[data-attach]')?.dataset.attach;if(!choice)return;$('#attach-menu').hidden=true;if(choice==='device')$('#device-files').click();else openComputerFiles();};
 $('#device-files').onchange=e=>{const files=[...e.target.files];e.target.value='';guard(()=>uploadFiles(files));};
 $('#prompt').addEventListener('paste',e=>{const files=[...(e.clipboardData?.files || [])];if(!files.length)return;e.preventDefault();guard(()=>uploadFiles(files));});
 // Fajl sa uređaja se kopira na računar, pa ga agent čita kao i svaku drugu povezanu putanju.
 async function uploadFiles(files){
-  if(!current() && !await create())return;const id=active;
-  for(const file of files){
-    const r=await fetch(`/api/chats/${id}/upload`,{method:'POST',headers:{'Content-Type':'application/octet-stream','X-File-Name':encodeURIComponent(file.name || 'slika.png')},body:file}),data=await r.json();
-    if(!r.ok)throw Error(data.error || 'Prilog nije sačuvan.');linkedFiles.set(id,[...(linkedFiles.get(id) || []),data.path]);
-  }
-  renderLinkedFiles();
+  if(!files.length || uploading)return;
+  if(files.some(file=>file.size>25*1024*1024))throw Error('Svaki prilog može imati najviše 25 MB.');
+  if((linkedFiles.get(active)||[]).length+files.length>20)throw Error('Najviše 20 priloga u jednoj poruci.');
+  uploading=true;const button=$('#files-open');button.disabled=true;button.textContent='…';button.setAttribute('aria-label','Dodavanje priloga…');
+  try{
+    if(!current() && !await create())return;const id=active;
+    for(const file of files){
+      const r=await fetch(`/api/chats/${id}/upload`,{method:'POST',headers:{'Content-Type':'application/octet-stream','X-File-Name':encodeURIComponent(file.name || 'slika.png')},body:file});
+      const data=await r.json().catch(()=>({}));
+      if(!r.ok || !data.path)throw Error(data.error || 'Prilog nije sačuvan. Pokušaj ponovo.');
+      linkedFiles.set(id,[...(linkedFiles.get(id) || []),data.path]);
+      if(active===id)renderLinkedFiles();
+    }
+  }finally{uploading=false;button.disabled=false;button.textContent='+';button.setAttribute('aria-label','Dodaj prilog');renderLinkedFiles();}
 }
 const openComputerFiles=()=>guard(async()=>{if(!current())await create();folderColumns=[];await browseFolder();filePickerClosing=false;$('#files-dialog').showModal();history.pushState({agentDesk:true,filePicker:true},'',location.href);});
 $('#files-dialog').addEventListener('cancel',e=>{e.preventDefault();closeFilePicker();});
