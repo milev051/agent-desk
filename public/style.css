@@ -175,3 +175,10 @@ body:not(.chat-view) .chat-row.working,body:not(.chat-view) .chat-row.working.pr
 #device-battery small{font-size:10px;font-variant-numeric:tabular-nums;line-height:1}
 #device-battery .battery-good{color:#89b992}#device-battery .battery-mid{color:#c7b074}#device-battery .battery-low{color:#d18e87}#device-battery .battery-unknown{color:#666}
 @media(max-width:650px){.sidebar-actions #device-battery{padding:7px 2px}#device-battery svg{width:19px;height:19px}}
+
+.sidebar-actions #new-agents{grid-template-columns:repeat(5,minmax(0,1fr))}
+.sidebar-actions #defaults-open{padding:0;align-self:start;height:auto}
+.sidebar-actions #defaults-open #device-battery{width:100%;box-sizing:border-box}
+#new-folder-drop{display:none;border:1px dashed #666;border-radius:5px;padding:14px 10px;color:#aaa;text-align:center;font-size:12px;flex-shrink:0}
+body.dragging-chat #new-folder-drop{display:block}
+#new-folder-drop.drop-hover{border-color:#98cfa6;background:#16211b;color:#98cfa6}

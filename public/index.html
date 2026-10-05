@@ -5,8 +5,9 @@
   <div id="boot" role="status"><p>Povezivanje</p></div>
   <header id="mobile-agent-header"></header>
   <aside class="sidebar">
-    <div class="sidebar-actions"><div id="new-agents" role="group" aria-label="Novi čet"><button id="folder-add" type="button" aria-label="Novi folder" title="Novi folder"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 7.5h5l2 2h9a1 1 0 0 1 1 1V18a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8.5a1 1 0 0 1 1-1z"/><path d="M12 11.5v5M9.5 14h5"/></svg></button><button id="defaults-open" aria-label="Podešavanja" title="Podešavanja"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="#000"/><circle cx="15" cy="17" r="3" fill="#000"/></svg></button></div><div id="device-battery" role="status" title="Stanje baterije drugog uređaja"></div></div>
+    <div class="sidebar-actions"><div id="new-agents" role="group" aria-label="Novi čet"><button id="defaults-open" type="button" aria-label="Podešavanja" title="Podešavanja"><span id="device-battery" role="status" title="Stanje baterije drugog uređaja"></span></button></div></div>
     <div id="pull-refresh" aria-live="polite"></div>
+    <div id="new-folder-drop" data-folder-new>Spusti čet ovde za novi folder</div>
     <nav id="chats" aria-label="Četovi"></nav>
   </aside>
   <aside id="agent-panel" aria-label="Pokrenuti agenti" hidden><nav id="agent-tree" aria-label="Agenti i podagenti"></nav></aside>
