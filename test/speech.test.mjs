@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {spokenText,speechSlice,speechChunk,createSpeech,repairWav,joinWavs,speechLabel} from '../speech.mjs';
+import {spokenText,speechInput,speechHash,speechSlice,speechChunk,createSpeech,repairWav,joinWavs,speechLabel} from '../speech.mjs';
 
 function brokenWav(samples){
   const data=Buffer.alloc(samples.length*2);
@@ -58,3 +58,13 @@ test('pokvareno WAV zaglavlje se spaja u jedan snimak sa imenom četa',()=>{
   assert.equal(joined.readUInt32LE(40),one.readUInt32LE(40)+two.readUInt32LE(40));
   assert.equal(speechLabel('Agent Desk','2026-10-05T12:42:03.581Z','gpt-4o-mini-tts'),'Agent Desk 2026-10-05T12-42-03Z gpt-4o-mini-tts');
 });
+
+ test('izbor više pasusa čita samo izabrani tekst i ima svoj sačuvani snimak',()=>{
+  const whole='Prvi pasus.\n\nDrugi pasus.\n\nTreći pasus.';
+  const selected='Drugi pasus.\n\nTreći pasus.';
+  assert.equal(speechInput(whole,selected),'Drugi pasus. Treći pasus.');
+  assert.notEqual(speechHash(speechInput(whole,selected)),speechHash(speechInput(whole)));
+  assert.equal(speechHash(speechInput(whole,selected)),speechHash(speechInput(whole,'Drugi pasus. Treći pasus.')));
+  assert.throws(()=>speechInput('',selected));
+  for(const invalid of ['',null,{},'x'.repeat(30001)])assert.throws(()=>speechInput(whole,invalid));
+ });

@@ -18,6 +18,16 @@ export function spokenText(text){
   return value.replace(/\s+/g,' ').trim();
 }
 
+export function speechInput(messageText, selectedText){
+  if(!messageText)throw new Error('Poruka nema tekst za čitanje.');
+  if(selectedText!==undefined){
+    if(typeof selectedText!=='string' || !selectedText.trim() || selectedText.length>30000)throw new Error('Izbor za čitanje je prazan ili predugačak.');
+    // Izbor je već običan tekst koji je pregledač izvukao iz prikazane poruke.
+    return selectedText.replace(/\s+/g,' ').trim();
+  }
+  return spokenText(messageText);
+}
+
 export function speechSlice(text, offset=0){
   const source=String(text||'');
   const start=Number.isInteger(offset)&&offset>0?offset:0;

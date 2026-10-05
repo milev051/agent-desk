@@ -19,7 +19,7 @@ import { command, parseEvent, names } from './adapters.mjs';
 import { catalog, quickCatalog, validateEffort } from './models.mjs';
 import { transferableMessages, transferPlan, historyText, contextEstimate } from './context.mjs';
 import { createTitleManager } from './titles.mjs';
-import { createSpeech, spokenText, speechSlice, speechHash, speechLabel, speechModel, joinWavs } from './speech.mjs';
+import { createSpeech, spokenText, speechInput, speechSlice, speechHash, speechLabel, speechModel, joinWavs } from './speech.mjs';
 import { usageDelta } from './usage.mjs';
 import { buildAccounting } from './accounting.mjs';
 import { createPush } from './push.mjs';
@@ -418,15 +418,15 @@ const server = http.createServer(async (req, res) => {
       if(req.method==='POST' && match[2]==='speak'){
         const b=await body(req);
         const message=chat.messages.find(m=>m.id===b.messageId && m.text);
-        const spoken=spokenText(message?.text || '');
+        const spoken=speechInput(message?.text || '',b.selectedText);
         if(!spoken)return json(400,{error:'Poruka nema tekst za čitanje.'});
         const hash=speechHash(spoken);
         const clips=speechClips(chat.id);
         const found=clips.find(item=>item.hash===hash && item.file && path.basename(item.file)===item.file && fs.existsSync(path.join(speechDir(chat.id), item.file)));
-        if(found)return json(200,{...found, messageId:message.id, cached:true});
+        if(found)return json(200,{...found, messageId:message.id, selected:b.selectedText!==undefined, cached:true});
         const controller=new AbortController();
         const timer=setTimeout(()=>controller.abort(),180000);
-        req.on('close',()=>{if(!res.writableEnded)controller.abort();});
+        res.on('close',()=>{if(!res.writableEnded)controller.abort();});
         try{
           const parts=[];
           let offset=0;
@@ -446,7 +446,7 @@ const server = http.createServer(async (req, res) => {
           fs.mkdirSync(dir,{recursive:true, mode:0o700});
           fs.writeFileSync(path.join(dir, clip.file), audio, {mode:0o600});
           fs.writeFileSync(path.join(dir, 'index.json'), JSON.stringify([clip, ...clips.filter(item=>item.id!==clip.id)]), {mode:0o600});
-          return json(200,{...clip, cached:false});
+          return json(200,{...clip, selected:b.selectedText!==undefined, cached:false});
         }catch(error){if(res.headersSent||res.writableEnded)return;return json(error.name==='AbortError'?504:400,{error:error.name==='AbortError'?'Čitanje je prekinuto.':error.message});}
         finally{clearTimeout(timer);}
       }

@@ -7,6 +7,7 @@ import { spawn } from 'node:child_process';
 import http from 'node:http';
 import { once } from 'node:events';
 import { command, parseEvent } from '../adapters.mjs';
+import {speechHash} from '../speech.mjs';
 
 test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustavljanje', async () => {
   const temp = mkdtempSync(path.join(tmpdir(), 'agent-desk-test-'));
@@ -80,6 +81,18 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal((await call(`/api/chats/${a.id}`, 'PATCH', { settings: { cwd: '/missing-folder-agent-desk' } })).status, 400);
     await call(`/api/chats/${a.id}/send`, 'POST', { text: 'Prva poruka' });
     let chat = await done(a.id);
+    // Sačuvani izbor se vraća bez ključa i bez novog poziva TTS servisu.
+    const selectedText='Dva označena pasusa.\n\nSamo njih čitaj.';
+    const clipId=speechHash(selectedText.replace(/\s+/g,' ').trim());
+    const audioDir=path.join(temp,'data','govor',a.id);mkdirSync(audioDir,{recursive:true});
+    writeFileSync(path.join(audioDir,'izbor.wav'),Buffer.from('cached-audio'));
+    writeFileSync(path.join(audioDir,'index.json'),JSON.stringify([{id:clipId,hash:clipId,file:'izbor.wav',label:'Izbor'}]));
+    const speechBody={messageId:chat.messages.at(-1).id,selectedText};
+    const cachedSpeech=await call(`/api/chats/${a.id}/speak`,'POST',speechBody);
+    assert.equal(cachedSpeech.status,200);assert.equal(cachedSpeech.data.cached,true);assert.equal(cachedSpeech.data.selected,true);assert.equal(cachedSpeech.data.id,clipId);
+    const cachedAudio=await fetch(`${base}/api/chats/${a.id}/speech/${clipId}`);assert.equal(cachedAudio.headers.get('content-type'),'audio/wav');assert.equal(await cachedAudio.text(),'cached-audio');
+    assert.equal((await call(`/api/chats/${a.id}/speak`,'POST',{...speechBody,selectedText:''})).status,400);
+
     assert.equal(chat.sessions.codex, 'test-native-session');
     assert.equal(chat.messages.at(-1).status, 'done');
     assert.equal(chat.messages.at(-1).usage.input,120);
