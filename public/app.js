@@ -102,11 +102,12 @@ function resizePrompt() {
   else view.scrollTop=before<8?view.scrollHeight:saved;
 }
 function discardEmpty(id){const chat=chats.find(c=>c.id===id);if(!(newEmptyChats.has(id)||chat?.ephemeral)||!chat||chat.messages.length||chat.running||chat.queue?.length||pendingMessages.has(id))return;newEmptyChats.delete(id);api(`/api/chats/${id}/discard-empty`,'POST',{}).then(()=>{chats=chats.filter(c=>c.id!==id);drafts.delete(id);linkedFiles.delete(id);if(meta)renderSidebar();}).catch(()=>{});}
-function choose(id) {
+function choose(id,{replaceHistory=false}={}) {
+  const changed=active!==id;
   if(active!==id){discardEmpty(active);selectedMessages.clear();messageSelectionMode=false;selectionAnchor=null;renderMessageSelection();}
   showDefaults(false);document.body.classList.toggle('chat-view',!!id);
   speechSelection=null;$('#speech-selection').hidden=true;clearTimeout(clickTimer);drafts.set(active,$('#prompt').value);active=id;$('#prompt').value=drafts.get(id)||'';resizePrompt();
-  const url=new URL(location.href);if(id)url.hash='chat='+encodeURIComponent(id);else url.hash='';history.replaceState(history.state,'',url);
+  const url=new URL(location.href);if(id)url.hash='chat='+encodeURIComponent(id);else url.hash='';if(mobileNavigation() && changed && id && !replaceHistory)history.pushState({agentDesk:true,agentDeskGuard:true,chatId:id},'',url);else history.replaceState(history.state,'',url);
   closePanels();
   if(speechClip && speechClip.chatId!==id)speechAudio.pause();
   if(id)localStorage.setItem('agent-desk-active',id);else localStorage.removeItem('agent-desk-active');
@@ -168,10 +169,15 @@ function renderAgentPanel() {
   if($('#agent-tree').innerHTML!==html)$('#agent-tree').innerHTML=html;
 }
 function showChatList(){if(messageSelectionMode){clearMessageSelection();return;}discardEmpty(active);document.body.classList.remove('chat-view');setOpenFolder(null);showDefaults(false);closePanels();menuChat=null;renderPopover();const url=new URL(location.href);url.hash='';history.replaceState(history.state,'',url);}
-function backFromChat(){if(messageSelectionMode){clearMessageSelection();return;}const parent=current()?.parentChatId;if(document.body.classList.contains('chat-view') && chats.some(c=>c.id===parent))choose(parent);else showChatList();}
+function backFromChat(){if(messageSelectionMode){clearMessageSelection();return;}const parent=current()?.parentChatId;if(document.body.classList.contains('chat-view') && chats.some(c=>c.id===parent))choose(parent,{replaceHistory:true});else showChatList();}
 $('#chat-back').onclick=backFromChat;
 $('#subagents-toggle').onclick=()=>{agentPanelOpen=!agentPanelOpen;localStorage.setItem('agent-desk-agent-panel',agentPanelOpen?'shown':'hidden');renderAgentPanel();};
 const mobileNavigation=()=>matchMedia('(max-width:650px)').matches;
+let mobileHistoryActivated=false;
+function activateMobileHistory(e){if(!e.isTrusted || !mobileNavigation() || mobileHistoryActivated)return;mobileHistoryActivated=true;history.pushState({agentDesk:true,agentDeskGuard:true},'',location.href);}
+// Chrome may skip entries created before user activation, including restored PWA entries.
+document.addEventListener('click',activateMobileHistory,{capture:true});document.addEventListener('keydown',activateMobileHistory,{capture:true});
+
 function keepMobileHistory(){if(mobileNavigation())history.pushState({agentDesk:true,agentDeskGuard:true},'',location.href);}
 window.addEventListener('popstate',()=>{if($('#attachment-view').open){$('#attachment-view').close();attachmentHistory=false;keepMobileHistory();return;}if($('#files-dialog').open){guard(async()=>{if(!filePickerClosing && fileListing.path!==fileListing.home && fileListing.parent){history.pushState({agentDesk:true,filePicker:true},'',location.href);await browseFolder(fileListing.parent);}else{filePickerClosing=false;$('#files-dialog').close();keepMobileHistory();}});return;}if(mobileNavigation()){if(document.body.classList.contains('chat-view')){if($('#files-dialog').open)$('#files-dialog').close();if($('#delete-dialog').open)$('#delete-dialog').close();backFromChat();}else if(openFolder)setOpenFolder(null);else showChatList();keepMobileHistory();}});
 
