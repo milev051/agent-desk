@@ -278,3 +278,5 @@ Arhivski JSON fajlovi imaju naziv `Naslov -- ID arhive.json`. Raniji nazivi koji
 Ime korisnika (`Korisnik`) ili model odgovora prikazuje se uz vreme u podnožju poruke. Na telefonu selekcija se kopira dugmetom `Kopiraj MD` iznad razgovora; unutrašnji razmak u prikazu ne dodaje razmake u Markdown tekst.
 
 Delegiranje ne treba zaobilaziti pokretanjem `grok -p`, `claude -p` ili drugog agentskog CLI-ja van Agent Deska: takvi procesi nemaju karticu, zapis ni potrošnju u aplikaciji. Za više od dva zadatka koristi se više uzastopnih grupa kroz `/delegate`; popunjen kapacitet vraća HTTP 409.
+
+Telefon dobija i kratke tekstualne izveštaje tokom rada: tek kada posle novog teksta agent nastavi alatom. Uzastopni izveštaji se grupišu, najviše jedan u minutu i šest tokom jednog odgovora; završetak otkazuje odloženi izveštaj. Pozivi alata bez teksta ne šalju obaveštenja.

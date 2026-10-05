@@ -23,6 +23,7 @@ import { createSpeech, spokenText, speechInput, speechSlice, speechHash, speechL
 import { usageDelta } from './usage.mjs';
 import { buildAccounting } from './accounting.mjs';
 import { createPush } from './push.mjs';
+import { createProgressPush } from './progress-push.mjs';
 import webpush from 'web-push';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
@@ -193,6 +194,7 @@ async function send(chat, prompt, options={}) {
   if (chat.title === 'Novi čet') chat.title = prompt.slice(0, 52);
   chat.updatedAt = Date.now();
   const run = { child, stopped: false }; run.done = new Promise(resolve=>run.resolve=resolve); running.set(chat.id, run); update();
+  const progressPush=createProgressPush({notify:body=>phonePush.notify({title:chat.title||'Agent Desk',body,chatId:chat.id,tag:chat.id})});
   let buffer = '', stderr = '', streamedBlock = false, finished = false;
   function event(line) {
     if (!line.trim()) return;
@@ -221,6 +223,7 @@ async function send(chat, prompt, options={}) {
       if (a.key ? reply.actions.some(x => x.key === a.key) : a.kind === 'tool' && last?.kind === 'tool' && last.text === a.text) continue;
       if (reply.actions.length < 300) reply.actions.push({ ...a, text: String(a.text || '').slice(0, 300) });
     }
+    if (e.activity || e.actions?.length) progressPush.tool(reply.text);
     if (e.error) reply.error = e.error;
     broadcast();
   }
@@ -234,6 +237,7 @@ async function send(chat, prompt, options={}) {
   function finish(code, error) {
     if (finished) return; finished = true; clearTimeout(run.timeout); clearTimeout(run.killTimer);
     if (buffer.trim()) event(buffer);
+    progressPush.close();
     running.delete(chat.id); reply.activity = '';reply.completedAt=Date.now();
     reply.status = run.stopped ? 'stopped' : code === 0 && !error && !reply.error ? 'done' : 'error';
     if (reply.status === 'error') reply.error ||= error?.message || stderr.trim() || `Agent je završio sa kodom ${code}.`;
