@@ -390,6 +390,30 @@ $('#queue').onclick=e=>guard(async()=>{
 // Na telefonu Enter dodaje novi red. Na računaru Enter šalje, a dok agent radi tekst ide u istu poruku u redu.
 $('#send').onclick=e=>{if(current()?.running){e.preventDefault();guard(enqueueMessage);}};
 $('#stop-run').onclick=()=>{const id=active;if(!current()?.running)return;guard(()=>api(`/api/chats/${id}/stop`,'POST'));};
+// Gestures start in the empty frame, never in editable text.
+const promptFrame=$('.prompt-wrap');let composerSwipe=null;
+function clearComposerSwipe(){composerSwipe=null;promptFrame.style.removeProperty('--swipe-offset');promptFrame.classList.remove('swipe-attach','swipe-stop');}
+function composerSwipeDirection(dx,dy,elapsed,firstMove){return elapsed<=500 && firstMove<=180 && Math.abs(dx)>=64 && Math.abs(dx)>Math.abs(dy)*3?(dx>0?'attach':'stop'):null;}
+promptFrame.addEventListener('pointerdown',e=>{
+ const input=$('#prompt');if(e.target!==promptFrame || e.button!==0 || !e.isPrimary || input.selectionStart!==input.selectionEnd || window.getSelection()?.toString())return;
+ composerSwipe={id:e.pointerId,x:e.clientX,y:e.clientY,at:performance.now(),firstMove:null,chatId:active};promptFrame.setPointerCapture(e.pointerId);
+});
+promptFrame.addEventListener('pointermove',e=>{
+ const swipe=composerSwipe;if(!swipe || e.pointerId!==swipe.id)return;
+ const dx=e.clientX-swipe.x,dy=e.clientY-swipe.y,elapsed=performance.now()-swipe.at;
+ if(elapsed>500 || Math.abs(dy)>18 || active!==swipe.chatId){clearComposerSwipe();return;}
+ if(Math.abs(dx)>8 && swipe.firstMove===null)swipe.firstMove=elapsed;
+ if(swipe.firstMove!==null && swipe.firstMove>180){clearComposerSwipe();return;}
+ if(Math.abs(dx)>12){e.preventDefault();promptFrame.style.setProperty('--swipe-offset',Math.max(-24,Math.min(24,dx/4))+'px');promptFrame.classList.toggle('swipe-attach',dx>0);promptFrame.classList.toggle('swipe-stop',dx<0 && !!current()?.running);}
+});
+promptFrame.addEventListener('pointerup',e=>{
+ const swipe=composerSwipe;if(!swipe || e.pointerId!==swipe.id)return;
+ const direction=composerSwipeDirection(e.clientX-swipe.x,e.clientY-swipe.y,performance.now()-swipe.at,swipe.firstMove??Infinity);
+ clearComposerSwipe();if(active!==swipe.chatId)return;
+ if(direction==='attach')$('#files-open').click();else if(direction==='stop' && current()?.running)$('#stop-run').click();
+});
+promptFrame.addEventListener('pointercancel',clearComposerSwipe);
+
 
 $('#prompt').onkeydown=e=>{if(e.key!=='Enter' || e.isComposing || e.shiftKey || matchMedia('(max-width:650px)').matches)return;e.preventDefault();if(current()?.running || e.metaKey || e.ctrlKey)guard(enqueueMessage);else $('#composer').requestSubmit();};
 $('#prompt').oninput=resizePrompt;

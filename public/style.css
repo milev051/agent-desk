@@ -186,3 +186,7 @@ body.dragging-chat #new-folder-drop{display:block}
 #chat-popover .folder-menu{display:flex;align-items:center;gap:8px}#chat-popover .folder-menu input{flex:1;min-width:0;width:100%;margin:0;padding:8px;font-size:13px}#chat-popover .folder-menu .delete-chat{border-left:0;flex-shrink:0}
 
 .chat-row{position:relative}.chat-drag-zone{position:absolute;top:0;right:0;bottom:0;width:50%;touch-action:none;cursor:grab}.chat-drag-zone:active{cursor:grabbing}
+
+.prompt-wrap{touch-action:pan-y;transform:translateX(var(--swipe-offset,0px))}
+.prompt-wrap.swipe-attach{border-color:#89b992}.prompt-wrap.swipe-stop{border-color:#d18e87}
+@media(pointer:coarse){.prompt-wrap{padding-top:12px;padding-bottom:12px}#composer .composer-actions #files-open,#composer .composer-actions #stop-run{display:none}}
