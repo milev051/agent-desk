@@ -46,7 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNaviga
   web.loadHTMLString("<html style='background:#111;color:#ddd;font:16px system-ui'><body style='display:grid;place-items:center;height:90vh'>Povezivanje…</body></html>",baseURL:nil)
   Task { await startServer() }
  }
- @objc func openSettings(){web.evaluateJavaScript("if(document.querySelector('#defaults')?.hidden && !document.querySelector('dialog[open]'))document.querySelector('#defaults-open')?.click();",completionHandler:nil)}
+ @objc func openSettings(){web.evaluateJavaScript("if(!document.querySelector('dialog[open]'))document.querySelector('#defaults-open')?.click();",completionHandler:nil)}
  @objc func refresh(){web.reload()}
  func applicationShouldTerminateAfterLastWindowClosed(_ sender:NSApplication)->Bool {true}
  func applicationShouldHandleReopen(_ sender:NSApplication,hasVisibleWindows flag:Bool)->Bool {window.makeKeyAndOrderFront(nil);return true}
