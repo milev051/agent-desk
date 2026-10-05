@@ -19,6 +19,13 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     async function call(url, method = 'GET', data, origin = base) { const r = await fetch(base + url, { method, headers: { Origin: origin, 'Content-Type': 'application/json' }, body: data ? JSON.stringify(data) : undefined }); return { status: r.status, data: await r.json() }; }
     async function done(id) { for(let i=0;i<100;i++){const c=(await call('/api/chats')).data.find(c=>c.id===id);if(!c.running)return c;await new Promise(r=>setTimeout(r,30));}throw Error('CLI nije završio'); }
     const script=await fetch(base+'/app.js',{headers:{'Accept-Encoding':'gzip'}});assert.equal(script.headers.get('content-encoding'),'gzip');assert.match(await script.text(),/import/);
+    const entry=await (await fetch(base+'/app.js')).text();
+    for(const match of entry.matchAll(/from\s+['"]([^'"]+)['"]/g)){
+      const dependency=await fetch(new URL(match[1],base+'/app.js'));
+      assert.equal(dependency.status,200,match[1]);
+      assert.match(dependency.headers.get('content-type'),/javascript/,match[1]);
+    }
+    const page=await fetch(base+'/');assert.match(page.headers.get('content-security-policy'),/media-src 'self' blob:/);
     const manifest=await fetch(base+'/manifest.webmanifest');assert.equal((await manifest.json()).display,'standalone');assert.equal((await fetch(base+'/icon-512.png')).headers.get('content-type'),'image/png');
     const stream=(await fetch(base+'/api/events')).body.getReader(),decoder=new TextDecoder();let buffered='';
     const nextEvent=async()=>{while(!buffered.includes('\n\n'))buffered+=decoder.decode((await stream.read()).value,{stream:true});const end=buffered.indexOf('\n\n'),raw=buffered.slice(0,end);buffered=buffered.slice(end+2);if(!raw.startsWith('data: '))return nextEvent();return JSON.parse(raw.slice(6));};

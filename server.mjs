@@ -19,6 +19,7 @@ import { command, parseEvent, names } from './adapters.mjs';
 import { catalog, quickCatalog, validateEffort } from './models.mjs';
 import { transferableMessages, transferPlan, historyText, contextEstimate } from './context.mjs';
 import { createTitleManager } from './titles.mjs';
+import { createSpeech, spokenText, speechSlice, speechHash, speechLabel, speechModel, joinWavs } from './speech.mjs';
 import { usageDelta } from './usage.mjs';
 import { buildAccounting } from './accounting.mjs';
 import { createPush } from './push.mjs';
@@ -114,7 +115,22 @@ function broadcast(immediate = false) {
   }
 }
 function update() { usageCache=null;save(); broadcast(true); }
-const titleManager=createTitleManager({settingsFile:path.join(dataDir,'title-settings.json'),keyFile:path.join(process.env.AGENT_DESK_CONFIG || path.join(os.homedir(),'.config','agent-desk'),'google-api-key'),getChat:id=>chats.find(c=>c.id===id),changed:update});
+const googleKeyFile=path.join(process.env.AGENT_DESK_CONFIG || path.join(os.homedir(),'.config','agent-desk'),'google-api-key');
+const titleManager=createTitleManager({settingsFile:path.join(dataDir,'title-settings.json'),keyFile:googleKeyFile,getChat:id=>chats.find(c=>c.id===id),changed:update});
+const speech=createSpeech({keyFile:path.join(path.dirname(googleKeyFile),'openai-tts-key')});
+function speechDir(chatId){return path.join(dataDir,'govor',chatId);}
+function speechClips(chatId){const file=path.join(speechDir(chatId),'index.json');if(!fs.existsSync(file))return [];try{const data=JSON.parse(fs.readFileSync(file,'utf8'));return Array.isArray(data)?data:[];}catch{return [];}}
+function sendAudio(req,res,file,filename){
+  const size=fs.statSync(file).size, range=req.headers.range, headers={'Content-Type':'audio/wav','Accept-Ranges':'bytes','Cache-Control':'private, max-age=86400','X-Content-Type-Options':'nosniff','Content-Disposition':`inline; filename*=UTF-8''${encodeURIComponent(filename)}`};
+  if(!range){res.writeHead(200,{...headers,'Content-Length':size});return fs.createReadStream(file).pipe(res);}
+  const found=/^bytes=(\d*)-(\d*)$/.exec(range);
+  if(!found){res.writeHead(416,{...headers,'Content-Range':`bytes */${size}`});return res.end();}
+  let start=found[1]?Number(found[1]):0, end=found[2]?Number(found[2]):size-1;
+  if(!Number.isInteger(start)||!Number.isInteger(end)||start<0||start>=size||end<start){res.writeHead(416,{...headers,'Content-Range':`bytes */${size}`});return res.end();}
+  end=Math.min(end,size-1);
+  res.writeHead(206,{...headers,'Content-Range':`bytes ${start}-${end}/${size}`,'Content-Length':end-start+1});
+  return fs.createReadStream(file,{start,end}).pipe(res);
+}
 function locate(name) {
   const dirs = [...(process.env.PATH || '').split(path.delimiter), '/opt/homebrew/bin', '/usr/local/bin', path.join(os.homedir(), '.local/bin'), path.join(os.homedir(), '.grok/bin')];
   for (const dir of dirs) { const p = path.join(dir, name); try { fs.accessSync(p, fs.constants.X_OK); return p; } catch {} }
@@ -137,6 +153,12 @@ async function body(req) {
   return JSON.parse(data || '{}');
 }
 function stop(id) { const run = running.get(id); if (run) { run.stopped = true; try { process.kill(-run.child.pid, 'SIGTERM'); } catch {} run.killTimer = setTimeout(() => { try { process.kill(-run.child.pid, 'SIGKILL'); } catch {} }, 2000); run.killTimer.unref(); } }
+function desktopNotify(title, body) {
+  if (process.platform !== 'darwin' || process.env.AGENT_DESK_DISABLE_LIMITS === '1') return;
+  const quoted = value => `"${String(value).replace(/[\\"]/g, '\\$&').replace(/[\r\n]+/g, ' ').slice(0, 140)}"`;
+  const child = spawn('/usr/bin/osascript', ['-e', `display notification ${quoted(body)} with title ${quoted(title)}`], {stdio:'ignore'});
+  child.unref();
+}
 function stopRelated(id) {for(const c of chats)if(c.parentChatId===id)stop(c.id);stop(id);}
 function resolveLocalFile(p){for(const cwd of new Set([root,...chats.map(c=>c.settings.cwd)])){try{return filePath(p,cwd);}catch{}}throw Error('Fajl nije dostupan.');}
 function appContext(chat) {
@@ -221,7 +243,7 @@ async function send(chat, prompt, options={}) {
     if(reply.status==='error' || reply.status==='stopped')chat.queuePaused=true;
     chat.updatedAt = Date.now(); update();run.resolve(reply);setImmediate(()=>drainQueue(chat));
     const outcome={done:'Završeno',error:'Greška',stopped:'Zaustavljeno'}[reply.status];
-    if(outcome)void phonePush.notify({title:chat.title||'Agent Desk',body:outcome,chatId:chat.id,tag:chat.id});
+    if(outcome){void phonePush.notify({title:chat.title||'Agent Desk',body:outcome,chatId:chat.id,tag:chat.id});desktopNotify(chat.title||'Agent Desk',outcome);}
   }
   child.on('error', error => finish(null, error)); child.on('close', code => finish(code));
   child.stdin.on('error', () => {}); child.stdin.end(spec.input || undefined);
@@ -329,7 +351,7 @@ const server = http.createServer(async (req, res) => {
     if(req.method==='POST' && emptyMatch){const chat=chats.find(c=>c.id===emptyMatch[1]);if(!chat)return json(200,{ok:true});
       if(running.has(chat.id)||chat.messages.length||chat.queue?.length||Object.keys(chat.sessions).length||chats.some(c=>c.parentChatId===chat.id))return json(409,{error:'Čet više nije prazan.'});
       chats=chats.filter(c=>c.id!==chat.id);update();return json(200,{ok:true});}
-    const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(send|stop|reset-session|fork|delegate|reveal|record|count-tokens|files|upload|prilog))?$/);
+    const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(send|stop|reset-session|speak|speech|fork|delegate|reveal|record|count-tokens|files|upload|prilog)(?:\/([a-f0-9]{16}))?)?$/);
     if (match) {
       const chat = chats.find(c => c.id === match[1]); if (!chat) return json(404, { error: 'Čet nije pronađen.' });
       // Prilog sa telefona ili iz privremene memorije čuva se u data/prilozi/<čet>/ i povezuje kao obična putanja.
@@ -386,6 +408,48 @@ const server = http.createServer(async (req, res) => {
         if(chat.usageBaselines)delete chat.usageBaselines[agent];
         chat.updatedAt=Date.now();update();return json(200,publicChat(chat));
       }
+      if(req.method==='GET' && match[2]==='speech'){
+        const clipId=match[3], clips=speechClips(chat.id), clip=clips.find(item=>item.id===clipId);
+        const stored=clip?.file || (clipId?`${clipId}.wav`:'');
+        const file=stored && path.basename(stored)===stored && path.join(speechDir(chat.id), stored);
+        if(!clip || !file || !fs.existsSync(file) || !fs.statSync(file).isFile())return json(404,{error:'Snimak nije pronađen.'});
+        return sendAudio(req, res, file, `${clip.label}.wav`);
+      }
+      if(req.method==='POST' && match[2]==='speak'){
+        const b=await body(req);
+        const message=chat.messages.find(m=>m.id===b.messageId && m.text);
+        const spoken=spokenText(message?.text || '');
+        if(!spoken)return json(400,{error:'Poruka nema tekst za čitanje.'});
+        const hash=speechHash(spoken);
+        const clips=speechClips(chat.id);
+        const found=clips.find(item=>item.hash===hash && item.file && path.basename(item.file)===item.file && fs.existsSync(path.join(speechDir(chat.id), item.file)));
+        if(found)return json(200,{...found, messageId:message.id, cached:true});
+        const controller=new AbortController();
+        const timer=setTimeout(()=>controller.abort(),180000);
+        req.on('close',()=>{if(!res.writableEnded)controller.abort();});
+        try{
+          const parts=[];
+          let offset=0;
+          while(!controller.signal.aborted){
+            const slice=speechSlice(spoken, offset);
+            if(!slice.text)break;
+            parts.push(await speech.speak(slice.text, controller.signal));
+            if(!slice.next)break;
+            offset=slice.next;
+          }
+          if(controller.signal.aborted || res.writableEnded)return;
+          const audio=joinWavs(parts);
+          const createdAt=Date.now();
+          const label=speechLabel(chat.title, createdAt, speechModel);
+          const clip={id:hash, messageId:message.id, hash, label, file:`${label} ${hash}.wav`, model:speechModel, createdAt, bytes:audio.length};
+          const dir=speechDir(chat.id);
+          fs.mkdirSync(dir,{recursive:true, mode:0o700});
+          fs.writeFileSync(path.join(dir, clip.file), audio, {mode:0o600});
+          fs.writeFileSync(path.join(dir, 'index.json'), JSON.stringify([clip, ...clips.filter(item=>item.id!==clip.id)]), {mode:0o600});
+          return json(200,{...clip, cached:false});
+        }catch(error){if(res.headersSent||res.writableEnded)return;return json(error.name==='AbortError'?504:400,{error:error.name==='AbortError'?'Čitanje je prekinuto.':error.message});}
+        finally{clearTimeout(timer);}
+      }
       if(req.method==='POST' && match[2]==='send'){const b=await body(req);req.sendBody=b;if(b.requestId!==undefined && (typeof b.requestId!=='string'||!/^[-a-zA-Z0-9]{1,80}$/.test(b.requestId)))throw Error('Neispravan ID poruke.');if(b.requestId && chat.messages.some(m=>m.requestId===b.requestId))return json(202,{ok:true});}
       if (running.has(chat.id) && !(req.method === 'PATCH' && !match[2])) return json(409, { error: 'Sačekaj odgovor ili zaustavi agenta.' });
 
@@ -429,10 +493,10 @@ const server = http.createServer(async (req, res) => {
         update();return json(200,{ok:true,deleted:[...ids],archiveId});
       }
     }
-    const files = { '/reasoning.mjs':['reasoning.mjs','text/javascript'], '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/sw.js': ['sw.js', 'text/javascript'], '/sidebar-groups.mjs': ['sidebar-groups.mjs', 'text/javascript'], '/folder-columns.mjs': ['folder-columns.mjs', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/marked.js': ['../node_modules/marked/lib/marked.esm.js', 'text/javascript'], '/purify.js': ['../node_modules/dompurify/dist/purify.es.mjs', 'text/javascript'], '/manifest.webmanifest': ['manifest.webmanifest', 'application/manifest+json'], '/icon-192.png': ['icon-192.png', 'image/png'], '/icon-512.png': ['icon-512.png', 'image/png'], '/apple-touch-icon.png': ['apple-touch-icon.png', 'image/png'], '/badge-96.png': ['badge-96.png', 'image/png'] };
+    const files = { '/wav.mjs':['wav.mjs','text/javascript'], '/reasoning.mjs':['reasoning.mjs','text/javascript'], '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/sw.js': ['sw.js', 'text/javascript'], '/sidebar-groups.mjs': ['sidebar-groups.mjs', 'text/javascript'], '/folder-columns.mjs': ['folder-columns.mjs', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/marked.js': ['../node_modules/marked/lib/marked.esm.js', 'text/javascript'], '/purify.js': ['../node_modules/dompurify/dist/purify.es.mjs', 'text/javascript'], '/manifest.webmanifest': ['manifest.webmanifest', 'application/manifest+json'], '/icon-192.png': ['icon-192.png', 'image/png'], '/icon-512.png': ['icon-512.png', 'image/png'], '/apple-touch-icon.png': ['apple-touch-icon.png', 'image/png'], '/badge-96.png': ['badge-96.png', 'image/png'] };
     if (req.method === 'GET' && files[url.pathname]) {
       const [file, mime] = files[url.pathname];
-      const headers = { 'Content-Type': mime.startsWith('image/') ? mime : `${mime}; charset=utf-8`, 'Content-Security-Policy': "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; img-src 'self' data: blob:; frame-ancestors 'none'", 'X-Content-Type-Options': 'nosniff' };
+      const headers = { 'Content-Type': mime.startsWith('image/') ? mime : `${mime}; charset=utf-8`, 'Content-Security-Policy': "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; frame-ancestors 'none'", 'X-Content-Type-Options': 'nosniff' };
       if (url.pathname === '/sw.js') headers['Cache-Control'] = 'no-cache';
       return respond(200, headers, fs.readFileSync(path.join(root, 'public', file)));
     }

@@ -26,15 +26,12 @@ Task {
  var ready=false
  for _ in 0..<60 {if await available(){ready=true;break};try? await Task.sleep(for:.milliseconds(250))}
  let isReady=ready
- // Chrome u app režimu sa zasebnim profilom: zatvaranje tog prozora gasi server.
+ // Chrome u app režimu sa zasebnim profilom; server nastavlja rad nakon zatvaranja prozora.
  let chrome="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",profile=FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".config/agent-desk/chrome").path
  if isReady && FileManager.default.isExecutableFile(atPath:chrome) {
-  let check=Process();check.executableURL=URL(fileURLWithPath:"/usr/bin/pgrep");check.arguments=["-f","--user-data-dir="+profile];check.standardOutput=FileHandle.nullDevice
-  let alreadyOpen=((try? check.run()) != nil) && {check.waitUntilExit();return check.terminationStatus==0}()
   let window=Process();window.executableURL=URL(fileURLWithPath:chrome);window.arguments=["--app="+address.absoluteString,"--user-data-dir="+profile,"--no-first-run","--no-default-browser-check"]
   if (try? window.run()) != nil {
    window.waitUntilExit()
-   if !alreadyOpen {_ = execute(["bootout","gui/\(getuid())/local.agent-desk.server"])}
    await MainActor.run {NSApplication.shared.terminate(nil)};return
   }
  }
