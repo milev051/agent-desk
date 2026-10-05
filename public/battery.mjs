@@ -8,7 +8,7 @@ export function startBatteryStatus(){
   : '<g fill="currentColor"><path d="M4 11h16v8a2 2 0 0 1-2 2h-1v2h-2v-2H9v2H7v-2H6a2 2 0 0 1-2-2ZM1 11h2v8H1Zm20 0h2v8h-2ZM4 9a8 8 0 0 1 16 0Z"/><path d="m6 1 2 3m10-3-2 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></g><g fill="#000"><circle cx="8.5" cy="6.5" r=".8"/><circle cx="15.5" cy="6.5" r=".8"/></g>';
  const percent=document.createElement('small');percent.textContent='-';display.replaceChildren(logo,percent);
  function show(value){
-  percent.textContent=value?.level!=null?`${value.level}%`:'-';
+  percent.textContent=value?.level!=null?String(value.level):'-';
   percent.className=value?.level==null?'battery-unknown':value.level<=20?'battery-low':value.level<=50?'battery-mid':'battery-good';
   display.classList.toggle('battery-stale',!!value?.stale);
  }
