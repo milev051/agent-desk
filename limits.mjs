@@ -5,7 +5,8 @@ import {fileURLToPath} from 'node:url';
 const agents=['codex','claude','antigravity','grok'];
 export function sanitizeLimit(value){
  if(!value || !agents.includes(value.agent))return null;
- const windows=(value.windows || []).filter(w=>['fiveHour','weekly'].includes(w.period) && Number.isFinite(w.remaining)).map(w=>({period:w.period,remaining:Math.max(0,Math.min(100,w.remaining)),resetAt:Number.isFinite(w.resetAt)?w.resetAt:null}));
+ const periods=['fiveHour','weekly','weeklyOpus','weeklySonnet'];
+ const windows=(value.windows || []).filter(w=>periods.includes(w.period) && Number.isFinite(w.remaining)).map(w=>({period:w.period,remaining:Math.max(0,Math.min(100,w.remaining)),resetAt:Number.isFinite(w.resetAt)?w.resetAt:null}));
  return {agent:value.agent,windows,updatedAt:Number.isFinite(value.updatedAt)?value.updatedAt:Date.now(),error:typeof value.error==='string'?value.error.slice(0,200):null,stale:value.stale===true,nextAttemptAt:Number.isFinite(value.nextAttemptAt)?value.nextAttemptAt:null};
 }
 export function createLimits({enabled=process.platform==='darwin',spawnFn=spawn,cacheFile,onSample=()=>{}}={}){

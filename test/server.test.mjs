@@ -18,6 +18,20 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     await once(server.stdout, 'data');
     async function call(url, method = 'GET', data, origin = base) { const r = await fetch(base + url, { method, headers: { Origin: origin, 'Content-Type': 'application/json' }, body: data ? JSON.stringify(data) : undefined }); return { status: r.status, data: await r.json() }; }
     async function done(id) { for(let i=0;i<100;i++){const c=(await call('/api/chats')).data.find(c=>c.id===id);if(!c.running)return c;await new Promise(r=>setTimeout(r,30));}throw Error('CLI nije završio'); }
+    const script=await fetch(base+'/app.js',{headers:{'Accept-Encoding':'gzip'}});assert.equal(script.headers.get('content-encoding'),'gzip');assert.match(await script.text(),/import/);
+    const manifest=await fetch(base+'/manifest.webmanifest');assert.equal((await manifest.json()).display,'standalone');assert.equal((await fetch(base+'/icon-512.png')).headers.get('content-type'),'image/png');
+    const stream=(await fetch(base+'/api/events')).body.getReader(),decoder=new TextDecoder();let buffered='';
+    const nextEvent=async()=>{while(!buffered.includes('\n\n'))buffered+=decoder.decode((await stream.read()).value,{stream:true});const end=buffered.indexOf('\n\n'),event=JSON.parse(buffered.slice(6,end));buffered=buffered.slice(end+2);return event;};
+    assert.deepEqual(await nextEvent(),[]);const made=(await call('/api/chats','POST',{})).data;
+    const delta=await nextEvent();assert.deepEqual(delta.order,[made.id]);assert.deepEqual(delta.changed.map(x=>x.chat.id),[made.id]);assert.equal(delta.changed[0].chat.messages,undefined);await stream.cancel();
+    const uploaded=await fetch(`${base}/api/chats/${made.id}/upload`,{method:'POST',headers:{Origin:base,'X-File-Name':encodeURIComponent('../slika ž.png')},body:Buffer.from('png')});const saved=(await uploaded.json()).path;
+    assert.equal(uploaded.status,201);assert.match(saved,/prilozi\/[\w-]+\/\d{8}-\d{6}-slika ž\.png$/);assert.equal(readFileSync(saved,'utf8'),'png');
+    assert.equal((await fetch(`${base}/api/chats/${made.id}/upload`,{method:'POST',headers:{Origin:'https://example.com'},body:'x'})).status,403);
+    const shown=await fetch(`${base}/api/chats/${made.id}/prilog?name=${encodeURIComponent(path.basename(saved))}`);assert.equal(shown.status,200);assert.equal(shown.headers.get('content-type'),'image/png');assert.equal(await shown.text(),'png');
+    assert.equal((await fetch(`${base}/api/chats/${made.id}/prilog?name=${encodeURIComponent('../../chats.json')}`)).status,404);
+    const doc=path.join(path.dirname(saved),'izveštaj.pdf');writeFileSync(doc,'pdf');const downloaded=await fetch(`${base}/api/chats/${made.id}/prilog?name=${encodeURIComponent('izveštaj.pdf')}`);assert.equal(downloaded.headers.get('content-type'),'application/octet-stream');assert.match(downloaded.headers.get('content-disposition'),/^attachment/);
+    rmSync(path.dirname(saved),{recursive:true});
+    await call(`/api/chats/${made.id}/discard-empty`,'POST',{});
     assert.equal((await call('/api/chats', 'POST', {}, 'https://example.com')).status, 403);assert.deepEqual((await call('/api/limit-history')).data,[]);
     assert.equal((await call('/api/title-settings')).data.configured,false);
     assert.equal((await call('/api/title-settings','PUT',{key:'test-only-key',enabled:false},'https://example.com')).status,403);
@@ -149,6 +163,8 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal((await call(`/api/archive/${deleted.data.archiveId}/restore`,'POST',{})).status,200);assert.equal((await call(`/api/chats/${child.id}`)).data.parentChatId,queued.id);
     const familyDeleted=await call(`/api/chats/${queued.id}?children=1`,'DELETE');assert.equal(familyDeleted.status,200);assert.ok(familyDeleted.data.deleted.includes(child.id));assert.equal((await call(`/api/chats/${child.id}`)).status,404);
     assert.equal((await call(`/api/archive/${familyDeleted.data.archiveId}/restore`,'POST',{})).status,200);assert.equal((await call(`/api/chats/${child.id}`)).data.parentChatId,queued.id);
+    const childArchived=await call(`/api/chats/${child.id}`,'DELETE');const parentArchived=await call(`/api/chats/${queued.id}`,'DELETE');assert.equal(childArchived.status,200);assert.equal(parentArchived.status,200);
+    assert.equal((await call(`/api/archive/${parentArchived.data.archiveId}/restore`,'POST',{})).status,200);assert.equal((await call(`/api/chats/${child.id}`)).data.parentChatId,queued.id);assert.ok(!(await call('/api/archive')).data.some(r=>r.id===childArchived.data.archiveId));
     const unused=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
     assert.equal((await call(`/api/chats/${unused.id}/discard-empty`,'POST',{})).status,200);assert.equal((await call(`/api/chats/${unused.id}`)).status,404);
     assert.equal((await call(`/api/chats/${a.id}/discard-empty`,'POST',{})).status,409);
@@ -172,6 +188,7 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
 });
 test('stream parser prepoznaje tekst, alate i greške dobavljača', () => {
   assert.equal(parseEvent('claude', { type: 'stream_event', event: { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Ćao' } } }).delta, 'Ćao');
+  assert.equal(parseEvent('claude', { type: 'stream_event', event: { type: 'content_block_start', content_block: { type: 'text', text: '' } } }).textStart, true);
   assert.equal(parseEvent('grok', { type: 'assistant', message: { content: [{ type: 'text', text: 'Odgovor' }] } }).text, 'Odgovor');
   assert.equal(parseEvent('claude', { type: 'result', is_error: true, result: 'Nema prijave' }).error, 'Nema prijave');
   const chat = { settings: { agent: 'grok', access: 'read' }, sessions: {} };

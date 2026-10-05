@@ -13,7 +13,7 @@ npm start
 
 Otvori http://127.0.0.1:4317. Za drugi port: `PORT=4318 npm start`.
 
-Na macOS-u dvoklikni `Agent Desk.app` u folderu aplikacije. Launcher pokreće server u pozadini bez Terminal prozora i otvara browser. Server ostaje uključen nakon zatvaranja taba. Launcher se pravi komandom `./launcher/build.sh`, bez dodatnih modula; `Pokreni Agent Desk.command` otvara isti launcher.
+Na macOS-u dvoklikni `Agent Desk.app` u folderu aplikacije. Launcher pokreće server u pozadini bez Terminal prozora i otvara Agent Desk u zasebnom Chrome prozoru (`--app`, profil u `~/.config/agent-desk/chrome`). Gašenje tog Chrome-a (Cmd+Q) gasi i server. Bez Chrome-a otvara podrazumevani browser, a server ostaje uključen. Launcher se pravi komandom `./launcher/build.sh`, bez dodatnih modula; `Pokreni Agent Desk.command` otvara isti launcher.
 
 ## Uključeno
 
@@ -102,7 +102,7 @@ Samo u tekstu za prenos, pre poslednjih šest poruka, zatvoreni fenced blokovi s
 ## Linkovi, zapis i kopiranje
 
 - Ikonica za kopiranje u meniju kartice kopira adresu `/#chat=<id>`. Otvaranje linka ili promena hash-a bira konkretan čet.
-- **Prikaži u Finderu** poziva `/usr/bin/open -R` za čitljiv Markdown zapis tog četa u `data/cetovi` na macOS-u; za prazan čet pokazuje `data/chats.json`.
+- **Prikaži u Finderu** poziva `/usr/bin/open -R` za čitljiv Markdown zapis tog četa u `data/cetovi` na macOS-u; za prazan čet pokazuje `data/chats.json`. Glavni čet koji ima podagente i svi njegovi podagenti su u zajedničkom podfolderu nazvanom po glavnom četu.
 - **Otvori zapis četa** prikazuje JSON samo tog četa u tekstualnom polju koje je samo za čitanje.
 - Obe serverske radnje zahtevaju POST, lokalnu adresu klijenta `127.0.0.1`, dozvoljen Host i odgovarajući Origin. Klijent ne prosleđuje putanju do fajla.
 - Svaki Markdown blok koda ima kopiranje u gornjem desnom uglu: kopira samo sadržaj, bez ograde i jezika, uz kratku potvrdu. Kopiranje cele poruke ostaje dostupno.
@@ -170,6 +170,14 @@ Računar i telefon moraju imati aktivan Tailscale. Agent Desk mora raditi na ra�
 ```
 
 Ako Tailscale zatraži uključivanje HTTPS Serve-a, završi njegov zvanični postupak. Za drugi Agent Desk port gateway podrazumevano koristi `PORT + 2`; može se zadati `AGENT_DESK_PHONE_PORT`. QR koristi macOS CoreImage kroz postojeći Swift alat, bez dodatnih npm modula. Kada taj alat nije dostupan, može se koristiti privremeni link. U pregledaču telefona prvo se prikazuje lista četova; klik otvara čet, a gest ili dugme Nazad pregledača vraća na listu. URL sa `#chat=<id>` otvara određeni čet odmah.
+
+Stalna HTTPS adresa može da se instalira kao aplikacija, bez promene adrese: Safari → Podeli → Dodaj na početni ekran, ili Chrome na Androidu → ⋮ → Instaliraj aplikaciju. `manifest.webmanifest` i ikonice gateway daje i bez sesije, jer ih telefon pri instalaciji ponekad traži bez cookie-ja; ostali fajlovi i podaci ostaju zaštićeni. Ikonice se crtaju komandom `python3 launcher/icon.py`, koja pravi i `launcher/AppIcon.icns` za `Agent Desk.app`.
+
+JSON odgovori, statički fajlovi i tok događaja šalju se gzip-om kad ga pregledač prihvata. Lista četova je tako oko tri puta manja. Pri otvaranju se uzima iz prve poruke toka događaja, pa se ne preuzima dvaput.
+
+Posle prve pune liste tok događaja šalje samo izmenjene četove, a u njima samo nove ili promenjene poruke. Procene prenosa se računaju ponovo samo kad se čet promeni. Povratak u aplikaciju na telefonu otvara novu vezu i dobija punu listu, jer telefon u pozadini često prekine vezu bez greške.
+
+Dugme **+** nudi fajl sa računara ili sliku ili fajl sa uređaja (galerija, fotoaparat, fajlovi). Slika zalepljena u polje za unos šalje se isto. Prilog se čuva u `data/prilozi/<čet>/`, do 25 MB, i povezuje kao obična putanja. Dugme sa strelicom šalje poruku, a dok agent radi stavlja je u red čekanja. Sakriven panel podagenata ostaje sakriven pri otvaranju drugih četova.
 
 ## Brojanje istorije
 

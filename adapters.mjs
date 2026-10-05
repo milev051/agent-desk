@@ -70,6 +70,7 @@ export function parseEvent(agent, event) {
     const inner = event.type === 'stream_event' ? event.event : event;
     if (inner?.type === 'content_block_delta' && inner.delta?.type === 'text_delta') result.delta = inner.delta.text;
     if (inner?.type === 'content_block_start' && inner.content_block?.type === 'tool_use') result.activity = inner.content_block.name;
+    if (inner?.type === 'content_block_start' && inner.content_block?.type === 'text') result.textStart = true;
     if (event.type === 'assistant') {
       result.text = (event.message?.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
       const tools = (event.message?.content || []).filter(b => b.type === 'tool_use');

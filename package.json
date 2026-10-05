@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "dompurify": "^3.4.16",
-    "marked": "^18.0.14"
+    "marked": "^18.0.14",
+    "web-push": "^3.6.7"
   }
 }

@@ -23,7 +23,7 @@ test('gateway štiti podatke, proverava Host/Origin i blokira radnje sa računar
  async function request(path,{method='GET',headers={},data}={}){return new Promise((resolve,reject)=>{const req=http.request({host:'127.0.0.1',port,path,method,headers:{Host:'agent.test.ts.net',...headers}},res=>{let body='';res.on('data',b=>body+=b);res.on('end',()=>resolve({status:res.statusCode,headers:res.headers,body}));});req.on('error',reject);req.end(data?JSON.stringify(data):undefined);});}
  try{
  assert.equal((await request('/api/chats')).status,401);assert.equal((await request('/api/phone/session')).status,401);
- assert.equal((await request('/app.js')).status,401);
+ assert.equal((await request('/app.js')).status,401);assert.equal((await request('/manifest.webmanifest')).status,200);assert.equal((await request('/icon-512.png')).status,200);
  assert.equal((await request('/api/chats',{headers:{Host:'attacker.example'}})).status,403);
  assert.equal((await request('/login')).status,200);
  assert.ok(!(await request('/login')).body.includes((await access.info()).url));
