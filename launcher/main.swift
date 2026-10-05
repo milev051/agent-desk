@@ -1,7 +1,13 @@
 import Foundation
 import AppKit
 import WebKit
-let project=Bundle.main.bundleURL.deletingLastPathComponent()
+// Instalirana aplikacija koristi isti projekat i podatke kao lokalni pokretač.
+let project:URL = {
+ if let file=Bundle.main.url(forResource:"project-path",withExtension:"txt"),let value=try? String(contentsOf:file,encoding:.utf8),!value.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty {
+  return URL(fileURLWithPath:value.trimmingCharacters(in:.whitespacesAndNewlines),isDirectory:true)
+ }
+ return Bundle.main.bundleURL.deletingLastPathComponent()
+}()
 let address=URL(string:"http://127.0.0.1:4317")!
 func execute(_ arguments:[String]) -> Int32 {
  let p=Process();p.executableURL=URL(fileURLWithPath:"/bin/launchctl");p.arguments=arguments;p.standardOutput=FileHandle.nullDevice;p.standardError=FileHandle.nullDevice
