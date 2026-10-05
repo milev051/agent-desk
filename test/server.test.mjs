@@ -27,6 +27,7 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
       assert.match(dependency.headers.get('content-type'),/javascript/,match[1]);
     }
     const page=await fetch(base+'/');assert.match(page.headers.get('content-security-policy'),/media-src 'self' blob:/);
+    for(const asset of ['/pdf-view.mjs','/pdfjs.mjs','/pdfjs-worker.mjs']){const r=await fetch(base+asset);assert.equal(r.status,200,asset);assert.match(r.headers.get('content-type'),/javascript/);}
     const manifest=await fetch(base+'/manifest.webmanifest');assert.equal((await manifest.json()).display,'standalone');assert.equal((await fetch(base+'/icon-512.png')).headers.get('content-type'),'image/png');
     const stream=(await fetch(base+'/api/events')).body.getReader(),decoder=new TextDecoder();let buffered='';
     const nextEvent=async()=>{while(!buffered.includes('\n\n'))buffered+=decoder.decode((await stream.read()).value,{stream:true});const end=buffered.indexOf('\n\n'),raw=buffered.slice(0,end);buffered=buffered.slice(end+2);if(!raw.startsWith('data: '))return nextEvent();return JSON.parse(raw.slice(6));};

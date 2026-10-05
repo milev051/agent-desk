@@ -13,6 +13,7 @@
   "dependencies": {
     "dompurify": "^3.4.16",
     "marked": "^18.0.14",
+    "pdfjs-dist": "^6.4.299",
     "web-push": "^3.6.7"
   }
 }

@@ -151,3 +151,5 @@ body:not(.chat-view) .chat-row.working,body:not(.chat-view) .chat-row.working.pr
 
 /* Nepročitan završen odgovor ostaje zelen pri povratku na mobilnu listu. */
 .chat-row.completed,.chat-row.completed:hover,.chat-row.completed:focus-within,.chat-row.completed:active,.chat-row.completed.pressed,.chat-row.active.completed,body:not(.chat-view) .chat-row.active.completed:not(.pressed),.agent-tree-item.completed,.agent-tree-item.completed:hover,.agent-tree-item.completed:active,.agent-tree-item.completed.pressed{background:#243e2c}
+
+#attachment-pdf:not([hidden]){display:flex;flex:1;min-height:0;flex-direction:column;gap:8px;color:#eee}.pdf-controls{display:flex;align-items:center;justify-content:center;gap:12px;flex-shrink:0}.pdf-controls button{min-width:40px;min-height:36px;margin:0!important;font-size:20px}.pdf-page{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:8px;background:#222}.pdf-page canvas{display:block;background:white;margin:0 auto}
