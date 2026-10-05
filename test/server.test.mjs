@@ -21,9 +21,19 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     const script=await fetch(base+'/app.js',{headers:{'Accept-Encoding':'gzip'}});assert.equal(script.headers.get('content-encoding'),'gzip');assert.match(await script.text(),/import/);
     const manifest=await fetch(base+'/manifest.webmanifest');assert.equal((await manifest.json()).display,'standalone');assert.equal((await fetch(base+'/icon-512.png')).headers.get('content-type'),'image/png');
     const stream=(await fetch(base+'/api/events')).body.getReader(),decoder=new TextDecoder();let buffered='';
-    const nextEvent=async()=>{while(!buffered.includes('\n\n'))buffered+=decoder.decode((await stream.read()).value,{stream:true});const end=buffered.indexOf('\n\n'),event=JSON.parse(buffered.slice(6,end));buffered=buffered.slice(end+2);return event;};
-    assert.deepEqual(await nextEvent(),[]);const made=(await call('/api/chats','POST',{})).data;
-    const delta=await nextEvent();assert.deepEqual(delta.order,[made.id]);assert.deepEqual(delta.changed.map(x=>x.chat.id),[made.id]);assert.equal(delta.changed[0].chat.messages,undefined);await stream.cancel();
+    const nextEvent=async()=>{while(!buffered.includes('\n\n'))buffered+=decoder.decode((await stream.read()).value,{stream:true});const end=buffered.indexOf('\n\n'),raw=buffered.slice(0,end);buffered=buffered.slice(end+2);if(!raw.startsWith('data: '))return nextEvent();return JSON.parse(raw.slice(6));};
+    assert.deepEqual(await nextEvent(),[]);
+    const initialFolders=(await call('/api/folders')).data;assert.deepEqual(initialFolders.map(folder=>folder.name),['Privatno','Projekti']);
+    assert.equal((await call('/api/folders','POST',{name:'Treći'})).status,201);
+    assert.equal((await call(`/api/folders/${initialFolders[0].id}`,'PATCH',{name:'Kuća'})).data.name,'Kuća');
+    const made=(await call('/api/chats','POST',{folderId:initialFolders[1].id})).data;assert.equal(made.folderId,initialFolders[1].id);
+    const delta=await nextEvent();assert.deepEqual(delta.order,[made.id]);assert.deepEqual(delta.changed.map(x=>x.chat.id),[made.id]);assert.equal(delta.changed[0].chat.messages,undefined);assert.equal(delta.changed[0].chat.folderId,initialFolders[1].id);await stream.cancel();
+    assert.equal((await call(`/api/chats/${made.id}`,'PATCH',{folderId:null})).data.folderId,undefined);
+    await call(`/api/chats/${made.id}`,'PATCH',{folderId:initialFolders[1].id});
+    assert.equal((await call(`/api/folders/${initialFolders[1].id}`,'DELETE')).status,200);
+    assert.equal((await call(`/api/chats/${made.id}`)).data.folderId,undefined);
+    assert.equal((await call('/api/folders')).data.some(folder=>folder.id===initialFolders[1].id),false);
+    assert.equal((await call('/api/folders/nema','DELETE')).status,400);
     const uploaded=await fetch(`${base}/api/chats/${made.id}/upload`,{method:'POST',headers:{Origin:base,'X-File-Name':encodeURIComponent('../slika ž.png')},body:Buffer.from('png')});const saved=(await uploaded.json()).path;
     assert.equal(uploaded.status,201);assert.match(saved,/prilozi\/[\w-]+\/\d{8}-\d{6}-slika ž\.png$/);assert.equal(readFileSync(saved,'utf8'),'png');
     assert.equal((await fetch(`${base}/api/chats/${made.id}/upload`,{method:'POST',headers:{Origin:'https://example.com'},body:'x'})).status,403);
@@ -129,12 +139,13 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     await call(`/api/chats/${queued.id}/send`,'POST',{text:'SLOW Prva'});
     assert.equal((await call(`/api/chats/${queued.id}/queue`,'POST',{text:'Druga iz reda'})).status,202);
     assert.equal((await call(`/api/chats/${queued.id}/queue`,'POST',{text:'Treća iz reda'})).status,202);
-    let q;for(let i=0;i<150;i++){q=(await call(`/api/chats/${queued.id}`)).data;if(!q.running && !q.queue?.length && q.messages.length===6)break;await new Promise(r=>setTimeout(r,20));}
-    assert.deepEqual(q.messages.filter(m=>m.role==='user').map(m=>m.text),['SLOW Prva','Druga iz reda','Treća iz reda']);
+    let q;for(let i=0;i<150;i++){q=(await call(`/api/chats/${queued.id}`)).data;if(!q.running && !q.queue?.length && q.messages.length===4)break;await new Promise(r=>setTimeout(r,20));}
+    assert.deepEqual(q.messages.filter(m=>m.role==='user').map(m=>m.text),['SLOW Prva','Druga iz reda\n\nTreća iz reda']);
     assert.equal(q.messages[2].origin,'queue');assert.ok(q.messages[2].sentAt>=q.messages[2].createdAt);
     assert.match(JSON.parse(q.messages.at(-1).text).input,/Korisnik · .*Z/);
     assert.match(JSON.parse(q.messages.at(-1).text).input,/Okruženje: Agent Desk/);
     const child=(await call(`/api/chats/${queued.id}/delegate`,'POST',{agent:'codex',name:'Provera testova',task:'Proveri podzadatak'})).data;
+    assert.equal((await call(`/api/chats/${child.id}`,'PATCH',{folderId:initialFolders[1].id})).status,400);
     assert.equal(child.parentChatId,queued.id);assert.equal(child.settings.cwd,temp);
     assert.equal(child.title,'Provera testova');assert.equal(child.agentRole,'Provera testova');assert.equal(child.titleManual,true);
     assert.equal((await call(`/api/chats/${child.id}/delegate`,'POST',{agent:'codex',task:'Nedozvoljen drugi nivo'})).status,400);
@@ -146,6 +157,7 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal((await call(`/api/chats/${b.id}`, 'PATCH', {title:'Aktivan čet'})).status, 200);
     assert.equal((await call(`/api/chats/${b.id}`, 'PATCH', {settings:{model:'test'}})).status, 409);
     assert.equal((await call(`/api/chats/${b.id}/send`, 'POST', { text: 'Nedozvoljena paralelna poruka' })).status, 409);
+    assert.equal((await call(`/api/chats/${b.id}/reset-session`,'POST',{})).status,409);
     assert.equal((await call(`/api/chats/${b.id}`, 'DELETE')).status, 409);
     await call(`/api/chats/${b.id}/queue`,'POST',{text:'Posle zaustavljanja'});
     await call(`/api/chats/${b.id}/stop`, 'POST', {});
@@ -180,6 +192,12 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     const fourth=await call(`/api/chats/${queued.id}/delegate`,'POST',{agent:'codex',task:'Sledeći nakon oslobađanja mesta'});assert.equal(fourth.status,202);const fourthDone=await done(fourth.data.id);assert.match(JSON.parse(fourthDone.messages.at(-1).text).input,/Ukupan broj podčetova po odgovoru nije ograničen/);
     const reqId='test-request-once';await call(`/api/chats/${a.id}/send`,'POST',{text:'Poruka jednom',requestId:reqId});await done(a.id);
     await call(`/api/chats/${a.id}/send`,'POST',{text:'Poruka jednom',requestId:reqId});assert.equal((await call(`/api/chats/${a.id}`)).data.messages.filter(m=>m.requestId===reqId).length,1);
+    const beforeReset=(await call(`/api/chats/${a.id}`)).data;
+    const reset=(await call(`/api/chats/${a.id}/reset-session`,'POST',{})).data;
+    assert.equal(reset.sessions.codex,undefined);assert.equal(reset.messages.length,beforeReset.messages.length);
+    await call(`/api/chats/${a.id}/send`,'POST',{text:'Posle nove sesije'});
+    const renewedChat=await done(a.id);const renewed=JSON.parse(renewedChat.messages.at(-1).text);
+    assert.ok(!renewed.args.includes('resume'));assert.match(renewed.input,/Prva poruka/);assert.equal(renewedChat.messages.at(-1).usage.input,120);
     writeFileSync(path.join(temp,'preview.html'),'<html><script>example()</script></html>');
     const localFile=await fetch(base+'/files'+path.join(temp,'preview.html'));assert.equal(localFile.status,200);assert.match(localFile.headers.get('Content-Security-Policy'),/sandbox/);assert.match(await localFile.text(),/example/);
     assert.equal((await call('/api/open-file','POST',{path:path.join(temp,'preview.html')},'https://example.com')).status,403);

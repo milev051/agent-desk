@@ -2,6 +2,7 @@ import {createChatFiles} from './chat-files.mjs';
 import {preferredEffort} from './public/reasoning.mjs';
 import http from 'node:http';
 import {createArchive} from './archive.mjs';
+import {createFolders} from './folders.mjs';
 import {browseFiles,withFiles,filePath} from './files.mjs';
 import {chatStructure,linkedPaths} from './public/sidebar-groups.mjs';
 import {createQuotaHistory} from './quota-history.mjs';
@@ -27,6 +28,8 @@ const root = path.dirname(fileURLToPath(import.meta.url));
 const dataDir = process.env.AGENT_DESK_DATA || path.join(root, 'data');
 fs.mkdirSync(dataDir, { recursive: true, mode: 0o700 });
 const archive=createArchive(dataDir);archive.prune();const archiveCleanup=setInterval(()=>archive.prune(),3600000);archiveCleanup.unref();
+const folders=createFolders(path.join(dataDir,'folders.json'));
+function broadcastFolders(){const payload=`event: folders\ndata: ${JSON.stringify(folders.list())}\n\n`;for(const res of listeners)res.write(payload);}
 const dataFile = path.join(dataDir, 'chats.json');
 const defaultsFile = path.join(dataDir, 'defaults.json');
 let defaults = Object.fromEntries(Object.keys(names).map(agent => [agent, {model:'',effort:''}]));
@@ -168,7 +171,6 @@ async function send(chat, prompt, options={}) {
   if (chat.title === 'Novi čet') chat.title = prompt.slice(0, 52);
   chat.updatedAt = Date.now();
   const run = { child, stopped: false }; run.done = new Promise(resolve=>run.resolve=resolve); running.set(chat.id, run); update();
-  if(chat.messages.filter(m=>m.role==='user').length===1)titleManager.request(chat,prompt,chats.find(c=>c.id===chat.parentChatId)?.title || '');
   let buffer = '', stderr = '', streamedBlock = false, finished = false;
   function event(line) {
     if (!line.trim()) return;
@@ -293,8 +295,11 @@ const server = http.createServer(async (req, res) => {
       if(req.method==='POST') {
         if(queueMatch[2]==='resume'){chat.queuePaused=false;delete chat.queueError;update();drainQueue(chat);return json(200,publicChat(chat));}
         const b=await body(req);if(typeof b.text!=='string'||!b.text.trim()||b.text.length>100000)throw new Error('Unesi poruku do 100.000 karaktera.');
-        chat.queue ||= [];if(chat.queue.length>=10)throw new Error('Red čekanja je ograničen na 10 poruka.');
-        chat.queue.push({id:randomUUID(),text:withFiles(b.text.trim(),b.files,chat.settings.cwd),createdAt:Date.now()});chat.queuePaused=false;delete chat.queueError;update();drainQueue(chat);return json(202,publicChat(chat));
+        chat.queue ||= [];
+        const text=withFiles(b.text.trim(),b.files,chat.settings.cwd),last=chat.queue.at(-1);
+        if(last){const joined=`${last.text}\n\n${text}`;if(joined.length>100000)throw new Error('Unesi poruku do 100.000 karaktera.');last.text=joined;}
+        else{if(chat.queue.length>=10)throw new Error('Red čekanja je ograničen na 10 poruka.');chat.queue.push({id:randomUUID(),text,createdAt:Date.now()});}
+        chat.queuePaused=false;delete chat.queueError;update();drainQueue(chat);return json(202,publicChat(chat));
       }
       if(req.method==='DELETE' && queueMatch[2]){chat.queue=(chat.queue || []).filter(m=>m.id!==queueMatch[2]);update();return json(200,publicChat(chat));}
     }
@@ -307,9 +312,15 @@ const server = http.createServer(async (req, res) => {
       const timer = setInterval(() => sink.write(': ping\n\n'), 15000);
       req.on('close', () => { listeners.delete(sink); clearInterval(timer); stream?.destroy(); }); return;
     }
+    if (req.method === 'GET' && url.pathname === '/api/folders') return json(200, folders.list());
+    if (req.method === 'POST' && url.pathname === '/api/folders') { const made=folders.add((await body(req)).name); broadcastFolders(); return json(201, made); }
+    const folderMatch=url.pathname.match(/^\/api\/folders\/([\w-]+)$/);
+    if (folderMatch && req.method === 'PATCH') { const renamed=folders.rename(folderMatch[1], (await body(req)).name); broadcastFolders(); return json(200, renamed); }
+    if (folderMatch && req.method === 'DELETE') { folders.remove(folderMatch[1]); for (const chat of chats) if (chat.folderId===folderMatch[1]) delete chat.folderId; update(); broadcastFolders(); return json(200, {ok:true}); }
     if (req.method === 'POST' && url.pathname === '/api/chats') {
       const b = await body(req);
       const chat = { id: randomUUID(), title: 'Novi čet', ephemeral:true, createdAt: Date.now(), updatedAt: Date.now(), settings: validate({ agent: 'codex', model: '', access: 'full', cwd: root, instructions: '', effort: '', ...defaults[b.settings?.agent || 'codex'], ...b.settings }), sessions: {}, sessionOffsets:{}, messages: [] };
+      if(b.folderId!==undefined){if(!folders.has(b.folderId))throw new Error('Folder nije pronađen.');chat.folderId=b.folderId;}
       if(b.settings?.model!==undefined && b.settings.effort===undefined)chat.settings.effort=preferredEffort(quickCatalog(binaries),chat.settings.agent,chat.settings.model);
       validateEffort(quickCatalog(binaries), chat.settings);
       chats.unshift(chat); update(); return json(201, publicChat(chat));
@@ -318,7 +329,7 @@ const server = http.createServer(async (req, res) => {
     if(req.method==='POST' && emptyMatch){const chat=chats.find(c=>c.id===emptyMatch[1]);if(!chat)return json(200,{ok:true});
       if(running.has(chat.id)||chat.messages.length||chat.queue?.length||Object.keys(chat.sessions).length||chats.some(c=>c.parentChatId===chat.id))return json(409,{error:'Čet više nije prazan.'});
       chats=chats.filter(c=>c.id!==chat.id);update();return json(200,{ok:true});}
-    const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(send|stop|fork|delegate|reveal|record|count-tokens|files|upload|prilog))?$/);
+    const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(send|stop|reset-session|fork|delegate|reveal|record|count-tokens|files|upload|prilog))?$/);
     if (match) {
       const chat = chats.find(c => c.id === match[1]); if (!chat) return json(404, { error: 'Čet nije pronađen.' });
       // Prilog sa telefona ili iz privremene memorije čuva se u data/prilozi/<čet>/ i povezuje kao obična putanja.
@@ -367,6 +378,14 @@ const server = http.createServer(async (req, res) => {
         chats.unshift(child);update();await send(child,`Podzadatak iz četa ${chat.title}.\n\n${b.task}`,{origin:'delegate'});return json(202,publicChat(child));
       }
       if(req.method==='POST' && match[2]==='stop'){chat.queuePaused=true;stopRelated(chat.id);update();return json(200,{ok:true});}
+      if(req.method==='POST' && match[2]==='reset-session'){
+        if(running.has(chat.id))return json(409,{error:'Sačekaj odgovor ili zaustavi agenta.'});
+        const agent=chat.settings.agent;
+        delete chat.sessions[agent];
+        if(chat.sessionOffsets)delete chat.sessionOffsets[agent];
+        if(chat.usageBaselines)delete chat.usageBaselines[agent];
+        chat.updatedAt=Date.now();update();return json(200,publicChat(chat));
+      }
       if(req.method==='POST' && match[2]==='send'){const b=await body(req);req.sendBody=b;if(b.requestId!==undefined && (typeof b.requestId!=='string'||!/^[-a-zA-Z0-9]{1,80}$/.test(b.requestId)))throw Error('Neispravan ID poruke.');if(b.requestId && chat.messages.some(m=>m.requestId===b.requestId))return json(202,{ok:true});}
       if (running.has(chat.id) && !(req.method === 'PATCH' && !match[2])) return json(409, { error: 'Sačekaj odgovor ili zaustavi agenta.' });
 
@@ -380,6 +399,13 @@ const server = http.createServer(async (req, res) => {
       }
       if (req.method === 'PATCH' && !match[2]) {
         const b = await body(req);
+        if (b.folderId!==undefined && b.settings===undefined && typeof b.title!=='string') {
+          if (chat.parentChatId) throw new Error('Podčet ostaje u četu roditelja.');
+          if (b.folderId===null) delete chat.folderId;
+          else if (folders.has(b.folderId)) chat.folderId=b.folderId;
+          else throw new Error('Folder nije pronađen.');
+          chat.updatedAt=Date.now();update();return json(200,publicChat(chat));
+        }
         if (running.has(chat.id) && b.settings) return json(409, {error:'Sačekaj odgovor ili zaustavi agenta.'});
         if (b.settings?.agent && b.settings.agent !== chat.settings.agent) {
           if (!binaries[b.settings.agent]) throw new Error('Izabrani agent nije povezan.');
