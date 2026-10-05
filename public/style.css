@@ -155,3 +155,16 @@ body:not(.chat-view) .chat-row.working,body:not(.chat-view) .chat-row.working.pr
 #attachment-pdf:not([hidden]){display:flex;flex:1;min-height:0;flex-direction:column;gap:8px;color:#eee}.pdf-controls{display:flex;align-items:center;justify-content:center;gap:12px;flex-shrink:0}.pdf-controls button{min-width:40px;min-height:36px;margin:0!important;font-size:20px}.pdf-page{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:8px;background:#222}.pdf-page canvas{display:block;background:white;margin:0 auto}
 
 #device-battery{align-self:flex-end;text-align:right;color:#999;font-size:11px;line-height:18px;min-height:18px;padding:0 4px 3px}#device-battery.battery-low{color:#e2ad68}#device-battery.battery-stale{opacity:.65}
+
+/* Keep the same agent toolbar above both phone views. */
+#mobile-agent-header{display:none}
+.sidebar-actions #new-agents{min-width:0}
+.sidebar-actions #device-battery{flex:0 0 48px;align-self:center;text-align:center;white-space:pre-line;font-size:10px;line-height:17px;padding:0;min-height:34px}
+@media(max-width:650px){
+ #mobile-agent-header{display:block;grid-column:1;grid-row:1;padding:8px 12px 4px;background:#000;min-width:0}
+ body,body:has(#agent-panel:not([hidden])),body.settings-view{grid-template-rows:auto minmax(0,1fr)!important}
+ .sidebar,main,body:has(#agent-panel:not([hidden])) main,body.chat-view main,body.settings-view main,body.chat-view:has(#agent-panel:not([hidden])) main{grid-row:2}
+ .sidebar{padding-top:8px}
+ body.chat-view:has(#agent-panel:not([hidden])){grid-template-rows:auto minmax(0,1fr) auto!important}
+ body.chat-view #agent-panel:not([hidden]){grid-row:3}
+}

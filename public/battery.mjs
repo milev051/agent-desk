@@ -8,10 +8,10 @@ export function startBatteryStatus(){
    if(phone && battery)await fetch('/api/battery/phone',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({level:Math.round(battery.level*100),charging:battery.charging})});
    const response=await fetch('/api/battery');if(!response.ok)throw Error();
    const status=await response.json(),value=phone?status.computer:status.phone,name=phone?'Mac':'Telefon';
-   display.textContent=value?.level!=null?`${name} ${value.level}%${value.charging?' ⚡':''}${value.stale?' · ranije':''}`:`${name} · baterija nije dostupna`;
+   display.textContent=value?.level!=null?`${name}\n${value.level}%${value.charging?' ⚡':''}`:`${name}\n—`;
    display.classList.toggle('battery-low',value?.level!=null && value.level<=20);display.classList.toggle('battery-stale',!!value?.stale);
    display.title=value?.updatedAt?`${name}: poslednje očitavanje ${new Date(value.updatedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}${value.stale?' · otvori aplikaciju na telefonu za novo stanje':''}`:'Otvori aplikaciju na telefonu. Ako pregledač ne podržava bateriju, podatak nije dostupan.';
-  }catch{display.textContent=`${phone?'Mac':'Telefon'} · baterija nije dostupna`;}
+  }catch{display.textContent=`${phone?'Mac':'Telefon'}\n—`;}
   finally{busy=false;}
  }
  if(phone && navigator.getBattery)navigator.getBattery().then(value=>{battery=value;battery.addEventListener('levelchange',refresh);battery.addEventListener('chargingchange',refresh);void refresh();}).catch(()=>{});

@@ -282,3 +282,5 @@ Delegiranje ne treba zaobilaziti pokretanjem `grok -p`, `claude -p` ili drugog a
 Telefon dobija i kratke tekstualne izveštaje tokom rada: tek kada posle novog teksta agent nastavi alatom. Uzastopni izveštaji se grupišu, najviše jedan u minutu i šest tokom jednog odgovora; završetak otkazuje odloženi izveštaj. Pozivi alata bez teksta ne šalju obaveštenja.
 
 Iznad unosa je baterija drugog uređaja: telefon vidi Mac (pmset), računar poslednje stanje koje prijavi mobilni pregledač preko Battery Status API-ja. Provera je na 30 sekundi dok je stranica vidljiva; posle tri minuta bez prijave telefona stanje se označava kao ranije. Nema očitavanja telefona dok je aplikacija zatvorena i nema izmišljanja podatka ako pregledač ne podržava API.
+
+Na telefonu traka za novi čet ostaje iznad liste i otvorenog razgovora. Uz ikonice je baterija Maca, sa oznakom ⚡ kada je na napajanju. Na računaru ista traka ostaje u sidebaru i pokazuje bateriju telefona.
