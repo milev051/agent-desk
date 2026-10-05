@@ -289,4 +289,4 @@ Baterija je odmah posle Grok ikonice: Apple logo na telefonu, Android logo na Ma
 
 Klik na logo baterije otvara podešavanja. Novi folder se pravi prevlačenjem četa na polje koje se pojavi tokom prevlačenja, pa unosom naziva. Prazan naziv i Escape odustaju, bez premeštanja četa.
 
-Na telefonu brzi potez po praznom gornjem ili donjem okviru unosa otvara priloge udesno, a zaustavlja aktivnog agenta ulevo. Dugi pritisak i izbor teksta ne pokreću gest. Dugmad za priloge i stop su sakrivena na uređajima sa unosom preko dodira; na računaru ostaju dostupna.
+Kružić desno od unosa je džojstik: nagore šalje poruku ili je dodaje u red čekanja, nadole zaustavlja aktivnog agenta, ulevo otvara priloge. Radnja se izvršava pri puštanju, tek posle pomeranja od najmanje 22 px. Dodir bez pomeranja ne šalje poruku. Tekst unosa se normalno selektuje. Kada je kružić fokusiran, iste radnje rade strelicama tastature.

@@ -187,6 +187,10 @@ body.dragging-chat #new-folder-drop{display:block}
 
 .chat-row{position:relative}.chat-drag-zone{position:absolute;top:0;right:0;bottom:0;width:50%;touch-action:none;cursor:grab}.chat-drag-zone:active{cursor:grabbing}
 
-.prompt-wrap{touch-action:pan-y;transform:translateX(var(--swipe-offset,0px))}
-.prompt-wrap.swipe-attach{border-color:#89b992}.prompt-wrap.swipe-stop{border-color:#d18e87}
-@media(pointer:coarse){.prompt-wrap{padding-top:12px;padding-bottom:12px}#composer .composer-actions #files-open,#composer .composer-actions #stop-run{display:none}}
+
+#composer .composer-actions #files-open,#composer .composer-actions #stop-run,#composer .composer-actions #send{display:none}
+.composer-actions{position:relative;align-self:flex-end}
+#composer-joystick{display:flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border:1px solid #555;border-radius:50%;background:#202020;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:grab;flex-shrink:0}
+#composer-joystick>span{display:block;width:14px;height:14px;border-radius:50%;background:#aaa;transform:translate(var(--stick-x,0px),var(--stick-y,0px));pointer-events:none}
+#composer-joystick[data-action="send"]{border-color:#89b992}#composer-joystick[data-action="stop"]{border-color:#d18e87}#composer-joystick[data-action="attach"]{border-color:#8dbcf0}
+#joystick-hint{position:absolute;right:0;bottom:calc(100% + 10px);padding:5px 8px;background:#222;border:1px solid #444;border-radius:5px;font-size:11px;white-space:nowrap;pointer-events:none;z-index:8}
