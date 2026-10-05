@@ -24,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNaviga
  var web:WKWebView!
  func applicationDidFinishLaunching(_ notification:Notification) {
   let menu=NSMenu(),appMenu=NSMenu(),appItem=NSMenuItem()
+  let settings=NSMenuItem(title:"Podešavanja…",action:#selector(openSettings),keyEquivalent:",");settings.target=self;appMenu.addItem(settings);appMenu.addItem(.separator())
   appMenu.addItem(withTitle:"Zatvori Agent Desk",action:#selector(NSApplication.terminate(_:)),keyEquivalent:"q")
   appItem.submenu=appMenu;menu.addItem(appItem)
   let edit=NSMenu(title:"Uređivanje"),editItem=NSMenuItem(title:"Uređivanje",action:nil,keyEquivalent:"")
@@ -45,6 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNaviga
   web.loadHTMLString("<html style='background:#111;color:#ddd;font:16px system-ui'><body style='display:grid;place-items:center;height:90vh'>Povezivanje…</body></html>",baseURL:nil)
   Task { await startServer() }
  }
+ @objc func openSettings(){web.evaluateJavaScript("if(document.querySelector('#defaults')?.hidden && !document.querySelector('dialog[open]'))document.querySelector('#defaults-open')?.click();",completionHandler:nil)}
  @objc func refresh(){web.reload()}
  func applicationShouldTerminateAfterLastWindowClosed(_ sender:NSApplication)->Bool {true}
  func applicationShouldHandleReopen(_ sender:NSApplication,hasVisibleWindows flag:Bool)->Bool {window.makeKeyAndOrderFront(nil);return true}
