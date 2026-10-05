@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import WebKit
 let project=Bundle.main.bundleURL.deletingLastPathComponent()
 let address=URL(string:"http://127.0.0.1:4317")!
 func execute(_ arguments:[String]) -> Int32 {
@@ -11,7 +12,53 @@ func available() async -> Bool {
  guard let (_,r)=try? await URLSession.shared.data(for:req) else{return false}
  return (r as? HTTPURLResponse)?.statusCode==200
 }
-Task {
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNavigationDelegate, WKScriptMessageHandler {
+ var window:NSWindow!
+ var web:WKWebView!
+ func applicationDidFinishLaunching(_ notification:Notification) {
+  let menu=NSMenu(),appMenu=NSMenu(),appItem=NSMenuItem()
+  appMenu.addItem(withTitle:"Zatvori Agent Desk",action:#selector(NSApplication.terminate(_:)),keyEquivalent:"q")
+  appItem.submenu=appMenu;menu.addItem(appItem)
+  let edit=NSMenu(title:"Uređivanje"),editItem=NSMenuItem(title:"Uređivanje",action:nil,keyEquivalent:"")
+  for (title,action,key) in [("Poništi","undo:","z"),("Iseci","cut:","x"),("Kopiraj","copy:","c"),("Nalepi","paste:","v"),("Izaberi sve","selectAll:","a")] {edit.addItem(withTitle:title,action:NSSelectorFromString(action),keyEquivalent:key)}
+  editItem.submenu=edit;menu.addItem(editItem)
+  let view=NSMenu(title:"Prikaz"),viewItem=NSMenuItem(title:"Prikaz",action:nil,keyEquivalent:"")
+  let reload=NSMenuItem(title:"Osveži",action:#selector(refresh),keyEquivalent:"r");reload.target=self;view.addItem(reload);viewItem.submenu=view;menu.addItem(viewItem)
+  NSApplication.shared.mainMenu=menu
+  let config=WKWebViewConfiguration()
+  config.userContentController.add(self,name:"copyText")
+  config.userContentController.addUserScript(WKUserScript(source:"Object.defineProperty(navigator, 'clipboard', {value: {writeText: async text => window.webkit.messageHandlers.copyText.postMessage(String(text))}, configurable: true});",injectionTime:.atDocumentStart,forMainFrameOnly:true))
+  web=WKWebView(frame:.zero,configuration:config);web.uiDelegate=self;web.navigationDelegate=self
+  web.setValue(false,forKey:"drawsBackground")
+  window=NSWindow(contentRect:NSRect(x:0,y:0,width:1180,height:800),styleMask:[.titled,.closable,.miniaturizable,.resizable],backing:.buffered,defer:false)
+  window.title="Agent Desk";window.minSize=NSSize(width:440,height:400);window.contentView=web;window.center();window.makeKeyAndOrderFront(nil)
+  NSApplication.shared.activate(ignoringOtherApps:true)
+  web.loadHTMLString("<html style='background:#111;color:#ddd;font:16px system-ui'><body style='display:grid;place-items:center;height:90vh'>Povezivanje…</body></html>",baseURL:nil)
+  Task { await startServer() }
+ }
+ @objc func refresh(){web.reload()}
+ func applicationShouldTerminateAfterLastWindowClosed(_ sender:NSApplication)->Bool {true}
+ func applicationShouldHandleReopen(_ sender:NSApplication,hasVisibleWindows flag:Bool)->Bool {window.makeKeyAndOrderFront(nil);return true}
+ func userContentController(_ userContentController:WKUserContentController,didReceive message:WKScriptMessage) {
+  guard message.frameInfo.isMainFrame,message.frameInfo.securityOrigin.host=="127.0.0.1",let text=message.body as? String else{return}
+  NSPasteboard.general.clearContents();NSPasteboard.general.setString(text,forType:.string)
+ }
+ func webView(_ webView:WKWebView,runOpenPanelWith parameters:WKOpenPanelParameters,initiatedByFrame frame:WKFrameInfo,completionHandler:@escaping ([URL]?)->Void) {
+  let panel=NSOpenPanel();panel.allowsMultipleSelection=parameters.allowsMultipleSelection;panel.canChooseDirectories=parameters.allowsDirectories;panel.canChooseFiles=true
+  panel.beginSheetModal(for:window){result in completionHandler(result == .OK ? panel.urls:nil)}
+ }
+ func webView(_ webView:WKWebView,createWebViewWith configuration:WKWebViewConfiguration,for navigationAction:WKNavigationAction,windowFeatures:WKWindowFeatures)->WKWebView? {
+  if let url=navigationAction.request.url {NSWorkspace.shared.open(url)};return nil
+ }
+ func webView(_ webView:WKWebView,decidePolicyFor navigationAction:WKNavigationAction,decisionHandler:@escaping (WKNavigationActionPolicy)->Void) {
+  guard let url=navigationAction.request.url else{decisionHandler(.cancel);return}
+  if url.host=="127.0.0.1" && url.port==4317 || url.scheme=="about" {decisionHandler(.allow)}
+  else {if navigationAction.navigationType == .linkActivated {NSWorkspace.shared.open(url)};decisionHandler(.cancel)}
+ }
+}
+func startServer() async {
+
  if !(await available()) {
   let fm=FileManager.default,home=fm.homeDirectoryForCurrentUser
   let config=home.appendingPathComponent(".config/agent-desk"),data=project.appendingPathComponent("data")
@@ -26,19 +73,12 @@ Task {
  var ready=false
  for _ in 0..<60 {if await available(){ready=true;break};try? await Task.sleep(for:.milliseconds(250))}
  let isReady=ready
- // Chrome u app režimu sa zasebnim profilom; server nastavlja rad nakon zatvaranja prozora.
- let chrome="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",profile=FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".config/agent-desk/chrome").path
- if isReady && FileManager.default.isExecutableFile(atPath:chrome) {
-  let window=Process();window.executableURL=URL(fileURLWithPath:chrome);window.arguments=["--app="+address.absoluteString,"--user-data-dir="+profile,"--no-first-run","--no-default-browser-check"]
-  if (try? window.run()) != nil {
-   window.waitUntilExit()
-   await MainActor.run {NSApplication.shared.terminate(nil)};return
-  }
- }
  await MainActor.run {
-  if isReady {NSWorkspace.shared.open(address)} else {let alert=NSAlert();alert.messageText="Agent Desk nije pokrenut.";alert.informativeText="Proveri data/server.log.";alert.runModal()}
-  NSApplication.shared.terminate(nil)
+  if isReady {delegate.web.load(URLRequest(url:address))}
+  else {let alert=NSAlert();alert.messageText="Agent Desk nije pokrenut.";alert.informativeText="Proveri data/server.log.";alert.runModal();NSApplication.shared.terminate(nil)}
  }
 }
-NSApplication.shared.setActivationPolicy(.accessory)
+let delegate=MainActor.assumeIsolated { AppDelegate() }
+NSApplication.shared.setActivationPolicy(.regular)
+NSApplication.shared.delegate=delegate
 NSApplication.shared.run()
