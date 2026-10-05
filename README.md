@@ -284,3 +284,5 @@ Telefon dobija i kratke tekstualne izveštaje tokom rada: tek kada posle novog t
 Iznad unosa je baterija drugog uređaja: telefon vidi Mac (pmset), računar poslednje stanje koje prijavi mobilni pregledač preko Battery Status API-ja. Provera je na 30 sekundi dok je stranica vidljiva; posle tri minuta bez prijave telefona stanje se označava kao ranije. Nema očitavanja telefona dok je aplikacija zatvorena i nema izmišljanja podatka ako pregledač ne podržava API.
 
 Na telefonu traka za novi čet ostaje iznad liste i otvorenog razgovora. Uz ikonice je baterija Maca, sa oznakom ⚡ kada je na napajanju. Na računaru ista traka ostaje u sidebaru i pokazuje bateriju telefona.
+
+Baterija je odmah posle Grok ikonice: Apple logo na telefonu, Android logo na Macu, sa procentom ispod. Procenat je zelen iznad 50%, žut od 21% do 50%, crven do 20%. Napajanje i vreme očitavanja su u opisu.

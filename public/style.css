@@ -168,3 +168,10 @@ body:not(.chat-view) .chat-row.working,body:not(.chat-view) .chat-row.working.pr
  body.chat-view:has(#agent-panel:not([hidden])){grid-template-rows:auto minmax(0,1fr) auto!important}
  body.chat-view #agent-panel:not([hidden]){grid-row:3}
 }
+
+.sidebar-actions #new-agents{grid-template-columns:repeat(7,minmax(0,1fr))}
+.sidebar-actions #device-battery{display:flex;flex-direction:column;align-items:center;align-self:start;gap:8px;padding:9px 4px;min-height:0;line-height:1;color:#aaa}
+#device-battery svg{display:block;flex-shrink:0}
+#device-battery small{font-size:10px;font-variant-numeric:tabular-nums;line-height:1}
+#device-battery .battery-good{color:#89b992}#device-battery .battery-mid{color:#c7b074}#device-battery .battery-low{color:#d18e87}#device-battery .battery-unknown{color:#666}
+@media(max-width:650px){.sidebar-actions #device-battery{padding:7px 2px}#device-battery svg{width:19px;height:19px}}
