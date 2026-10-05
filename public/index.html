@@ -31,6 +31,7 @@
 
     <div id="conversation" aria-live="polite" tabindex="-1"></div>
     <div class="composer-area">
+      <div id="device-battery" role="status" title="Stanje baterije drugog uređaja"></div>
       <div id="message-selection" role="group" aria-label="Izabrane poruke" hidden><button id="select-all-messages" type="button">Sve</button><button id="copy-selected-messages" type="button">Kopiraj</button></div>
       <div id="speech-selection" hidden><button id="speak-selection" type="button">Pročitaj izbor</button></div><div id="speech-bar" hidden><button id="speech-toggle" type="button" aria-label="Pusti"></button><input id="speech-seek" type="range" min="0" max="1000" value="0" step="1" aria-label="Mesto u snimku"><span id="speech-time">0:00 / 0:00</span><span id="speech-label"></span><button id="speech-close" type="button" aria-label="Zatvori traku">×</button></div><div id="queue" aria-label="Red čekanja"></div>
       <span id="connection" hidden>Veza je prekinuta.</span>

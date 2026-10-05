@@ -396,7 +396,7 @@ try {
   const linked=new URLSearchParams(location.hash.slice(1)).get('chat');if(linked && chats.some(c=>c.id===linked))active=linked;if(!current())active=null;else selectedAgent=current().settings.agent;
   document.body.classList.toggle('chat-view',!!linked && !!current());for(const c of chats)if(!Object.hasOwn(seen,c.id))markRead(c);
   if(mobileNavigation()){const entry=new URL(location.href);entry.hash='';history.replaceState({agentDesk:true},'',entry);history.pushState({agentDesk:true},'',linked && current()?location.origin+'/#chat='+encodeURIComponent(active):entry.href);}
-  render();resizePrompt();refreshLimits();document.body.classList.add('ready');api('/api/models').then(value=>{models=value;lastMessages='';render();if(newMenuAgent)showNewModels(newMenuAgent);}).catch(()=>{});enablePush(false);
+  render();resizePrompt();refreshLimits();import('/battery.mjs').then(({startBatteryStatus})=>startBatteryStatus()).catch(()=>{});document.body.classList.add('ready');api('/api/models').then(value=>{models=value;lastMessages='';render();if(newMenuAgent)showNewModels(newMenuAgent);}).catch(()=>{});enablePush(false);
   // Telefon u pozadini često prekine vezu bez greške; povratak u aplikaciju otvara novu i dobija punu listu.
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)connectEvents();});
 } catch(e){const boot=$('#boot p');if(boot)boot.textContent=`Aplikacija nije dostupna: ${e.message}`;}

@@ -1,0 +1,5 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {parseBattery,createBatteryStatus} from '../battery.mjs';
+test('Mac baterija razlikuje napajanje i pražnjenje',()=>{assert.deepEqual(parseBattery("Now drawing from 'Battery Power'\n-InternalBattery-0 16%; discharging; 5:52 remaining"),{level:16,charging:false,state:'discharging'});assert.equal(parseBattery("Now drawing from 'AC Power'\n-InternalBattery-0 85%; charging; 0:20 remaining").charging,true);assert.equal(parseBattery('No battery'),null);});
+test('očitavanje se grupiše i kešira, star telefon je označen',async()=>{let time=0,calls=0;const b=createBatteryStatus({now:()=>time,read:async()=>{calls++;return {level:16,charging:false};}});b.report({level:65,charging:true});await Promise.all([b.status(),b.status()]);assert.equal(calls,1);assert.equal((await b.status()).phone.stale,false);time=180001;assert.equal((await b.status()).phone.stale,true);assert.equal(calls,2);assert.throws(()=>b.report({level:101,charging:true}));});

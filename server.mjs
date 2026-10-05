@@ -22,6 +22,7 @@ import { createTitleManager } from './titles.mjs';
 import { createSpeech, spokenText, speechInput, speechSlice, speechHash, speechLabel, speechModel, joinWavs } from './speech.mjs';
 import { usageDelta } from './usage.mjs';
 import { buildAccounting } from './accounting.mjs';
+import {createBatteryStatus} from './battery.mjs';
 import { createPush } from './push.mjs';
 import { createProgressPush } from './progress-push.mjs';
 import webpush from 'web-push';
@@ -48,6 +49,7 @@ const limits=createLimits({onSample:sample=>{if(quotaHistory.observe(sample))bro
 const phoneOriginFile=path.join(process.env.AGENT_DESK_CONFIG || path.join(os.homedir(),'.config','agent-desk'),'phone-origin');
 const savedPhoneOrigin=fs.existsSync(phoneOriginFile)?fs.readFileSync(phoneOriginFile,'utf8').trim():'';
 const phone=createPhoneAccess({sessionFile:path.join(path.dirname(phoneOriginFile),'phone-sessions.json'),port,gatewayPort:Number(process.env.AGENT_DESK_PHONE_PORT || port+2),origin:process.env.AGENT_DESK_PHONE_ORIGIN || savedPhoneOrigin});
+const batteryStatus=createBatteryStatus();
 const phonePush=createPush({keysFile:path.join(dataDir,'vapid.json'),subscriptionsFile:path.join(dataDir,'push-subscriptions.json'),sender:webpush});
 const chatFiles=createChatFiles(dataDir);
 let chatFilesTimer;
@@ -279,6 +281,8 @@ const server = http.createServer(async (req, res) => {
     if(req.method==='GET' && url.pathname==='/api/limit-history')return json(200,quotaHistory.list());
     if(req.method==='GET' && url.pathname==='/api/limits')return json(200,limits.snapshot());
     if(req.method==='GET' && url.pathname==='/api/usage')return json(200,accounting());
+    if(req.method==='GET' && url.pathname==='/api/battery')return json(200,await batteryStatus.status());
+    if(req.method==='POST' && url.pathname==='/api/battery/phone'){batteryStatus.report(await body(req));return json(200,{ok:true});}
     if(req.method==='GET' && url.pathname==='/api/push/key')return json(200,{publicKey:phonePush.publicKey()});
     if(req.method==='POST' && url.pathname==='/api/push/subscribe'){phonePush.save(await body(req));return json(200,{ok:true});}
     if(req.method==='DELETE' && url.pathname==='/api/push/subscribe'){phonePush.remove(await body(req));return json(200,{ok:true});}
@@ -497,7 +501,7 @@ const server = http.createServer(async (req, res) => {
         update();return json(200,{ok:true,deleted:[...ids],archiveId});
       }
     }
-    const files = { '/pdf-view.mjs':['pdf-view.mjs','text/javascript'], '/pdfjs.mjs':['../node_modules/pdfjs-dist/build/pdf.min.mjs','text/javascript'], '/pdfjs-worker.mjs':['../node_modules/pdfjs-dist/build/pdf.worker.min.mjs','text/javascript'], '/wav.mjs':['wav.mjs','text/javascript'], '/reasoning.mjs':['reasoning.mjs','text/javascript'], '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/sw.js': ['sw.js', 'text/javascript'], '/sidebar-groups.mjs': ['sidebar-groups.mjs', 'text/javascript'], '/folder-columns.mjs': ['folder-columns.mjs', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/marked.js': ['../node_modules/marked/lib/marked.esm.js', 'text/javascript'], '/purify.js': ['../node_modules/dompurify/dist/purify.es.mjs', 'text/javascript'], '/manifest.webmanifest': ['manifest.webmanifest', 'application/manifest+json'], '/icon-192.png': ['icon-192.png', 'image/png'], '/icon-512.png': ['icon-512.png', 'image/png'], '/apple-touch-icon.png': ['apple-touch-icon.png', 'image/png'], '/badge-96.png': ['badge-96.png', 'image/png'] };
+    const files = { '/battery.mjs':['battery.mjs','text/javascript'], '/pdf-view.mjs':['pdf-view.mjs','text/javascript'], '/pdfjs.mjs':['../node_modules/pdfjs-dist/build/pdf.min.mjs','text/javascript'], '/pdfjs-worker.mjs':['../node_modules/pdfjs-dist/build/pdf.worker.min.mjs','text/javascript'], '/wav.mjs':['wav.mjs','text/javascript'], '/reasoning.mjs':['reasoning.mjs','text/javascript'], '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/sw.js': ['sw.js', 'text/javascript'], '/sidebar-groups.mjs': ['sidebar-groups.mjs', 'text/javascript'], '/folder-columns.mjs': ['folder-columns.mjs', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/marked.js': ['../node_modules/marked/lib/marked.esm.js', 'text/javascript'], '/purify.js': ['../node_modules/dompurify/dist/purify.es.mjs', 'text/javascript'], '/manifest.webmanifest': ['manifest.webmanifest', 'application/manifest+json'], '/icon-192.png': ['icon-192.png', 'image/png'], '/icon-512.png': ['icon-512.png', 'image/png'], '/apple-touch-icon.png': ['apple-touch-icon.png', 'image/png'], '/badge-96.png': ['badge-96.png', 'image/png'] };
     if (req.method === 'GET' && files[url.pathname]) {
       const [file, mime] = files[url.pathname];
       const headers = { 'Content-Type': mime.startsWith('image/') ? mime : `${mime}; charset=utf-8`, 'Content-Security-Policy': "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' blob:; worker-src 'self'; frame-ancestors 'none'", 'X-Content-Type-Options': 'nosniff' };

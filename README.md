@@ -280,3 +280,5 @@ Ime korisnika (`Korisnik`) ili model odgovora prikazuje se uz vreme u podnožju 
 Delegiranje ne treba zaobilaziti pokretanjem `grok -p`, `claude -p` ili drugog agentskog CLI-ja van Agent Deska: takvi procesi nemaju karticu, zapis ni potrošnju u aplikaciji. Za više od dva zadatka koristi se više uzastopnih grupa kroz `/delegate`; popunjen kapacitet vraća HTTP 409.
 
 Telefon dobija i kratke tekstualne izveštaje tokom rada: tek kada posle novog teksta agent nastavi alatom. Uzastopni izveštaji se grupišu, najviše jedan u minutu i šest tokom jednog odgovora; završetak otkazuje odloženi izveštaj. Pozivi alata bez teksta ne šalju obaveštenja.
+
+Iznad unosa je baterija drugog uređaja: telefon vidi Mac (pmset), računar poslednje stanje koje prijavi mobilni pregledač preko Battery Status API-ja. Provera je na 30 sekundi dok je stranica vidljiva; posle tri minuta bez prijave telefona stanje se označava kao ranije. Nema očitavanja telefona dok je aplikacija zatvorena i nema izmišljanja podatka ako pregledač ne podržava API.
