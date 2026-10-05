@@ -13,7 +13,7 @@ npm start
 
 Otvori http://127.0.0.1:4317. Za drugi port: `PORT=4318 npm start`.
 
-Na macOS-u dvoklikni `Agent Desk.app` u folderu aplikacije. Pokretač pokreće server u pozadini bez Terminal prozora i otvara zaseban Mac prozor sa ugrađenim WebView-om, sopstvenom ikonicom i nazivom u Docku. Cmd+Q zatvara aplikaciju; server ostaje uključen za telefon i agente koji rade. Osvežavanje je Cmd+R, a kopiranje i lepljenje koriste standardne Mac prečice. Pokretač se pravi komandom `./launcher/build.sh`, bez dodatnih modula; `./launcher/build.sh --install` ga postavlja u `/Applications/Agent Desk.app`, uz vezu ka postojećem projektu i podacima; `Pokreni Agent Desk.command` otvara isti pokretač.
+Na macOS-u dvoklikni `Agent Desk.app` u folderu aplikacije. Pokretač pokreće server u pozadini bez Terminal prozora i otvara zaseban Mac prozor sa ugrađenim WebView-om, sopstvenom ikonicom i nazivom u Docku. Pri pokretanju prozor popunjava dostupni ekran, uz prostor za Dock i gornju traku. Cmd+Q zatvara aplikaciju; server ostaje uključen za telefon i agente koji rade. Osvežavanje je Cmd+R, a kopiranje i lepljenje koriste standardne Mac prečice. Pokretač se pravi komandom `./launcher/build.sh`, bez dodatnih modula; `./launcher/build.sh --install` ga postavlja u `/Applications/Agent Desk.app`, uz vezu ka postojećem projektu i podacima; `Pokreni Agent Desk.command` otvara isti pokretač.
 
 ## Uključeno
 

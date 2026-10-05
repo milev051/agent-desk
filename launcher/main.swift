@@ -38,7 +38,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNaviga
   web=WKWebView(frame:.zero,configuration:config);web.uiDelegate=self;web.navigationDelegate=self
   web.setValue(false,forKey:"drawsBackground")
   window=NSWindow(contentRect:NSRect(x:0,y:0,width:1180,height:800),styleMask:[.titled,.closable,.miniaturizable,.resizable],backing:.buffered,defer:false)
-  window.title="Agent Desk";window.minSize=NSSize(width:440,height:400);window.contentView=web;window.center();window.makeKeyAndOrderFront(nil)
+  window.title="Agent Desk";window.minSize=NSSize(width:440,height:400);window.contentView=web
+  if let screen=NSScreen.main {window.setFrame(screen.visibleFrame,display:true)}else{window.center()}
+  window.makeKeyAndOrderFront(nil)
   NSApplication.shared.activate(ignoringOtherApps:true)
   web.loadHTMLString("<html style='background:#111;color:#ddd;font:16px system-ui'><body style='display:grid;place-items:center;height:90vh'>Povezivanje…</body></html>",baseURL:nil)
   Task { await startServer() }
