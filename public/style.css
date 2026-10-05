@@ -184,3 +184,5 @@ body.dragging-chat #new-folder-drop{display:block}
 #new-folder-drop.drop-hover{border-color:#98cfa6;background:#16211b;color:#98cfa6}
 
 #chat-popover .folder-menu{display:flex;align-items:center;gap:8px}#chat-popover .folder-menu input{flex:1;min-width:0;width:100%;margin:0;padding:8px;font-size:13px}#chat-popover .folder-menu .delete-chat{border-left:0;flex-shrink:0}
+
+.chat-row{position:relative}.chat-drag-zone{position:absolute;top:0;right:0;bottom:0;width:50%;touch-action:none;cursor:grab}.chat-drag-zone:active{cursor:grabbing}
