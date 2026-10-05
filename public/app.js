@@ -71,7 +71,7 @@ let seen={};try {seen=JSON.parse(localStorage.getItem('agent-desk-seen') || '{}'
 let folders=[],openFolder=null,folderRename=null,drag=null;try{openFolder=localStorage.getItem('agent-desk-folder');}catch{}
 function completion(chat) {const m=[...chat.messages].reverse().find(m=>m.role==='assistant');return m && ['done','stopped','error','interrupted'].includes(m.status) ? {token:`${m.id}:${m.status}`,status:m.status} : null;}
 function markRead(chat) {const c=chat && completion(chat);if(c && seen[chat.id]!==c.token){seen[chat.id]=c.token;localStorage.setItem('agent-desk-seen',JSON.stringify(seen));}}
-function notification(chat) {const c=completion(chat);if(chat.running)return '';if(c?.status==='done')return 'completed';return c && seen[chat.id]!==c.token ? 'unread' : '';}
+function notification(chat) {const c=completion(chat);if(chat.running || !c || seen[chat.id]===c.token)return '';return c.status==='done'?'completed':'unread';}
 function resizePrompt() {
   const input=$('#prompt'),view=$('#conversation');
   const before=view?view.scrollHeight-view.scrollTop-view.clientHeight:0;

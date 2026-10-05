@@ -149,5 +149,5 @@ body:not(.chat-view) .chat-row.working,body:not(.chat-view) .chat-row.working.pr
 
 #speech-selection:not([hidden]){display:flex;justify-content:flex-end;margin-bottom:8px}#speak-selection{min-height:36px;padding:6px 12px;font-size:13px}
 
-/* Boja statusa ostaje i posle čitanja, izbora ili povratka na mobilnu listu. */
+/* Nepročitan završen odgovor ostaje zelen pri povratku na mobilnu listu. */
 .chat-row.completed,.chat-row.completed:hover,.chat-row.completed:focus-within,.chat-row.completed:active,.chat-row.completed.pressed,.chat-row.active.completed,body:not(.chat-view) .chat-row.active.completed:not(.pressed),.agent-tree-item.completed,.agent-tree-item.completed:hover,.agent-tree-item.completed:active,.agent-tree-item.completed.pressed{background:#243e2c}
