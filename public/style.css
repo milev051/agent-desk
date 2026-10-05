@@ -182,3 +182,5 @@ body:not(.chat-view) .chat-row.working,body:not(.chat-view) .chat-row.working.pr
 #new-folder-drop{display:none;border:1px dashed #666;border-radius:5px;padding:14px 10px;color:#aaa;text-align:center;font-size:12px;flex-shrink:0}
 body.dragging-chat #new-folder-drop{display:block}
 #new-folder-drop.drop-hover{border-color:#98cfa6;background:#16211b;color:#98cfa6}
+
+#chat-popover .folder-menu{display:flex;align-items:center;gap:8px}#chat-popover .folder-menu input{flex:1;min-width:0;width:100%;margin:0;padding:8px;font-size:13px}#chat-popover .folder-menu .delete-chat{border-left:0;flex-shrink:0}
