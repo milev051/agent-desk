@@ -290,3 +290,5 @@ Baterija je odmah posle Grok ikonice: Apple logo na telefonu, Android logo na Ma
 Klik na logo baterije otvara podešavanja. Novi folder se pravi prevlačenjem četa na polje koje se pojavi tokom prevlačenja, pa unosom naziva. Prazan naziv i Escape odustaju, bez premeštanja četa.
 
 Kružić desno od unosa je džojstik: nagore šalje poruku ili je dodaje u red čekanja, nadole zaustavlja aktivnog agenta, ulevo otvara priloge. Radnja se izvršava pri puštanju, tek posle pomeranja od najmanje 22 px. Dodir bez pomeranja ne šalje poruku. Tekst unosa se normalno selektuje. Kada je kružić fokusiran, iste radnje rade strelicama tastature.
+
+`data/statistika.json` je objedinjeni izvedeni zapis tokena, procene API cene po četu/modelu/projektu i promena limita. Ažurira se uz čitljive zapise četova i očitane promene limita. Agenti dobijaju putanju, sadržaj se ne šalje automatski u kontekst. Izvori ostaju `data/chats.json` i `data/limit-history.json`.
