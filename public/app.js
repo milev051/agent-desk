@@ -40,9 +40,21 @@ const escape = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'
 const current = () => chats.find(c => c.id === active);
 const agentName = id => meta.agents.find(a => a.id === id)?.name || id;
 function toast(message) { $('#toast').textContent = message; $('#toast').hidden = false; clearTimeout(toast.timer); toast.timer = setTimeout(() => $('#toast').hidden = true, 5500); }
+const bootLabels={'/api/meta':'Agenti i dostupnost','/api/defaults':'Podešavanja','/api/folders':'Folderi','/api/chats':'Istorija četova'};
+const bootSteps=new Map(),bootStarted=performance.now();
+function bootProgress(key,status){if(document.body.classList.contains('ready'))return;bootSteps.set(key,status);const list=$('#boot-progress');if(list)list.replaceChildren(...[...bootSteps].map(([name,state])=>{const li=document.createElement('li');li.textContent=`${name} · ${state}`;return li;}));}
+function bootSize(bytes){return bytes<1024?`${bytes} B`:`${(bytes/1024).toFixed(1)} KB`;}
+const bootClock=setInterval(()=>{if(document.body.classList.contains('ready')){clearInterval(bootClock);return;}const time=$('#boot-time');if(time)time.textContent=`Traje ${Math.floor((performance.now()-bootStarted)/1000)} s · veličina je učitani JSON, bez kompresije`;},1000);
+$('#boot-stage').textContent='Učitavam podatke sa računara…';
 async function api(url, method = 'GET', data) {
-  const res = await fetch(url, {method, headers:{'Content-Type':'application/json'},body:data ? JSON.stringify(data) : undefined});
-  const b = await res.json(); if(!res.ok) throw new Error(b.error || 'Greška servera.');return b;
+  const label=!appReady && method==='GET'?bootLabels[url]:null;
+  if(label)bootProgress(label,'čekam odgovor servera');
+  try{
+   const res = await fetch(url, {method, headers:{'Content-Type':'application/json'},body:data ? JSON.stringify(data) : undefined});
+   let b;
+   if(label && res.body){const reader=res.body.getReader(),decoder=new TextDecoder();let text='',bytes=0;for(;;){const part=await reader.read();if(part.done)break;bytes+=part.value.byteLength;text+=decoder.decode(part.value,{stream:true});bootProgress(label,'preuzimam · '+bootSize(bytes));}text+=decoder.decode();b=JSON.parse(text);bootProgress(label,'učitano · '+bootSize(bytes));}else b=await res.json();
+   if(!res.ok)throw new Error(b.error || 'Greška servera.');return b;
+  }catch(error){if(label)bootProgress(label,'nije učitano · '+error.message);throw error;}
 }
 async function guard(fn) {try {await fn();} catch(e) {toast(e.message);}}
 function localFileHref(value){try{const u=new URL(value,location.href);if(u.protocol==='file:')return decodeURIComponent(u.pathname);if(/^\/(Users|Volumes)\//.test(u.pathname) && (u.origin===location.origin||['127.0.0.1','localhost'].includes(u.hostname)))return decodeURIComponent(u.pathname);}catch{}return null;}
@@ -412,7 +424,7 @@ document.onkeydown=e=>{if(e.metaKey && !e.shiftKey && !e.altKey && e.key===','){
 const isImage=name=>/\.(png|jpe?g|gif|webp)$/i.test(name);
 try {
   // Prva SSE poruka već nosi sve četove. Ako veza ne javi ništa, posle 8 s ostaje običan zahtev, da ekran ne ostane prazan.
-  const initialChats=new Promise(resolve=>{let first=true;const finish=value=>{if(!first)return;first=false;clearTimeout(timer);resolve(value);};const timer=setTimeout(()=>finish(api('/api/chats')),8000);connectEvents(list=>{sawEvents=true;finish(list);return true;},()=>finish(api('/api/chats')));});
+  const initialChats=new Promise(resolve=>{let first=true;const finish=value=>{if(!first)return;first=false;clearTimeout(timer);resolve(value);};const timer=setTimeout(()=>{bootProgress('Veza za poruke','spora veza · pokušavam direktno preuzimanje');finish(api('/api/chats'));},8000);connectEvents(list=>{sawEvents=true;finish(list);return true;},()=>finish(api('/api/chats')));});
   const [metaValue,listed,defaultsValue,folderValue]=await Promise.all([api('/api/meta'),initialChats,api('/api/defaults'),api('/api/folders').catch(()=>[])]);meta=metaValue;defaults=defaultsValue;folders=Array.isArray(folderValue)?folderValue:[];if(openFolder && !folders.some(folder=>folder.id===openFolder))openFolder=null;if(!sawEvents)chats=listed;appReady=true;
   const linked=new URLSearchParams(location.hash.slice(1)).get('chat');if(linked && chats.some(c=>c.id===linked))active=linked;if(!current())active=null;else selectedAgent=current().settings.agent;
   document.body.classList.toggle('chat-view',!!linked && !!current());for(const c of chats)if(!Object.hasOwn(seen,c.id))markRead(c);
@@ -420,7 +432,7 @@ try {
   render();resizePrompt();refreshLimits();import('/battery.mjs').then(({startBatteryStatus})=>startBatteryStatus()).catch(()=>{});document.body.classList.add('ready');api('/api/models').then(value=>{models=value;lastMessages='';render();if(newMenuAgent)showNewModels(newMenuAgent);}).catch(()=>{});enablePush(false);
   // Telefon u pozadini često prekine vezu bez greške; povratak u aplikaciju otvara novu i dobija punu listu.
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)connectEvents();});
-} catch(e){const boot=$('#boot p');if(boot)boot.textContent=`Aplikacija nije dostupna: ${e.message}`;}
+} catch(e){const boot=$('#boot-stage');if(boot)boot.textContent=`Aplikacija nije dostupna: ${e.message}`;}
 let pullRefreshLock=false;
 async function refreshChatList(){
   if(pullRefreshLock)return;
@@ -457,11 +469,11 @@ function bindPullToRefresh(){
 }
 bindPullToRefresh();
 function connectEvents(initial,failed){
-  events?.close();events=new EventSource('/api/events');
-  events.onmessage=e=>{const data=JSON.parse(e.data),next=Array.isArray(data)?data:mergeChats(data);connected=true;if(!appReady){chats=next;initial?.(next);return;}chats=next;if(active && !current())choose(null);else render();};
+  events?.close();events=new EventSource('/api/events');if(!appReady)bootProgress('Veza za poruke','povezujem se');events.onopen=()=>{if(!appReady)bootProgress('Veza za poruke','otvorena · čekam istoriju četova');};
+  events.onmessage=e=>{const data=JSON.parse(e.data),next=Array.isArray(data)?data:mergeChats(data);connected=true;if(!appReady){bootProgress('Istorija četova',`učitano · ${bootSize(new TextEncoder().encode(e.data).length)} · ${next.length} četova`);bootProgress('Veza za poruke','povezana');chats=next;initial?.(next);return;}chats=next;if(active && !current())choose(null);else render();};
   events.addEventListener('folders',e=>{folders=JSON.parse(e.data);if(openFolder && !folders.some(folder=>folder.id===openFolder))setOpenFolder(null);else{lastSidebar='';if(appReady)renderSidebar();}});
   events.addEventListener('reload',()=>{if(!$('#prompt').value.trim() && !document.querySelector('dialog[open]'))location.reload();else toast('Interfejs je izmenjen. Osveži stranicu kad završiš unos.');});
-  events.onerror=()=>{failed?.();connected=false;if(appReady)render();};
+  events.onerror=()=>{if(!appReady)bootProgress('Veza za poruke','veza prekinuta · pokušavam ponovo');failed?.();connected=false;if(appReady)render();};
 }
 // Izmena sadrži ceo opis izmenjenog četa, redosled poruka i samo nove ili promenjene poruke.
 function mergeChats(delta){const byId=new Map(chats.map(c=>[c.id,c]));for(const x of delta.changed){const old=new Map((byId.get(x.chat.id)?.messages || []).map(m=>[m.id,m])),fresh=new Map(x.messages.map(m=>[m.id,m]));byId.set(x.chat.id,{...x.chat,messages:x.order.map(id=>fresh.get(id) || old.get(id)).filter(Boolean)});}return delta.order.map(id=>byId.get(id)).filter(Boolean);}
