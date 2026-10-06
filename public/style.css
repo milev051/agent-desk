@@ -263,3 +263,5 @@ body.dragging-chat #chat-drop-targets{display:flex}
 #conversation{overflow-anchor:none}
 
 .paragraph-duration{display:block;margin-top:3px;color:#777;font-size:10px;line-height:1.2;user-select:none}.work-duration{color:#888;font-size:11px}
+
+.folder-row.working:not(.open){background:#3e3824;border-color:#665b36}.folder-row.completed:not(.open){background:#243e2c;border-color:#3c6749}.folder-row.unread:not(.open){background:#243d53;border-color:#3c607e}
