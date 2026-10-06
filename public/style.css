@@ -218,3 +218,5 @@ body.dragging-chat #new-folder-drop{display:block}
 #device-battery .battery-duration{font-size:9px;color:#888;white-space:nowrap}
 
 .chat-row.drop-hover{outline:1px solid #98cfa6;background:#16211b}
+
+.folder-shared[aria-pressed="true"],.folder-mark.shared{color:#93d9aa}.folder-shared[aria-pressed="true"]{background:#16291c}

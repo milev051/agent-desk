@@ -1,3 +1,4 @@
+import {sharedFolderContext} from './shared-folders.mjs';
 import {linkChat,childUpdates} from './chat-links.mjs';
 import {createWarmup,lightModel} from './warmup.mjs';
 import {createChatFiles} from './chat-files.mjs';
@@ -82,7 +83,8 @@ function estimates(c){
 }
 const publicChat = c => {
   const {hash,context,transferEstimates,transfers}=estimates(c);
-  return { ...c, quotaChanges:quotaHistory.forChat(c.id), historyTokenCount:c.historyTokenCount?.hash===hash?c.historyTokenCount:null, usageSummary:accounting().chats[c.id], running: running.has(c.id), context, transferEstimates, transfers };
+  const {sharedFolderReads,childReadOffsets,...visible}=c;
+  return { ...visible, quotaChanges:quotaHistory.forChat(c.id), historyTokenCount:c.historyTokenCount?.hash===hash?c.historyTokenCount:null, usageSummary:accounting().chats[c.id], running: running.has(c.id), context, transferEstimates, transfers };
 };
 // Tok događaja posle prve pune liste šalje samo izmenjene četove, a u njima samo izmenjene poruke.
 let sent=new Map(),sentOrder='';
@@ -193,9 +195,10 @@ async function send(chat, prompt, options={}) {
   const sentAt=Date.now(),createdAt=options.createdAt || sentAt;
   const newMessage=historyText([{role:'user',text:prompt,createdAt,sentAt}]);
   const history = historyTransferred ? `Prethodne poruke iz ovog četa (istorija razgovora${chat.sessions[agent]?', dopuna od prethodnog odgovora ovog agenta':''}):\n${plan.text}\n\nNova poruka korisnika:\n${newMessage}` : newMessage;
+  const sharedContext=sharedFolderContext(chats,folders.list(),chat,agent);
   const linkedUpdates=childUpdates(chats,chat,agent);
-  const linkedText=linkedUpdates.updates.map(({child,messages})=>`Nove poruke podagenta ${child.title} (${child.id}), koje ova sesija još nije dobila:\n${historyText(messages)}\nZa celu istoriju koristi GET /api/chats/${child.id}.`).join('\n\n');
-  const spec = command(chat,options.minimalContext?prompt:`${appContext(chat)}\n\n${linkedText}\n\n${history}`, binaries[agent]);
+  const linkedText=linkedUpdates.updates.filter(({child})=>!sharedContext.peerIds.includes(child.id)).map(({child,messages})=>`Nove poruke podagenta ${child.title} (${child.id}), koje ova sesija još nije dobila:\n${historyText(messages)}\nZa celu istoriju koristi GET /api/chats/${child.id}.`).join('\n\n');
+  const spec = command(chat,options.minimalContext?prompt:`${appContext(chat)}\n\n${sharedContext.text}\n\n${linkedText}\n\n${history}`, binaries[agent]);
   const child = spawn(spec.executable, spec.args, { cwd: chat.settings.cwd, env: { ...process.env, NO_COLOR: '1' }, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
   const reply = { id: randomUUID(), role: 'assistant', agent, model: chat.settings.model || '', configuredModel: chat.settings.model || '', historyTransferred, usageTracked:true, usageCwd:chat.settings.cwd, text: '', status: 'running', activity: 'Pokrećem agenta…', createdAt: Date.now() };
   delete chat.ephemeral;
@@ -251,7 +254,7 @@ async function send(chat, prompt, options={}) {
     reply.status = run.stopped ? 'stopped' : code === 0 && !error && !reply.error ? 'done' : 'error';
     if (reply.status === 'error') reply.error ||= error?.message || stderr.trim() || `Agent je završio sa kodom ${code}.`;
     if (!reply.text && reply.status === 'done') { reply.status = 'error'; reply.error = 'Agent je završio bez tekstualnog odgovora. Proveri CLI prijavu.'; }
-    if(reply.status==='done'){chat.transferPending=false;chat.childReadOffsets ||= {};chat.childReadOffsets[agent]={...chat.childReadOffsets[agent],...linkedUpdates.consumed};}
+    if(reply.status==='done'){chat.transferPending=false;if(!options.minimalContext){chat.sharedFolderReads ||= {};chat.sharedFolderReads[agent]={...sharedContext.state,sessionId:chat.sessions[agent] || null};}chat.childReadOffsets ||= {};chat.childReadOffsets[agent]={...chat.childReadOffsets[agent],...linkedUpdates.consumed};}
     if(chat.sessions[agent]){chat.sessionOffsets ||= {};chat.sessionOffsets[agent]=chat.messages.length;}
     if(reply.status==='error' || reply.status==='stopped')chat.queuePaused=true;
     chat.updatedAt = Date.now(); update();run.resolve(reply);setImmediate(()=>drainQueue(chat));
@@ -375,7 +378,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/api/folders') return json(200, folders.list());
     if (req.method === 'POST' && url.pathname === '/api/folders') { const made=folders.add((await body(req)).name); broadcastFolders(); return json(201, made); }
     const folderMatch=url.pathname.match(/^\/api\/folders\/([\w-]+)$/);
-    if (folderMatch && req.method === 'PATCH') { const renamed=folders.rename(folderMatch[1], (await body(req)).name); broadcastFolders(); return json(200, renamed); }
+    if (folderMatch && req.method === 'PATCH') { const renamed=folders.update(folderMatch[1], await body(req)); broadcastFolders(); return json(200, renamed); }
     if (folderMatch && req.method === 'DELETE') { folders.remove(folderMatch[1]); for (const chat of chats) if (chat.folderId===folderMatch[1]) delete chat.folderId; update(); broadcastFolders(); return json(200, {ok:true}); }
     if (req.method === 'POST' && url.pathname === '/api/chats') {
       const b = await body(req);
@@ -445,6 +448,7 @@ const server = http.createServer(async (req, res) => {
         delete chat.sessions[agent];
         if(chat.sessionOffsets)delete chat.sessionOffsets[agent];
         if(chat.childReadOffsets)delete chat.childReadOffsets[agent];
+        if(chat.sharedFolderReads)delete chat.sharedFolderReads[agent];
         if(chat.usageBaselines)delete chat.usageBaselines[agent];
         chat.updatedAt=Date.now();update();return json(200,publicChat(chat));
       }
@@ -498,7 +502,7 @@ const server = http.createServer(async (req, res) => {
         await send(chat, withFiles(b.text.trim(),b.files,chat.settings.cwd),{requestId:b.requestId}); return json(202, { ok: true });
       }
       if(req.method==='POST' && match[2]==='fork') {
-        const copy={...structuredClone(chat),id:randomUUID(),title:chat.title,createdAt:Date.now(),updatedAt:Date.now(),sessions:{},sessionOffsets:{},usageBaselines:{},queue:[],queuePaused:false,queueError:null,messages:structuredClone(chat.messages).map(m=>({...m,id:randomUUID(),usageInherited:true})),accountingEvents:(chat.accountingEvents || []).map(e=>({...e,usageInherited:true})),duplicatedFrom:chat.id};
+        const copy={...structuredClone(chat),id:randomUUID(),title:chat.title,createdAt:Date.now(),updatedAt:Date.now(),sessions:{},sessionOffsets:{},usageBaselines:{},sharedFolderReads:{},childReadOffsets:{},queue:[],queuePaused:false,queueError:null,messages:structuredClone(chat.messages).map(m=>({...m,id:randomUUID(),usageInherited:true})),accountingEvents:(chat.accountingEvents || []).map(e=>({...e,usageInherited:true})),duplicatedFrom:chat.id};
         chats.unshift(copy);update();return json(201,publicChat(copy));
       }
       if (req.method === 'PATCH' && !match[2]) {

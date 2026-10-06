@@ -18,6 +18,10 @@ test('nova instalacija dobija dva foldera i prima nove do granice',()=>{
   assert.throws(()=>folders.add('Preko'),/najviše 12/);
   const renamed=folders.rename(folders.list()[0].id,'Kuća');
   assert.equal(renamed.name,'Kuća');
+  assert.equal(folders.update(renamed.id,{shared:true}).shared,true);
+  assert.equal(createFolders(file).list()[0].shared,true);
+  assert.equal(folders.update(renamed.id,{name:'Kuća'}).shared,true);
+  assert.throws(()=>folders.update(renamed.id,{shared:'yes'}));
   assert.deepEqual(createFolders(file).list().map(folder=>folder.name),['Kuća','Projekti','Treći',...Array.from({length:9},(_,i)=>'Folder '+(i+3))]);
   assert.throws(()=>folders.rename(renamed.id,'  '),/1 do 40/);
   assert.throws(()=>folders.rename('nema','Ime'),/nije pronađen/);

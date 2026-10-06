@@ -249,6 +249,19 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.doesNotMatch(JSON.parse(noRepeat.messages.at(-1).text).input,/Nove poruke podagenta/);
     await call(`/api/chats/${linkedChild.id}/send`,'POST',{text:'Nastavi'});const childRole=await done(linkedChild.id);
     assert.match(JSON.parse(childRole.messages.at(-1).text).input,/Sada si podagent glavnog četa/);
+    const team=(await call('/api/folders','POST',{name:'Tim'})).data;
+    assert.equal((await call(`/api/folders/${team.id}`,'PATCH',{shared:true})).data.shared,true);
+    await call(`/api/chats/${linkedParent.id}`,'PATCH',{folderId:team.id});
+    await call(`/api/chats/${b.id}`,'PATCH',{folderId:team.id});
+    await call(`/api/chats/${b.id}/send`,'POST',{text:'GRUPNA_PROVERA'});const teamReply=await done(b.id);
+    assert.match(JSON.parse(teamReply.messages.at(-1).text).input,/Zajednička grupa agenata/);
+    assert.match(JSON.parse(teamReply.messages.at(-1).text).input,/Nove ili izmenjene poruke četa/);
+    assert.equal(teamReply.sharedFolderReads,undefined);
+    await call(`/api/chats/${b.id}/send`,'POST',{text:'Dalje bez promena'});const teamNext=await done(b.id);
+    assert.doesNotMatch(JSON.parse(teamNext.messages.at(-1).text).input,/Nove ili izmenjene poruke četa/);
+    await call(`/api/chats/${b.id}`,'PATCH',{folderId:null});
+    await call(`/api/chats/${b.id}/send`,'POST',{text:'Van grupe'});const departed=await done(b.id);
+    assert.match(JSON.parse(departed.messages.at(-1).text).input,/Više nisi u zajedničkoj grupi/);
   } finally { if(server.exitCode===null){server.kill('SIGTERM');await once(server,'exit');} rmSync(temp, { recursive: true, force: true }); }
 });
 test('stream parser prepoznaje tekst, alate i greške dobavljača', () => {

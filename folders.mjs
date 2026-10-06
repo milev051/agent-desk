@@ -39,6 +39,14 @@ export function createFolders(file){
       if(!folder)throw new Error('Folder nije pronađen.');
       folder.name=clean(name);write(list);return {...folder};
     },
+    update(id,changes){
+      const folder=list.find(item=>item.id===id);
+      if(!folder)throw new Error('Folder nije pronađen.');
+      const name=changes.name===undefined?folder.name:clean(changes.name);
+      if(changes.shared!==undefined && typeof changes.shared!=='boolean')throw new Error('Izaberi da li folder deli kontekst.');
+      folder.name=name;if(changes.shared!==undefined)folder.shared=changes.shared;
+      write(list);return {...folder};
+    },
     remove(id){
       const index=list.findIndex(item=>item.id===id);
       if(index<0)throw new Error('Folder nije pronađen.');

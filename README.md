@@ -306,3 +306,9 @@ Podešavanja i poslednjih 100 rezultata sa prijavljenom potrošnjom čuvaju se u
 Zadrži desnu polovinu kartice i prevuci čet na drugi čet. Prevlačeni čet postaje podagent ciljnog četa, sa svojim porukama, radnim folderom i CLI sesijama. Oba agenta moraju da miruju. Čet koji već ima podagente ne može postati podagent, a podagent ne može primati nove podagente.
 
 Pri sledećem slanju podagent dobija opis nove uloge. Glavni agent prvo dobija poslednju završenu razmenu podagenta, a zatim samo nove poruke koje njegova konkretna sesija još nije dobila. Granica pročitanog se čuva tek posle uspešnog odgovora; nova sesija je poništava. Za celu istoriju agent može koristiti GET `/api/chats/ID`. Povezivanje se ne koristi za automatsko pokretanje agenata.
+
+### Folder sa zajedničkim kontekstom
+
+U meniju foldera uključi ikonicu „Zajednički kontekst agenata“. Zelena ikonica znači da članovi dobijaju razgovore jedni drugih pri sledećem slanju. Prvo se prenosi dosadašnja istorija; kasnije samo nove ili izmenjene završene poruke, uključujući zabeležene aktivnosti. Podagenti nasleđuju grupu glavnog četa. Obični folderi ne dele kontekst.
+
+Evidencija heševa poruka i članstva čuva se u `data/chats.json`, u `sharedFolderReads`, odvojeno po primaocu i CLI sesiji. Sačuvana je tek kada odgovor uspe. Izlazak, isključivanje deljenja i brisanje foldera javljaju se pri sledećoj poruci; raniji kontekst ostaje u CLI sesiji. Povratak u isti folder sa istom sesijom ne prenosi staru istoriju ponovo. Nova sesija dobija istoriju ponovo. Grupe ne pokreću automatski članove i ne prave kopije četova.
