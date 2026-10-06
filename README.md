@@ -291,7 +291,7 @@ Klik na logo baterije otvara podešavanja. Novi folder se pravi prevlačenjem č
 
 Kružić desno od unosa je džojstik: nagore šalje poruku ili je dodaje u red čekanja, nadole zaustavlja aktivnog agenta, ulevo otvara priloge. Radnja se izvršava pri puštanju, tek posle pomeranja od najmanje 22 px. Dodir bez pomeranja ne šalje poruku. Tekst unosa se normalno selektuje. Kada je kružić fokusiran, iste radnje rade strelicama tastature.
 
-`data/statistika.json` je objedinjeni izvedeni zapis tokena, procene API cene po četu/modelu/projektu i promena limita. Ažurira se uz čitljive zapise četova i očitane promene limita. Agenti dobijaju putanju, sadržaj se ne šalje automatski u kontekst. Izvori ostaju `data/chats.json` i `data/limit-history.json`.
+`data/statistika.json` je objedinjeni izvedeni zapis tokena, procene API cene po četu/modelu/projektu i promena limita. Ažurira se uz čitljive zapise četova i očitane promene limita. Agenti dobijaju putanju, sadržaj se ne šalje automatski u kontekst. Izvori ostaju `data/chats.json` i `data/limit-history.json`. U podešavanjima dugme „Otvori folder statistike“ otvara Finder i označava ovaj fajl; na telefonu je dostupno preuzimanje istog JSON fajla. Statističke tabele se više ne učitavaju u podešavanjima.
 
 ### Jednokratna poruka agentima
 

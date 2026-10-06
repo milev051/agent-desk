@@ -295,6 +295,16 @@ const server = http.createServer(async (req, res) => {
     if(req.method==='GET' && url.pathname==='/api/limits')return json(200,limits.snapshot());
     if(url.pathname==='/api/warmup'){if(req.method==='GET')return json(200,warmup.view());if(req.method==='PUT')return json(200,warmup.configure(await body(req)));}
     if(req.method==='POST' && url.pathname==='/api/warmup/run'){if(warmup.view().running)return json(409,{error:'Provera agenata je već u toku.'});void warmup.run().catch(error=>console.error('Provera agenata:',error.message));return json(202,warmup.view());}
+    if(req.method==='GET' && url.pathname==='/api/statistics/file'){
+      syncChatFiles();const content=fs.readFileSync(statisticsFile);
+      return respond(200,{'Content-Type':'application/json; charset=utf-8','Content-Disposition':'attachment; filename="statistika.json"','Cache-Control':'no-store'},content);
+    }
+    if(req.method==='POST' && url.pathname==='/api/statistics/reveal'){
+      if(!['127.0.0.1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress))return json(403,{error:'Samo lokalni pristup.'});
+      if(process.platform!=='darwin')throw Error('Finder je dostupan samo na macOS-u.');
+      syncChatFiles();await new Promise((resolve,reject)=>{const child=spawn('/usr/bin/open',['-R',statisticsFile]);child.once('error',reject);child.once('close',code=>code===0?resolve():reject(Error('Folder statistike nije otvoren.')));});
+      return json(200,{ok:true});
+    }
     if(req.method==='GET' && url.pathname==='/api/usage')return json(200,accounting());
     if(req.method==='GET' && url.pathname==='/api/battery')return json(200,await batteryStatus.status());
     if(req.method==='POST' && url.pathname==='/api/battery/phone'){batteryStatus.report(await body(req));return json(200,{ok:true});}

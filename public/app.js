@@ -24,7 +24,7 @@ const speechAudio=new Audio();
 speechAudio.id='speech-audio';
 speechAudio.preload='auto';
 document.body.append(speechAudio);
-let titleSettings={}, usageReport={};
+let titleSettings={};
 let agentPanelOpen=localStorage.getItem('agent-desk-agent-panel')!=='hidden';
 let mobileAutofocus=localStorage.getItem('agent-desk-mobile-autofocus')==='1';
 const linkedFiles=new Map();
@@ -202,7 +202,6 @@ function renderUsage(){const c=current(),box=$('#usage-details');if(!box)return;
  const html=`<div class="usage-scope-label">Ovaj čet · ${escape(apiMoney(u.own))}</div>${usageTable(u.own)}${u.childCount?`<div class="usage-scope-label">Čet i podagenti · ${escape(apiMoney(u.family))}</div>${usageTable(u.family)}`:''}<div class="usage-scope-label" title="${escape(u.projectPath)}">Projekat: ${escape(u.projectPath)} · ${escape(apiMoney(u.project))}</div>${usageTable(u.project)}<p class="usage-note">¹ Novi ulaz ne uključuje čitanje keša; upis keša je deo novog ulaza. Novi tokeni u sažetku uključuju i izlaz. Razmišljanje je deo izlaza kada ga CLI tako prijavi. API procena prema cenovniku od 04.10.2026, standardne tarife. Raspon pokriva kratki/dugi kontekst i trajanje upisa keša. Zbir sačuvanih četova. Bez naknada za alate i skladištenje. Pretplata ima sopstvene limite.</p>${u.project.legacyProject?'<p class="usage-note">Stariji odgovori bez zabeleženog foldera pripisani su sadašnjem radnom folderu četa.</p>':''}<p class="usage-note">Native podagenti koje CLI ne prijavi nisu zasebno izmereni.</p>`;
  if($('#usage-breakdown').innerHTML!==html)$('#usage-breakdown').innerHTML=html;
 }
-function renderProjectUsage(){const html=Object.entries(usageReport.projects || {}).map(([cwd,s])=>`<div class="usage-scope-label">${escape(cwd)} · ${splitUsage(s)} · ${escape(apiMoney(s))}</div>${usageTable(s)}`).join('') || '<p class="usage-note">Nema zabeležene potrošnje.</p>';$('#project-usage-list').innerHTML=html;}
 $('#agent-tree').onscroll=positionPopover;
 const storedKeyMask='••••••••';
 function fillTitleSettings(){if(!phoneRemote && meta)meta.titleSettings=titleSettings;
@@ -271,7 +270,7 @@ let renderedChatId=null,stickToken=0,forceBottom=false;
 function cancelStick(){stickToken++;}
 function stickToBottom(view){const token=++stickToken;const go=()=>{if(token!==stickToken)return;view.scrollTop=view.scrollHeight;};go();requestAnimationFrame(()=>{go();requestAnimationFrame(go);});}
 function render() {
-  $('#quota-history-open').hidden=!meta.limitHistory;renderQueue();renderTransfer();renderAgentPanel();renderUsage();renderChatQuota();
+  renderQueue();renderTransfer();renderAgentPanel();renderUsage();renderChatQuota();
   const chat=current();if(document.visibilityState==='visible' && document.hasFocus())markRead(chat);renderSidebar();
   $('#prompt').disabled=!connected || !meta.agents.find(a=>a.id===(chat?.settings.agent || selectedAgent))?.available;
   $('#connection').hidden=connected;$('#stop-run').hidden=!chat?.running;$('#prompt').setAttribute('aria-busy',chat?.running?'true':'false');
@@ -367,7 +366,7 @@ $('#warmup-save').onclick=()=>guard(saveWarmup);
 $('#warmup-run').onclick=()=>guard(async()=>{await saveWarmup();warmupSettings=await api('/api/warmup/run','POST',{});renderWarmupStatus();});
 function renderDefaults() {$('#default-agents').innerHTML=meta.agents.map(a=>{const s={agent:a.id,...defaults[a.id]};return `<div class="default-agent" data-default-agent="${a.id}"><img src="${agentLogos[a.id]}" alt="${escape(a.name)}" title="${escape(a.name)}" width="22" height="22"><select data-default-model aria-label="Podrazumevani model ${escape(a.name)}">${modelOptions(s)}</select><select data-default-effort aria-label="Podrazumevano razmišljanje ${escape(a.name)}" ${effortsFor(a.id,s.model).length?'':'disabled'}>${effortOptions(s)}</select></div>`;}).join('');}
 function showDefaults(open) {document.body.classList.toggle('settings-view',open);if(open)refreshPhone();$('#defaults').hidden=!open;for(const el of [$('#conversation'),$('.composer-area'),$('#usage-details')].filter(Boolean))el.inert=open;if(open){closePanels();$('#defaults-close').focus();}else focusPrompt();}
-$('#defaults-open').onclick=()=>guard(async()=>{const form=$('#defaults');if(!form.hidden){showDefaults(false);return;}const button=$('#defaults-open');button.disabled=true;try{[defaults,models,titleSettings,usageReport,warmupSettings]=await Promise.all([api('/api/defaults'),api('/api/models'),phoneRemote?Promise.resolve(titleSettings):api('/api/title-settings'),api('/api/usage'),api('/api/warmup').catch(()=>null)]);renderDefaults();renderWarmup();fillTitleSettings();renderProjectUsage();$('#response-colors').value=colorMode;$('#mobile-autofocus').checked=mobileAutofocus;menuChat=null;renderPopover();showDefaults(true);renderWarmupStatus();}finally{button.disabled=false;}});
+$('#defaults-open').onclick=()=>guard(async()=>{const form=$('#defaults');if(!form.hidden){showDefaults(false);return;}const button=$('#defaults-open');button.disabled=true;try{[defaults,models,titleSettings,warmupSettings]=await Promise.all([api('/api/defaults'),api('/api/models'),phoneRemote?Promise.resolve(titleSettings):api('/api/title-settings'),api('/api/warmup').catch(()=>null)]);renderDefaults();renderWarmup();$('#statistics-open').hidden=phoneRemote;$('#statistics-download').hidden=!phoneRemote;fillTitleSettings();$('#response-colors').value=colorMode;$('#mobile-autofocus').checked=mobileAutofocus;menuChat=null;renderPopover();showDefaults(true);renderWarmupStatus();}finally{button.disabled=false;}});
 $('#defaults-close').onclick=()=>showDefaults(false);
 $('#default-agents').onchange=e=>{const row=e.target.closest('[data-default-agent]');if(!row || !e.target.matches('[data-default-model]'))return;const s={agent:row.dataset.defaultAgent,model:e.target.value,effort:preferredEffort(models,row.dataset.defaultAgent,e.target.value)},select=row.querySelector('[data-default-effort]');select.innerHTML=effortOptions(s);select.disabled=!effortsFor(s.agent,s.model).length;};
 $('#defaults-form').onsubmit=e=>{e.preventDefault();guard(async()=>{const next=Object.fromEntries([...$('#default-agents').querySelectorAll('[data-default-agent]')].map(row=>[row.dataset.defaultAgent,{model:row.querySelector('[data-default-model]').value,effort:row.querySelector('[data-default-effort]').value}]));if(!phoneRemote)await saveTitleSettings();defaults=await api('/api/defaults','PUT',next);mobileAutofocus=$('#mobile-autofocus').checked;localStorage.setItem('agent-desk-mobile-autofocus',mobileAutofocus?'1':'0');colorMode=$('#response-colors').value;localStorage.setItem('agent-desk-color-mode',colorMode);document.body.classList.toggle('colored-responses',colorMode==='full');showDefaults(false);});};
@@ -529,7 +528,7 @@ window.addEventListener('hashchange',()=>{const id=new URLSearchParams(location.
 let phoneTimer;
 async function refreshPhone(){
  clearTimeout(phoneTimer);
- $('.phone-settings').hidden=phoneRemote;$('.title-settings').hidden=phoneRemote;if(phoneRemote)return;
+ $('.phone-settings').hidden=phoneRemote;$('#token-count-settings').hidden=phoneRemote;if(phoneRemote)return;
  try {const info=await api('/api/phone');$('#phone-status').textContent=info.origin?'Link važi još '+Math.max(0,Math.ceil((info.expiresAt-Date.now())/1000))+' s. Prijava traje '+info.sessionDays+' dana.':'Tailscale nije povezan.';
  $('#phone-address').hidden=!info.origin;$('#phone-address').textContent=info.origin || '';if(info.origin)$('#phone-address').href=info.origin;
  $('#phone-link').hidden=!info.url;$('#phone-link').value=info.url || '';$('#phone-qr').hidden=!info.url;
@@ -661,7 +660,6 @@ navigator.serviceWorker?.addEventListener('message',event=>{const id=event.data?
 
 function quotaChanges(events=[]){if(!events.length)return '';return `<details class="quota-changes"><summary>Promene limita</summary>${quotaRows(events)}<small>Očitane promene u intervalu. Drugi četovi i CLI sesije mogu uticati na iste procente; ovo nije tačna potrošnja pojedinačnog odgovora.</small></details>`;}
 function quotaRows(events){return events.map(e=>`<div class="quota-change"><time>${new Date(e.from).toLocaleTimeString('sr-Latn-RS')} - ${new Date(e.to).toLocaleTimeString('sr-Latn-RS')}</time><div>${escape(agentName(e.agent))} · ${e.windows.map(w=>({fiveHour:'5h',weekly:'7d',weeklyOpus:'7d Opus',weeklySonnet:'7d Sonnet'}[w.period] || w.period)+' '+w.before+'% → '+w.after+'%').join(' · ')}</div><small>${e.turns.length?e.turns.map(t=>escape(t.title)+' · '+escape(modelName(t.agent,t.model))).join(' / '):'Bez prepoznatog odgovora u Agent Desku'}</small></div>`).join('');}
-$('#quota-history-open').onclick=()=>guard(async()=>{const box=$('#quota-history-list');box.hidden=!box.hidden;if(!box.hidden){const events=await api('/api/limit-history');box.innerHTML=quotaRows(events.slice(0,100)) || '<small>Još nema zabeleženih promena limita.</small>';}});
 
 function renderMessageSelection(){$('#message-selection').hidden=!messageSelectionMode;$('#copy-selected-messages').disabled=!selectedMessages.size;$('#conversation').classList.toggle('selection-mode',messageSelectionMode);}
 function refreshMessageSelection(){const view=$('#conversation'),scroll=view.scrollTop;renderMessageSelection();lastMessages='';render();cancelStick();view.scrollTop=scroll;}
@@ -671,3 +669,5 @@ function selectedMessagesMarkdown(){return exportMessages(chats,active,[...selec
 async function copySelectedMessages(){const text=selectedMessagesMarkdown();if(!text)return;await navigator.clipboard.writeText(text);toast('Markdown je kopiran.');}
 $('#select-all-messages').onclick=selectAllMessages;
 $('#copy-selected-messages').onclick=()=>guard(copySelectedMessages);
+
+$('#statistics-open').onclick=()=>guard(()=>api('/api/statistics/reveal','POST',{}));

@@ -28,6 +28,10 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal(warmupResult.runs[0].results[0].status,'done');
     assert.ok(warmupResult.runs[0].results[0].usage);
     assert.deepEqual((await call('/api/chats')).data,[]);
+    const statistics=await fetch(base+'/api/statistics/file');
+    assert.equal(statistics.status,200);assert.match(statistics.headers.get('content-disposition'),/attachment; filename="statistika.json"/);
+    const report=await statistics.json();assert.ok(report.updatedAt);assert.ok(report.accounting);assert.ok(Array.isArray(report.limits));
+    assert.deepEqual(report,JSON.parse(readFileSync(path.join(temp,'data','statistika.json'),'utf8')));
     const script=await fetch(base+'/app.js',{headers:{'Accept-Encoding':'gzip'}});assert.equal(script.headers.get('content-encoding'),'gzip');assert.match(await script.text(),/import/);
     const entry=await (await fetch(base+'/app.js')).text();
     for(const match of entry.matchAll(/from\s+['"]([^'"]+)['"]/g)){

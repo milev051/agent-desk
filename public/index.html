@@ -34,13 +34,13 @@
         </fieldset>
         <label class="color-setting">Boja odgovora<select id="response-colors"><option value="label">Samo oznaka modela</option><option value="full">Oznaka i tekst odgovora</option></select></label>
         <label class="color-setting">Tastatura pri otvaranju četa na telefonu<input id="mobile-autofocus" type="checkbox"></label>
-        <fieldset class="title-settings"><legend>Brojanje tokena</legend>
+        <fieldset id="token-count-settings" class="title-settings"><legend>Brojanje tokena</legend>
           <small>Ime četa se ne menja samo. Prva poruka ostaje početno ime dok ga ručno ne promeniš. Google ključ služi za brojanje tokena u istoriji.</small>
           <div class="title-key-row"><input id="google-title-key" type="password" autocomplete="off" aria-label="Google API ključ za brojanje tokena" placeholder="Google API ključ"><button id="title-check" type="button">Proveri</button></div>
           <small id="title-status" aria-live="polite"></small>
         </fieldset>
         <fieldset class="phone-settings"><legend>Telefon · Tailscale</legend><small id="phone-status"></small><a id="phone-address" hidden></a><img id="phone-qr" alt="QR kod za jednokratnu prijavu" width="180" height="180" hidden><input id="phone-link" readonly aria-label="Privremeni link za telefon" hidden><div class="settings-actions"><button id="phone-copy" type="button">Kopiraj link</button><button id="phone-revoke" type="button" hidden>Odjavi telefone</button></div></fieldset>
-        <section><button id="quota-history-open" type="button">Promene limita</button><div id="quota-history-list" hidden></div></section><section class="archive-settings"><button id="archive-open" type="button">Arhivirani četovi</button><div id="archive-list" hidden></div></section><button id="notifications-enable" type="button">Obaveštenja na telefonu</button><small id="notifications-status">Na računaru obaveštenje stiže čim agent završi.</small><section id="project-usage"><div>Potrošnja projekata</div><div id="project-usage-list"></div></section>
+        <section class="archive-settings"><button id="archive-open" type="button">Arhivirani četovi</button><div id="archive-list" hidden></div></section><button id="notifications-enable" type="button">Obaveštenja na telefonu</button><small id="notifications-status">Na računaru obaveštenje stiže čim agent završi.</small><section><button id="statistics-open" type="button">Otvori folder statistike</button><a id="statistics-download" href="/api/statistics/file" download="statistika.json" hidden>Preuzmi statistiku</a></section>
         <div class="settings-actions"><button id="defaults-close" type="button">Zatvori</button><button type="submit">Sačuvaj</button></div>
       </form>
     </section>
