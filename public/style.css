@@ -268,3 +268,5 @@ body.dragging-chat #chat-drop-targets{display:flex}
 .chat-row[data-expand-parent] .chat-item{padding-right:32px}
 .chat-group>.subagent-chats{margin:4px 0 8px 10px}
 .chat-row[data-expand-parent].working{background:#3e3824}.chat-row[data-expand-parent].completed{background:#243e2c}.chat-row[data-expand-parent].has-draft:not(.working){background:#363940}
+
+.chat-drag-zone{display:flex;align-items:center;justify-content:center;color:#777}.chat-drag-zone:hover{color:#bbb}.chat-drag-zone svg{pointer-events:none}

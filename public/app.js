@@ -178,7 +178,7 @@ function visibleSidebarChats(){
 }
 function renderSidebar() {
   const row=(c,index,hasChildren=false)=>{const shortcut=index<9?` · ⌘${index+1}`:'';return `<div role="button" tabindex="0" aria-label="${escape(c.title)}${shortcut}" class="chat-row ${c.parentChatId?'subagent-card':''} ${(drafts.has(c.id)?drafts.get(c.id):c.draft?.text||'').trim()?'has-draft':''} ${c.id===active?'active':''} ${c.running?'working':notification(c)} ${drag?.active && drag.id===c.id?'drag-source':''}" data-row="${c.id}" ${hasChildren?`data-expand-parent="${c.id}" aria-expanded="${!closedAgentGroups.has(c.id)}"`:""} data-agent="${c.settings.agent}" title="${escape(c.title)} · ${escape(agentName(c.settings.agent))} · ${escape(modelLabel(c))}${shortcut}">
-    <span class="chat-item"><span>${escape(c.title)}</span></span><span class="chat-drag-zone" aria-hidden="true" title="Zadrži desnu ivicu i prevuci čet"></span>
+    <span class="chat-item"><span>${escape(c.title)}</span></span><span class="chat-drag-zone" aria-hidden="true" title="Zadrži desnu ivicu i prevuci čet"><svg width="12" height="18" viewBox="0 0 12 18" fill="currentColor" aria-hidden="true"><circle cx="4" cy="4" r="1.1"/><circle cx="8" cy="4" r="1.1"/><circle cx="4" cy="9" r="1.1"/><circle cx="8" cy="9" r="1.1"/><circle cx="4" cy="14" r="1.1"/><circle cx="8" cy="14" r="1.1"/></svg></span>
   </div>`;};
   const groups=sidebarGroups(chats),ids=folders.map(folder=>folder.id);
   if(openFolder && !ids.includes(openFolder))openFolder=null;
