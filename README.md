@@ -300,3 +300,9 @@ U podešavanjima, „Kratka poruka agentima“ omogućava ručno slanje ili dnev
 Automatski izbor koristi poznate lakše modele iz dostupnog kataloga; ako takav model nije dostupan, agent se preskače uz grešku umesto pokretanja jačeg modela. Model se može izabrati i ručno. Slanje ide redom, sa najviše dva minuta po agentu i bez automatskih ponavljanja. Dnevni termin se izvršava jednom, uz najviše 15 minuta kašnjenja; Mac i server moraju raditi. Poziv troši limit, a njegov reset i deljenje kvote između modela određuje provajder.
 
 Podešavanja i poslednjih 100 rezultata sa prijavljenom potrošnjom čuvaju se u `data/provera-agenata.json`.
+
+### Povezivanje postojećih četova
+
+Zadrži desnu polovinu kartice i prevuci čet na drugi čet. Prevlačeni čet postaje podagent ciljnog četa, sa svojim porukama, radnim folderom i CLI sesijama. Oba agenta moraju da miruju. Čet koji već ima podagente ne može postati podagent, a podagent ne može primati nove podagente.
+
+Pri sledećem slanju podagent dobija opis nove uloge. Glavni agent prvo dobija poslednju završenu razmenu podagenta, a zatim samo nove poruke koje njegova konkretna sesija još nije dobila. Granica pročitanog se čuva tek posle uspešnog odgovora; nova sesija je poništava. Za celu istoriju agent može koristiti GET `/api/chats/ID`. Povezivanje se ne koristi za automatsko pokretanje agenata.

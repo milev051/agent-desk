@@ -196,9 +196,10 @@ body.dragging-chat #new-folder-drop{display:block}
 #joystick-hint{position:absolute;right:0;bottom:calc(100% + 10px);padding:5px 8px;background:#222;border:1px solid #444;border-radius:5px;font-size:11px;white-space:nowrap;pointer-events:none;z-index:8}
 
 #composer-joystick[data-action="computer"]{border-color:#8dbcf0}
-#new-agents .agent-limits{display:flex;justify-content:center;align-items:flex-start;gap:4px;word-spacing:normal}
-#new-agents .limit-slot{display:flex;flex-direction:column;align-items:center;gap:5px;line-height:1}
-#new-agents .limit-reset{color:#888;font-size:9px;font-weight:400}
+#new-agents .agent-limits{display:flex;justify-content:center;align-items:flex-start;gap:.3em;word-spacing:normal}
+#new-agents .limit-slot{position:relative;display:flex;flex:0 0 auto;min-width:0;flex-direction:column;align-items:center;gap:5px;line-height:1;padding-bottom:13px}
+#new-agents .limit-reset{position:absolute;top:15px;left:50%;transform:translateX(-50%);color:#888;font-size:8px;font-weight:400;letter-spacing:-.3px;white-space:nowrap}
+#new-agents .limit-slot:first-child:not(:last-child) .limit-reset{left:auto;right:0;transform:none}#new-agents .limit-slot:last-child:not(:first-child) .limit-reset{left:0;transform:none}
 
 .sidebar-actions{touch-action:pan-x}#chat-popover{max-height:calc(100dvh - 24px);overflow-y:auto}#chat-popover [data-menu-rename]{display:block;box-sizing:border-box;width:100%;margin:0 0 10px;padding:8px;font-size:13px}
 
@@ -215,3 +216,5 @@ body.dragging-chat #new-folder-drop{display:block}
 .message-body>blockquote{position:relative;padding:34px 12px 12px;border-left:2px solid #555;background:#ffffff04;border-radius:0 5px 5px 0}.copy-excerpt{position:absolute;top:5px;right:6px;display:flex;align-items:center;justify-content:center;min-width:28px;min-height:28px;padding:5px;border:0;background:none;color:#aaa}.copy-excerpt:hover{background:#303030;color:#eee}
 
 #device-battery .battery-duration{font-size:9px;color:#888;white-space:nowrap}
+
+.chat-row.drop-hover{outline:1px solid #98cfa6;background:#16211b}

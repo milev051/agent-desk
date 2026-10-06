@@ -1,3 +1,4 @@
+import {linkChat,childUpdates} from './chat-links.mjs';
 import {createWarmup,lightModel} from './warmup.mjs';
 import {createChatFiles} from './chat-files.mjs';
 import {preferredEffort} from './public/reasoning.mjs';
@@ -169,10 +170,12 @@ function resolveLocalFile(p){for(const cwd of new Set([root,...chats.map(c=>c.se
 function appContext(chat) {
   const address=`http://127.0.0.1:${port}`;
   const structure=chatStructure(chats,chat.id,{isRunning:c=>running.has(c.id)});const children=structure.filter(c=>c.parentChatId===chat.id);const paths=linkedPaths(chat);
+  const parent=chats.find(c=>c.id===chat.parentChatId);
+  const role=parent?`Sada si podagent glavnog četa ${parent.title} (${parent.id}). Nastavi u svojoj sesiji i izveštavaj glavnog agenta; ne kreiraj novi nivo podagenata. `:children.length?`Ti si glavni agent ovih podčetova. `:'';
   const brief=structure.map(({id,parentChatId,title,agent,status})=>({id,parentChatId,title,agent,status}));
   // Sesija agenta već ima pun tekst iz prve poruke, pa se ponavlja samo stanje.
-  if(chat.sessions?.[chat.settings.agent])return `Snimak strukture povezanih četova u trenutku slanja: ${JSON.stringify(brief)}.${paths.length?` Povezane putanje (sadržaj nije učitan): ${JSON.stringify(paths)}.`:''} Okruženje: Agent Desk; čet ${chat.id}; radni folder ${chat.settings.cwd}; agent ${chat.settings.agent}; model ${chat.settings.model || 'CLI podrazumevani'}. Datumi poruka su ISO UTC. Statistika tokena, procene cene i promena limita je u ${statisticsFile}; pročitaj samo kada je potrebna. Fajl koji korisnik treba da preuzme, i na telefonu, kopiraj u ${path.join(dataDir,'prilozi',chat.id)}/ i navedi punu putanju u odgovoru; interfejs prikazuje sliku ili link za preuzimanje. Podčetovi i dalje samo kroz POST ${address}/api/chats/${chat.id}/delegate (pravila iz prve poruke važe; "childId" nastavlja postojeći podčet).`;
-  return `Snimak strukture povezanih četova u trenutku slanja: ${JSON.stringify(brief)}. Povezane putanje (sadržaj nije učitan): ${JSON.stringify(paths)}. Stanja su snimak pri slanju; tokom rada koristi GET za aktuelno stanje.\nPostojeći podčetovi (ID): ${JSON.stringify(children.map(c=>c.id))}. Završen CLI proces ne znači da je podagent izgubljen: čet i sesija su sačuvani. Za nastavak istog zadatka koristi postojeći podčet, ne pravi zamenu. POST ${address}/api/chats/${chat.id}/delegate sa telom {"childId":"postojeći ID","task":"nastavi zadatak"} nastavlja podčet sa njegovom istorijom i sesijom. Novi podčet napravi samo za nov zadatak ili izričit zahtev korisnika.\nOkruženje: Agent Desk; čet ${chat.id}; radni folder ${chat.settings.cwd}; agent ${chat.settings.agent}; model ${chat.settings.model || 'CLI podrazumevani'}. Datumi poruka su ISO UTC. Statistika tokena, procene cene i promena limita je u ${statisticsFile}; pročitaj samo kada je potrebna. Fajl koji korisnik treba da preuzme, i na telefonu, kopiraj u ${path.join(dataDir,'prilozi',chat.id)}/ i navedi punu putanju u odgovoru; interfejs prikazuje sliku ili link za preuzimanje.\nAko zadatak zahteva podagenta, možeš lokalnim HTTP zahtevom napraviti podčet: POST ${address}/api/chats/${chat.id}/delegate, header Origin: ${address}, Content-Type: application/json, telo {"agent":"codex","name":"Provera testova","task":"konkretan zadatak"} (agenti: codex, claude, grok, antigravity). Polje name je kratak naziv uloge ili zadatka podagenta, ne samo broj radnika. Odgovor sadrži id. GET ${address}/api/chats/ID vraća running i messages. Podčet koristi isti folder i zasebnu sesiju; rezultat pročitaj i objedini. Najviše dva istovremeno aktivna podčeta, samo jedan nivo delegiranja. Ukupan broj podčetova po odgovoru nije ograničen. Za više zadataka sačekaj završetak aktivnih podčetova preko GET, pa pozovi delegate za sledeće. Ako delegate vrati 409 zbog kapaciteta, sačekaj slobodno mesto; ne zaobilazi Agent Desk direktnim pokretanjem drugih CLI agenata. Sve podagente ovog zadatka pokreni kroz delegate da budu vidljivi u interfejsu, sa sačuvanim četom i potrošnjom. Ne otvaraj podčet bez potrebe za korisnikov zadatak.`;
+  if(chat.sessions?.[chat.settings.agent])return `${role}Snimak strukture povezanih četova u trenutku slanja: ${JSON.stringify(brief)}.${paths.length?` Povezane putanje (sadržaj nije učitan): ${JSON.stringify(paths)}.`:''} Okruženje: Agent Desk; čet ${chat.id}; radni folder ${chat.settings.cwd}; agent ${chat.settings.agent}; model ${chat.settings.model || 'CLI podrazumevani'}. Datumi poruka su ISO UTC. Statistika tokena, procene cene i promena limita je u ${statisticsFile}; pročitaj samo kada je potrebna. Fajl koji korisnik treba da preuzme, i na telefonu, kopiraj u ${path.join(dataDir,'prilozi',chat.id)}/ i navedi punu putanju u odgovoru; interfejs prikazuje sliku ili link za preuzimanje. Podčetovi i dalje samo kroz POST ${address}/api/chats/${chat.id}/delegate (pravila iz prve poruke važe; "childId" nastavlja postojeći podčet).`;
+  return `${role}Snimak strukture povezanih četova u trenutku slanja: ${JSON.stringify(brief)}. Povezane putanje (sadržaj nije učitan): ${JSON.stringify(paths)}. Stanja su snimak pri slanju; tokom rada koristi GET za aktuelno stanje.\nPostojeći podčetovi (ID): ${JSON.stringify(children.map(c=>c.id))}. Završen CLI proces ne znači da je podagent izgubljen: čet i sesija su sačuvani. Za nastavak istog zadatka koristi postojeći podčet, ne pravi zamenu. POST ${address}/api/chats/${chat.id}/delegate sa telom {"childId":"postojeći ID","task":"nastavi zadatak"} nastavlja podčet sa njegovom istorijom i sesijom. Novi podčet napravi samo za nov zadatak ili izričit zahtev korisnika.\nOkruženje: Agent Desk; čet ${chat.id}; radni folder ${chat.settings.cwd}; agent ${chat.settings.agent}; model ${chat.settings.model || 'CLI podrazumevani'}. Datumi poruka su ISO UTC. Statistika tokena, procene cene i promena limita je u ${statisticsFile}; pročitaj samo kada je potrebna. Fajl koji korisnik treba da preuzme, i na telefonu, kopiraj u ${path.join(dataDir,'prilozi',chat.id)}/ i navedi punu putanju u odgovoru; interfejs prikazuje sliku ili link za preuzimanje.\nAko zadatak zahteva podagenta, možeš lokalnim HTTP zahtevom napraviti podčet: POST ${address}/api/chats/${chat.id}/delegate, header Origin: ${address}, Content-Type: application/json, telo {"agent":"codex","name":"Provera testova","task":"konkretan zadatak"} (agenti: codex, claude, grok, antigravity). Polje name je kratak naziv uloge ili zadatka podagenta, ne samo broj radnika. Odgovor sadrži id. GET ${address}/api/chats/ID vraća running i messages. Podčet koristi isti folder i zasebnu sesiju; rezultat pročitaj i objedini. Najviše dva istovremeno aktivna podčeta, samo jedan nivo delegiranja. Ukupan broj podčetova po odgovoru nije ograničen. Za više zadataka sačekaj završetak aktivnih podčetova preko GET, pa pozovi delegate za sledeće. Ako delegate vrati 409 zbog kapaciteta, sačekaj slobodno mesto; ne zaobilazi Agent Desk direktnim pokretanjem drugih CLI agenata. Sve podagente ovog zadatka pokreni kroz delegate da budu vidljivi u interfejsu, sa sačuvanim četom i potrošnjom. Ne otvaraj podčet bez potrebe za korisnikov zadatak.`;
 }
 function drainQueue(chat) {
   if(shuttingDown || chat.queuePaused || chat.queueError || running.has(chat.id) || !chat.queue?.length)return;
@@ -190,7 +193,9 @@ async function send(chat, prompt, options={}) {
   const sentAt=Date.now(),createdAt=options.createdAt || sentAt;
   const newMessage=historyText([{role:'user',text:prompt,createdAt,sentAt}]);
   const history = historyTransferred ? `Prethodne poruke iz ovog četa (istorija razgovora${chat.sessions[agent]?', dopuna od prethodnog odgovora ovog agenta':''}):\n${plan.text}\n\nNova poruka korisnika:\n${newMessage}` : newMessage;
-  const spec = command(chat,options.minimalContext?prompt:`${appContext(chat)}\n\n${history}`, binaries[agent]);
+  const linkedUpdates=childUpdates(chats,chat,agent);
+  const linkedText=linkedUpdates.updates.map(({child,messages})=>`Nove poruke podagenta ${child.title} (${child.id}), koje ova sesija još nije dobila:\n${historyText(messages)}\nZa celu istoriju koristi GET /api/chats/${child.id}.`).join('\n\n');
+  const spec = command(chat,options.minimalContext?prompt:`${appContext(chat)}\n\n${linkedText}\n\n${history}`, binaries[agent]);
   const child = spawn(spec.executable, spec.args, { cwd: chat.settings.cwd, env: { ...process.env, NO_COLOR: '1' }, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
   const reply = { id: randomUUID(), role: 'assistant', agent, model: chat.settings.model || '', configuredModel: chat.settings.model || '', historyTransferred, usageTracked:true, usageCwd:chat.settings.cwd, text: '', status: 'running', activity: 'Pokrećem agenta…', createdAt: Date.now() };
   delete chat.ephemeral;
@@ -246,7 +251,7 @@ async function send(chat, prompt, options={}) {
     reply.status = run.stopped ? 'stopped' : code === 0 && !error && !reply.error ? 'done' : 'error';
     if (reply.status === 'error') reply.error ||= error?.message || stderr.trim() || `Agent je završio sa kodom ${code}.`;
     if (!reply.text && reply.status === 'done') { reply.status = 'error'; reply.error = 'Agent je završio bez tekstualnog odgovora. Proveri CLI prijavu.'; }
-    if(reply.status==='done')chat.transferPending=false;
+    if(reply.status==='done'){chat.transferPending=false;chat.childReadOffsets ||= {};chat.childReadOffsets[agent]={...chat.childReadOffsets[agent],...linkedUpdates.consumed};}
     if(chat.sessions[agent]){chat.sessionOffsets ||= {};chat.sessionOffsets[agent]=chat.messages.length;}
     if(reply.status==='error' || reply.status==='stopped')chat.queuePaused=true;
     chat.updatedAt = Date.now(); update();run.resolve(reply);setImmediate(()=>drainQueue(chat));
@@ -384,9 +389,10 @@ const server = http.createServer(async (req, res) => {
     if(req.method==='POST' && emptyMatch){const chat=chats.find(c=>c.id===emptyMatch[1]);if(!chat)return json(200,{ok:true});
       if(running.has(chat.id)||chat.messages.length||chat.queue?.length||Object.keys(chat.sessions).length||chats.some(c=>c.parentChatId===chat.id))return json(409,{error:'Čet više nije prazan.'});
       chats=chats.filter(c=>c.id!==chat.id);update();return json(200,{ok:true});}
-    const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(send|stop|reset-session|speak|speech|fork|delegate|reveal|record|count-tokens|files|upload|prilog)(?:\/([a-f0-9]{16}))?)?$/);
+    const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(link|send|stop|reset-session|speak|speech|fork|delegate|reveal|record|count-tokens|files|upload|prilog)(?:\/([a-f0-9]{16}))?)?$/);
     if (match) {
       const chat = chats.find(c => c.id === match[1]); if (!chat) return json(404, { error: 'Čet nije pronađen.' });
+      if(req.method==='POST' && match[2]==='link'){const b=await body(req);const parent=chats.find(c=>c.id===b.parentChatId);linkChat(chats,chat,parent,id=>running.has(id));update();return json(200,publicChat(chat));}
       // Prilog sa telefona ili iz privremene memorije čuva se u data/prilozi/<čet>/ i povezuje kao obična putanja.
       if(req.method==='POST' && match[2]==='upload'){
         const name=decodeURIComponent(req.headers['x-file-name'] || 'prilog').normalize('NFC').replace(/[\x00-\x1f\x7f/\\:*?"<>|]/g,' ').replace(/^[.\s]+/,'').slice(-80).trim() || 'prilog';
@@ -438,6 +444,7 @@ const server = http.createServer(async (req, res) => {
         const agent=chat.settings.agent;
         delete chat.sessions[agent];
         if(chat.sessionOffsets)delete chat.sessionOffsets[agent];
+        if(chat.childReadOffsets)delete chat.childReadOffsets[agent];
         if(chat.usageBaselines)delete chat.usageBaselines[agent];
         chat.updatedAt=Date.now();update();return json(200,publicChat(chat));
       }

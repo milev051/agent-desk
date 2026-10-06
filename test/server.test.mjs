@@ -237,6 +237,18 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     const localFile=await fetch(base+'/files'+path.join(temp,'preview.html'));assert.equal(localFile.status,200);assert.match(localFile.headers.get('Content-Security-Policy'),/sandbox/);assert.match(await localFile.text(),/example/);
     assert.equal((await call('/api/open-file','POST',{path:path.join(temp,'preview.html')},'https://example.com')).status,403);
     assert.equal((await call(`/api/chats/${a.id}`, 'DELETE')).status, 200);
+    const linkedParent=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
+    const linkedChild=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
+    await call(`/api/chats/${linkedChild.id}/send`,'POST',{text:'REZULTAT_PODAGENTA'});const beforeLink=await done(linkedChild.id);
+    assert.equal((await call(`/api/chats/${linkedChild.id}/link`,'POST',{parentChatId:linkedParent.id})).status,200);
+    assert.equal((await call(`/api/chats/${linkedChild.id}`)).data.sessions.codex,beforeLink.sessions.codex);
+    assert.equal((await call(`/api/chats/${linkedParent.id}/link`,'POST',{parentChatId:linkedChild.id})).status,400);
+    await call(`/api/chats/${linkedParent.id}/send`,'POST',{text:'Pročitaj rezultat'});const received=await done(linkedParent.id);
+    assert.match(JSON.parse(received.messages.at(-1).text).input,/Nove poruke podagenta/);
+    await call(`/api/chats/${linkedParent.id}/send`,'POST',{text:'Dalje'});const noRepeat=await done(linkedParent.id);
+    assert.doesNotMatch(JSON.parse(noRepeat.messages.at(-1).text).input,/Nove poruke podagenta/);
+    await call(`/api/chats/${linkedChild.id}/send`,'POST',{text:'Nastavi'});const childRole=await done(linkedChild.id);
+    assert.match(JSON.parse(childRole.messages.at(-1).text).input,/Sada si podagent glavnog četa/);
   } finally { if(server.exitCode===null){server.kill('SIGTERM');await once(server,'exit');} rmSync(temp, { recursive: true, force: true }); }
 });
 test('stream parser prepoznaje tekst, alate i greške dobavljača', () => {
