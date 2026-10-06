@@ -39,3 +39,19 @@ test('neraspoređeni četovi su odvojeni od četova u otvorenom folderu',()=>{
   assert.deepEqual(placedChats(chats,['home','work'],'work').map(group=>group.chat.id),[]);
   assert.deepEqual(placedChats(chats,['home']).map(group=>group.chat.id),['lost','b']);
 });
+
+
+test('automatski naziv se čuva, a ručna promena i brisanje imaju prednost',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agent-folder-auto-'));
+ try{
+ const file=path.join(dir,'folders.json'),folders=createFolders(file);
+ const empty=folders.add('');assert.equal(empty.name,'Novi folder');assert.equal(empty.nameAuto,true);
+ assert.equal(folders.applyGeneratedName(empty.id,'Razvoj aplikacije',empty.name),true);
+ assert.equal(createFolders(file).list().find(f=>f.id===empty.id).name,'Razvoj aplikacije');
+ assert.equal(folders.applyGeneratedName(empty.id,'Drugi naziv','Razvoj aplikacije'),false);
+ const pending=folders.add('Novi folder');folders.update(pending.id,{name:'Moj projekat'});
+ assert.equal(folders.applyGeneratedName(pending.id,'Gemini naziv',pending.name),false);
+ folders.update(pending.id,{name:''});assert.equal(folders.list().find(f=>f.id===pending.id).nameAuto,true);
+ folders.remove(pending.id);assert.equal(folders.applyGeneratedName(pending.id,'Gemini naziv','Novi folder'),false);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});

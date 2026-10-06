@@ -6,7 +6,7 @@ import {createChatFiles} from './chat-files.mjs';
 import {preferredEffort} from './public/reasoning.mjs';
 import http from 'node:http';
 import {createArchive} from './archive.mjs';
-import {createFolders} from './folders.mjs';
+import {createFolders,automaticFolderName} from './folders.mjs';
 import {browseFiles,withFiles,filePath} from './files.mjs';
 import {chatStructure,linkedPaths} from './public/sidebar-groups.mjs';
 import {createQuotaHistory} from './quota-history.mjs';
@@ -126,6 +126,9 @@ function broadcast(immediate = false) {
 function update() { usageCache=null;save(); broadcast(true); }
 const googleKeyFile=path.join(process.env.AGENT_DESK_CONFIG || path.join(os.homedir(),'.config','agent-desk'),'google-api-key');
 const titleManager=createTitleManager({settingsFile:path.join(dataDir,'title-settings.json'),keyFile:googleKeyFile,getChat:id=>chats.find(c=>c.id===id),changed:update});
+const folderNameAttempts=new Map();let namingFolders=false;
+async function nameUnnamedFolders(){if(namingFolders || !titleManager.settings().configured)return;namingFolders=true;try{for(const folder of folders.list()){if(!(folder.nameAuto===true || (folder.nameAuto===undefined && automaticFolderName(folder.name))))continue;if(Date.now()-(folderNameAttempts.get(folder.id)||0)<60000)continue;const seed=chats.filter(c=>c.folderId===folder.id && !c.parentChatId).slice(0,8).map(c=>[!/^Empty$|^Novi čet$|^New chat$/i.test(c.title)?c.title:'',...c.messages.filter(m=>m.role==='user').slice(0,2).map(m=>m.text?.slice(0,350)||'')].filter(Boolean).join(': ')).filter(Boolean).join('\n');if(!seed.trim())continue;folderNameAttempts.set(folder.id,Date.now());try{const name=await titleManager.nameFolder(seed);if(folders.applyGeneratedName(folder.id,name,folder.name))broadcastFolders();}catch(error){console.error('Naziv foldera:',error.message);}}}finally{namingFolders=false;}}
+const folderNameTimer=setInterval(()=>void nameUnnamedFolders(),5000);folderNameTimer.unref();
 const speech=createSpeech({keyFile:path.join(path.dirname(googleKeyFile),'openai-tts-key')});
 function speechDir(chatId){return path.join(dataDir,'govor',chatId);}
 function speechClips(chatId){const file=path.join(speechDir(chatId),'index.json');if(!fs.existsSync(file))return [];try{const data=JSON.parse(fs.readFileSync(file,'utf8'));return Array.isArray(data)?data:[];}catch{return [];}}
@@ -576,5 +579,5 @@ const server = http.createServer(async (req, res) => {
   } catch (error) { json(400, { error: error.message }); }
 });
 server.listen(port, '127.0.0.1', () => {phone.start();limits.start();warmup.start();console.log(`Agent Desk: http://127.0.0.1:${port}`);});
-function shutdown() {syncChatFiles();shuttingDown=true;clearInterval(archiveCleanup);limits.close();warmup.stop();phone.close();titleManager.close();for (const id of running.keys()) stop(id); setTimeout(() => process.exit(0), 2200); server.close(); }
+function shutdown() {clearInterval(folderNameTimer);syncChatFiles();shuttingDown=true;clearInterval(archiveCleanup);limits.close();warmup.stop();phone.close();titleManager.close();for (const id of running.keys()) stop(id); setTimeout(() => process.exit(0), 2200); server.close(); }
 process.on('SIGINT', shutdown); process.on('SIGTERM', shutdown);

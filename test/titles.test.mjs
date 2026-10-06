@@ -27,3 +27,15 @@ test('posle tri poruke naslov se proverava iz razgovora i ostaje ako tema nije p
 });
 
 test('brojanje koristi countTokens i vraća samo provereni broj, bez generisanja odgovora',async t=>{const f=fixture(t,async(url,opts)=>{assert.match(url,/gemini-3\.5-flash-lite:countTokens$/);assert.equal(JSON.parse(opts.body).contents[0].parts[0].text,'Primer istorije');return {ok:true,json:async()=>({totalTokens:4})};});f.manager.configure({key:'test-only-key'});const c=await f.manager.countTokens('Primer istorije');assert.equal(c.tokens,4);assert.equal(c.model,'gemini-3.5-flash-lite');});
+
+
+test('ime foldera koristi Flash-Lite i ograničen sadržaj, bez punih istorija',async t=>{
+ const f=fixture(t,async(url,opts)=>{
+ assert.match(url,/gemini-3\.5-flash-lite:generateContent$/);
+ const request=JSON.parse(opts.body);assert.match(request.systemInstruction.parts[0].text,/foldera/);
+ assert.ok(JSON.parse(request.contents[0].parts[0].text).zadatak.length<=2000);
+ return {ok:true,json:async()=>({candidates:[{content:{parts:[{text:'{"title":"Razvoj aplikacije"}'}]}}]})};
+ });
+ f.manager.configure({key:'test-only-key'});
+ assert.equal(await f.manager.nameFolder('Primer '.repeat(500)),'Razvoj aplikacije');
+});
