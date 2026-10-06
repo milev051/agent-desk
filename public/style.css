@@ -274,4 +274,5 @@ body #chats .chat-row.working,body #agent-tree .agent-tree-item.working{backgrou
 
 .prompt-wrap.working{background:var(--agent-writing-background,#303030)}
 
-#folder-context-dialog{width:min(720px,calc(100vw - 32px));max-height:85dvh;overflow:auto}#folder-context-text{width:100%;resize:vertical;font-size:12px}#folder-context-estimate{font-size:12px;color:#aaa;line-height:1.5}
+
+.folder-copy-actions{display:flex;gap:8px;margin-top:10px}.folder-copy-actions button{display:flex;align-items:center;gap:7px;flex:1;min-width:0;text-align:left;padding:8px}.folder-copy-actions svg{flex-shrink:0;width:16px;height:16px}.folder-copy-actions span{min-width:0;font-size:12px}.folder-copy-actions small{display:block;margin-top:3px;color:#999;font-size:10px;overflow-wrap:anywhere}
