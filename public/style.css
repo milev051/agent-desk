@@ -273,3 +273,5 @@ body #chats .chat-row.working,body #agent-tree .agent-tree-item.working{backgrou
 #composer-joystick.working{background:var(--agent-writing-background,#303030);box-shadow:0 0 8px var(--agent-writing-background,#303030)}
 
 .prompt-wrap.working{background:var(--agent-writing-background,#303030)}
+
+#folder-context-dialog{width:min(720px,calc(100vw - 32px));max-height:85dvh;overflow:auto}#folder-context-text{width:100%;resize:vertical;font-size:12px}#folder-context-estimate{font-size:12px;color:#aaa;line-height:1.5}

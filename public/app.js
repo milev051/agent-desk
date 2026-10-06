@@ -1,3 +1,4 @@
+import {folderContext} from './folder-context.mjs';
 import {joinWavs} from '/wav.mjs';
 import {preferredEffort} from './reasoning.mjs';
 import {exportMessages,copiedMessage} from './sidebar-groups.mjs';
@@ -275,7 +276,7 @@ function renderPopover() {
   const pop=$('#chat-popover');
   const folder=folders.find(item=>item.id===menuFolder);
   if(folder){
-    const content=`<div class="folder-menu"><input data-menu-folder-name data-folder-id="${folder.id}" aria-label="Naziv foldera" value="${escape(folder.name)}" maxlength="40"><button class="icon-action folder-shared" data-action="shared-folder" data-id="${folder.id}" aria-pressed="${folder.shared===true}" title="Zajednički kontekst agenata" aria-label="Zajednički kontekst agenata">${actionIcon('<circle cx="7" cy="12" r="3"/><circle cx="17" cy="12" r="3"/><path d="M10 12h4"/>')}</button><button class="icon-action delete-chat" data-action="delete-folder" data-id="${folder.id}" aria-label="Obriši folder" title="Obriši folder. Četovi ostaju u listi.">${actionIcon('<path d="M4 7h16M9 7V5h6v2M6 7l1 14h10l1-14"/>')}</button></div>`;
+    const content=`<div class="folder-menu"><input data-menu-folder-name data-folder-id="${folder.id}" aria-label="Naziv foldera" value="${escape(folder.name)}" maxlength="40"><button class="icon-action folder-shared" data-action="shared-folder" data-id="${folder.id}" aria-pressed="${folder.shared===true}" title="Zajednički kontekst agenata" aria-label="Zajednički kontekst agenata">${actionIcon('<circle cx="7" cy="12" r="3"/><circle cx="17" cy="12" r="3"/><path d="M10 12h4"/>')}</button><button class="icon-action" data-action="copy-folder-context" data-id="${folder.id}" aria-label="Kopiraj kontekst foldera" title="Kontekst foldera i procena tokena">${copyIcon}</button><button class="icon-action delete-chat" data-action="delete-folder" data-id="${folder.id}" aria-label="Obriši folder" title="Obriši folder. Četovi ostaju u listi.">${actionIcon('<path d="M4 7h16M9 7V5h6v2M6 7l1 14h10l1-14"/>')}</button></div>`;
     const input=pop.querySelector('[data-menu-folder-name]');
     if(input?.dataset.folderId!==folder.id)pop.innerHTML=content;
     else if(document.activeElement!==input)input.value=folder.name;
@@ -422,6 +423,7 @@ $('#chat-popover').onclick=e=>guard(async()=>{
     switchingChats.add(id);try{const copy=await api(`/api/chats/${id}`,'PATCH',{settings:{agent}});putChat(copy);choose(copy.id);}finally{switchingChats.delete(id);}return;
   }
   const action=e.target.closest('[data-action]');if(!action)return;const id=action.dataset.id;
+  if(action.dataset.action==='copy-folder-context'){const folder=folders.find(f=>f.id===id);if(!folder)return;const snapshot=folderContext(folder,chats,{modelName});const dialog=$('#folder-context-dialog');dialog.contextSnapshot=snapshot;$('#folder-context-title').textContent=folder.name;$('#folder-context-estimate').textContent=`${snapshot.count} agenata · Ceo kontekst ≈ ${tokenRange(snapshot.fullTokens)} tokena · Referenca ≈ ${tokenRange(snapshot.referenceTokens)}. Procena važi za kopirani tekst, bez sistemskih uputstava i postojeće sesije. Kopiranje samo po sebi ne troši tokene; čitanje reference kasnije troši dodatne tokene.`;$('#folder-context-text').value=snapshot.full;menuFolder=null;renderPopover();dialog.showModal();return;}
   if(action.dataset.action==='shared-folder'){const folder=folders.find(f=>f.id===id);if(!folder)return;const saved=await api(`/api/folders/${id}`,'PATCH',{shared:!folder.shared});folders=folders.map(f=>f.id===id?saved:f);lastSidebar='';renderSidebar();toast(saved.shared?'Agenti u folderu dele kontekst.':'Deljenje konteksta je isključeno.');return;}
   if(action.dataset.action==='rename-folder'){menuFolder=null;folderRename={id,value:folders.find(folder=>folder.id===id)?.name||''};lastSidebar='';renderSidebar();renderPopover();const input=$('[data-folder-name]');input?.focus();input?.select();return;}
   if(action.dataset.action==='delete-folder'){const name=folders.find(folder=>folder.id===id)?.name||'folder';menuFolder=null;renderPopover();const inside=chats.some(chat=>chat.folderId===id && !chat.parentChatId);if(!inside){await removeFolder(id);return;}pendingFolderDelete=id;$('#delete-title').textContent=`Obriši folder „${name}“? Četovi ostaju u listi.`;$('#delete-only').textContent='Obriši folder';$('#delete-family').hidden=true;$('#delete-dialog').showModal();return;}
@@ -809,3 +811,6 @@ renderKeyboardToggle();
 
 function renderColorToggle(){const button=$('#response-colors');button.setAttribute('aria-pressed',String(colorMode==='full'));button.title=`Bojenje celih odgovora: ${colorMode==='full'?'uključeno':'isključeno'}`;}
 renderColorToggle();
+
+$('#folder-context-close').onclick=()=>$('#folder-context-dialog').close();
+for(const button of document.querySelectorAll('[data-copy-folder-context]'))button.onclick=()=>guard(async()=>{const snapshot=$('#folder-context-dialog').contextSnapshot;if(!snapshot)return;await navigator.clipboard.writeText(snapshot[button.dataset.copyFolderContext]);toast('Kontekst foldera je kopiran.');});
