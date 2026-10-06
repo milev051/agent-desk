@@ -1,3 +1,5 @@
+import {createNotificationSettings,desktopNotificationArgs} from './desktop-notifications.mjs';
+import {chatSummary,chatPage,createBrowserDelivery} from './chat-delivery.mjs';
 import {recordTextTiming} from './response-timing.mjs';
 import {sharedFolderContext} from './shared-folders.mjs';
 import {linkChat,unlinkChat,childUpdates} from './chat-links.mjs';
@@ -39,6 +41,7 @@ const folders=createFolders(path.join(dataDir,'folders.json'));
 function broadcastFolders(){const payload=`event: folders\ndata: ${JSON.stringify(folders.list())}\n\n`;for(const res of listeners)res.write(payload);}
 const dataFile = path.join(dataDir, 'chats.json');
 const defaultsFile = path.join(dataDir, 'defaults.json');
+const notificationSettings=createNotificationSettings(path.join(dataDir,'notification-settings.json'));
 let defaults = Object.fromEntries(Object.keys(names).map(agent => [agent, {model:'',effort:''}]));
 if (fs.existsSync(defaultsFile)) defaults = {...defaults, ...JSON.parse(fs.readFileSync(defaultsFile,'utf8'))};
 let chats = fs.existsSync(dataFile) ? JSON.parse(fs.readFileSync(dataFile, 'utf8')) : [];
@@ -100,18 +103,21 @@ function eventPayload(){
   const same=!changed.length && order===sentOrder;sent=next;sentOrder=order;
   return same?null:`data: {"order":${order},"changed":[${changed.join(',')}]}\n\n`;
 }
+function deliverEvents(){
+ const legacy=[...listeners].filter(s=>!s.browserDelivery),payload=legacy.length?eventPayload():null;
+ if(payload)for(const sink of legacy)sink.write(payload);
+ if([...listeners].some(s=>s.browserDelivery)){const list=chats.map(c=>({...c,running:running.has(c.id)}));for(const sink of listeners)if(sink.browserDelivery){const data=sink.browserDelivery(list);if(data)sink.write(`data: ${JSON.stringify(data)}\n\n`);}}
+}
 let broadcastTimer = null, broadcastPending = false;
 function broadcast(immediate = false) {
   if (immediate) {
     if (broadcastTimer) { clearTimeout(broadcastTimer); broadcastTimer = null; }
     broadcastPending = false;
-    const payload = eventPayload();
-    if (payload) for (const res of listeners) res.write(payload);
+    deliverEvents();
     return;
   }
   if (!broadcastTimer) {
-    const payload = eventPayload();
-    if (payload) for (const res of listeners) res.write(payload);
+    deliverEvents();
     broadcastTimer = setTimeout(() => {
       broadcastTimer = null;
       if (broadcastPending) {
@@ -166,12 +172,13 @@ async function body(req) {
   return JSON.parse(data || '{}');
 }
 function stop(id) { const run = running.get(id); if (run) { run.stopped = true; try { process.kill(-run.child.pid, 'SIGTERM'); } catch {} run.killTimer = setTimeout(() => { try { process.kill(-run.child.pid, 'SIGKILL'); } catch {} }, 2000); run.killTimer.unref(); } }
-function desktopNotify(title, body) {
-  if (process.platform !== 'darwin' || process.env.AGENT_DESK_DISABLE_LIMITS === '1') return;
-  const quoted = value => `"${String(value).replace(/[\\"]/g, '\\$&').replace(/[\r\n]+/g, ' ').slice(0, 140)}"`;
-  const child = spawn('/usr/bin/osascript', ['-e', `display notification ${quoted(body)} with title ${quoted(title)}`], {stdio:'ignore'});
-  child.unref();
+function desktopNotify(title,body,chatId){
+ if(process.platform!=='darwin' || process.env.AGENT_DESK_DISABLE_LIMITS==='1')return;
+ const notifier=['/opt/homebrew/bin/terminal-notifier','/usr/local/bin/terminal-notifier'].find(p=>fs.existsSync(p));
+ if(!notifier){console.error('Mac obaveštenje nije poslato: terminal-notifier nije dostupan.');return;}
+ const child=spawn(notifier,desktopNotificationArgs({title,body,chatId,sound:notificationSettings.get().sound}),{stdio:'ignore'});child.on('error',e=>console.error('Mac obaveštenje:',e.message));child.unref();
 }
+
 function stopRelated(id) {for(const c of chats)if(c.parentChatId===id)stop(c.id);stop(id);}
 function resolveLocalFile(p){for(const cwd of new Set([root,...chats.map(c=>c.settings.cwd)])){try{return filePath(p,cwd);}catch{}}throw Error('Fajl nije dostupan.');}
 function appContext(chat) {
@@ -266,7 +273,7 @@ async function send(chat, prompt, options={}) {
     if(reply.status==='error' || reply.status==='stopped')chat.queuePaused=true;
     chat.updatedAt = Date.now(); update();run.resolve(reply);setImmediate(()=>drainQueue(chat));
     const outcome={done:'Završeno',error:'Greška',stopped:'Zaustavljeno'}[reply.status];
-    if(outcome && !options.silent){void phonePush.notify({title:chat.title||'Agent Desk',body:outcome,chatId:chat.id,tag:chat.id});desktopNotify(chat.title||'Agent Desk',outcome);}
+    if(outcome && !options.silent){void phonePush.notify({title:chat.title||'Agent Desk',body:outcome,chatId:chat.id,tag:chat.id});desktopNotify(chat.title||'Agent Desk',outcome,chat.id);}
   }
   child.on('error', error => finish(null, error)); child.on('close', code => finish(code));
   child.stdin.on('error', () => {}); child.stdin.end(spec.input || undefined);
@@ -327,6 +334,16 @@ const server = http.createServer(async (req, res) => {
     if(req.method==='POST' && url.pathname==='/api/push/subscribe'){phonePush.save(await body(req));return json(200,{ok:true});}
     if(req.method==='DELETE' && url.pathname==='/api/push/subscribe'){phonePush.remove(await body(req));return json(200,{ok:true});}
     if (req.method === 'GET' && url.pathname === '/api/meta') return json(200, metadata());
+    if(url.pathname==='/api/notifications/settings'){
+      if(req.method==='GET')return json(200,notificationSettings.get());
+      if(req.method==='PUT')return json(200,notificationSettings.set(await body(req)));
+    }
+    if(url.pathname==='/api/notifications/preview' && req.method==='POST'){
+      if(req.headers['x-forwarded-for'])return json(403,{error:'Proba zvuka je dostupna na Macu.'});
+      const value=await body(req),chat=chats.find(c=>c.id===value.chatId) || chats[0];
+      if(!chat)return json(400,{error:'Otvori čet za probu obaveštenja.'});
+      desktopNotify('Agent Desk','Proba zvuka. Klik otvara čet.',chat.id);return json(200,{ok:true});
+    }
     if (req.method === 'GET' && url.pathname === '/api/defaults') return json(200, defaults);
     if (req.method === 'PUT' && url.pathname === '/api/defaults') {
       const b = await body(req), next = {};
@@ -373,12 +390,13 @@ const server = http.createServer(async (req, res) => {
       }
       if(req.method==='DELETE' && queueMatch[2]){chat.queue=(chat.queue || []).filter(m=>m.id!==queueMatch[2]);update();return json(200,publicChat(chat));}
     }
-    if (req.method === 'GET' && url.pathname === '/api/chats') return json(200, chats.map(publicChat));
+    if (req.method === 'GET' && url.pathname === '/api/chats') return json(200, chats.map(c=>url.searchParams.get('summary')==='1'?chatSummary({...c,running:running.has(c.id)}):publicChat(c)));
     if (req.method === 'GET' && url.pathname === '/api/events') {
       res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive', ...(gzip?{'Content-Encoding':'gzip',Vary:'Accept-Encoding'}:{}) });
       const stream=gzip?zlib.createGzip({level:4}):null;stream?.pipe(res);
       const sink=stream?{write:text=>{stream.write(text);stream.flush();}}:res;
-      listeners.add(sink); sink.write(`data: ${JSON.stringify(chats.map(publicChat))}\n\n`);
+      if(url.searchParams.get('summary')==='1')sink.browserDelivery=createBrowserDelivery({selected:url.searchParams.get('chat') || ''});
+      listeners.add(sink);const list=chats.map(c=>sink.browserDelivery?{...c,running:running.has(c.id)}:publicChat(c));sink.write(`data: ${JSON.stringify(sink.browserDelivery?sink.browserDelivery(list):list)}\n\n`);
       const timer = setInterval(() => sink.write(': ping\n\n'), 15000);
       req.on('close', () => { listeners.delete(sink); clearInterval(timer); stream?.destroy(); }); return;
     }
@@ -450,7 +468,7 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200,{'Content-Type':type || 'application/octet-stream','Content-Disposition':`${type?'inline':'attachment'}; filename*=UTF-8''${encodeURIComponent(name)}`,'Cache-Control':'private, max-age=86400','X-Content-Type-Options':'nosniff'});return fs.createReadStream(file).pipe(res);
       }
       if(req.method==='GET' && match[2]==='files'){const place=url.searchParams.get('place');let target=url.searchParams.get('path');if(place==='home')target=os.homedir();if(place==='desktop')target=fs.existsSync(path.join(os.homedir(),'Desktop'))?path.join(os.homedir(),'Desktop'):os.homedir();return json(200,browseFiles(target,chat.settings.cwd));}
-      if(req.method==='GET' && !match[2])return json(200,publicChat(chat));
+      if(req.method==='GET' && !match[2])return json(200,url.searchParams.has('limit')?chatPage(publicChat(chat),{limit:url.searchParams.get('limit'),before:url.searchParams.get('before')}):publicChat(chat));
       if(req.method==='POST' && match[2]==='count-tokens'){
         const b=await body(req);if(b.consent!==true)return json(400,{error:'Brojanje šalje vidljivu istoriju Google-u. Potrebna je potvrda.'});
         if(running.has(chat.id))return json(409,{error:'Sačekaj završetak odgovora za brojanje.'});
@@ -576,8 +594,10 @@ const server = http.createServer(async (req, res) => {
         update();return json(200,{ok:true,deleted:[...ids],archiveId});
       }
     }
-    const files = { '/battery.mjs':['battery.mjs','text/javascript'], '/pdf-view.mjs':['pdf-view.mjs','text/javascript'], '/pdfjs.mjs':['../node_modules/pdfjs-dist/build/pdf.min.mjs','text/javascript'], '/pdfjs-worker.mjs':['../node_modules/pdfjs-dist/build/pdf.worker.min.mjs','text/javascript'], '/wav.mjs':['wav.mjs','text/javascript'], '/reasoning.mjs':['reasoning.mjs','text/javascript'], '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/sw.js': ['sw.js', 'text/javascript'], '/sidebar-groups.mjs': ['sidebar-groups.mjs', 'text/javascript'], '/folder-columns.mjs': ['folder-columns.mjs', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/marked.js': ['../node_modules/marked/lib/marked.esm.js', 'text/javascript'], '/purify.js': ['../node_modules/dompurify/dist/purify.es.mjs', 'text/javascript'], '/manifest.webmanifest': ['manifest.webmanifest', 'application/manifest+json'], '/icon-192.png': ['icon-192.png', 'image/png'], '/icon-512.png': ['icon-512.png', 'image/png'], '/apple-touch-icon.png': ['apple-touch-icon.png', 'image/png'], '/badge-96.png': ['badge-96.png', 'image/png'] };
-    if (req.method === 'GET' && files[url.pathname]) {
+    const files = { '/battery.mjs':['battery.mjs','text/javascript'], '/pdf-view.mjs':['pdf-view.mjs','text/javascript'], '/pdfjs.mjs':['../node_modules/pdfjs-dist/build/pdf.min.mjs','text/javascript'], '/pdfjs-worker.mjs':['../node_modules/pdfjs-dist/build/pdf.worker.min.mjs','text/javascript'], '/wav.mjs':['wav.mjs','text/javascript'], '/reasoning.mjs':['reasoning.mjs','text/javascript'], '/': ['index.html', 'text/html'], '/boot-check.js': ['boot-check.js', 'text/javascript'], '/app.js': ['app.js', 'text/javascript'], '/sw.js': ['sw.js', 'text/javascript'], '/sidebar-groups.mjs': ['sidebar-groups.mjs', 'text/javascript'], '/folder-context.mjs': ['folder-context.mjs', 'text/javascript'], '/folder-columns.mjs': ['folder-columns.mjs', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/marked.js': ['../node_modules/marked/lib/marked.esm.js', 'text/javascript'], '/purify.js': ['../node_modules/dompurify/dist/purify.es.mjs', 'text/javascript'], '/manifest.webmanifest': ['manifest.webmanifest', 'application/manifest+json'], '/icon-192.png': ['icon-192.png', 'image/png'], '/icon-512.png': ['icon-512.png', 'image/png'], '/apple-touch-icon.png': ['apple-touch-icon.png', 'image/png'], '/badge-96.png': ['badge-96.png', 'image/png'] };
+    // Svaki browser modul iz public/ se isporučuje sam, bez ručnog upisa u spisak.
+    if (req.method === 'GET' && !Object.hasOwn(files, url.pathname) && /^\/[a-z0-9-]+\.mjs$/.test(url.pathname) && fs.existsSync(path.join(root, 'public', url.pathname))) files[url.pathname] = [url.pathname.slice(1), 'text/javascript'];
+    if (req.method === 'GET' && Object.hasOwn(files, url.pathname)) {
       const [file, mime] = files[url.pathname];
       const headers = { 'Content-Type': mime.startsWith('image/') ? mime : `${mime}; charset=utf-8`, 'Content-Security-Policy': "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' blob:; worker-src 'self'; frame-ancestors 'none'", 'X-Content-Type-Options': 'nosniff' };
       if (url.pathname === '/sw.js') headers['Cache-Control'] = 'no-cache';

@@ -21,9 +21,12 @@ self.addEventListener('notificationclick', event => {
   event.waitUntil((async () => {
     const open = await self.clients.matchAll({type: 'window', includeUncontrolled: true});
     for (const client of open) {
-      await client.focus();
-      client.postMessage({chatId});
-      if (typeof client.navigate === 'function') { try { await client.navigate(new URL(target, client.url).href); } catch {} }
+      let destination=client;
+      if (typeof client.navigate === 'function') {
+        try { destination=await client.navigate(new URL(target, client.url).href) || client; } catch {}
+      }
+      try { await destination.focus(); } catch {}
+      destination.postMessage({chatId});
       return;
     }
     await self.clients.openWindow(target);

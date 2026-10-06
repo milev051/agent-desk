@@ -108,6 +108,15 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal((await call(`/api/chats/${a.id}`, 'PATCH', { settings: { cwd: '/missing-folder-agent-desk' } })).status, 400);
     await call(`/api/chats/${a.id}/send`, 'POST', { text: 'Prva poruka' });
     let chat = await done(a.id);assert.notEqual(chat.title,'Empty');
+    const summaries=(await call('/api/chats?summary=1')).data;
+    assert.ok(summaries.every(c=>c.messages.length===0));assert.equal(summaries.find(c=>c.id===a.id).latestReply.id,chat.messages.at(-1).id);
+    const paged=(await call(`/api/chats/${a.id}?limit=1`)).data;assert.equal(paged.messages.length,1);assert.equal(paged.historyPage.hasMore,true);
+    const olderPage=(await call(`/api/chats/${a.id}?limit=1&before=${paged.messages[0].id}`)).data;assert.equal(olderPage.messages[0].role,'user');
+    const browserStream=(await fetch(base+`/api/events?summary=1&chat=${a.id}`)).body.getReader();let browserRaw='';
+    while(!browserRaw.includes('\n\n'))browserRaw+=new TextDecoder().decode((await browserStream.read()).value);
+    const browserEvent=JSON.parse(browserRaw.split('\n\n')[0].slice(6));assert.equal(browserEvent.lite,true);assert.equal(browserEvent.detail.id,a.id);assert.ok(browserEvent.summaries.every(c=>!c.messages.length));await browserStream.cancel();
+    assert.equal((await call('/api/notifications/settings','PUT',{sound:'Glass'})).data.sound,'Glass');assert.equal((await call('/api/notifications/settings')).data.sound,'Glass');
+    assert.equal((await call('/api/notifications/settings','PUT',{sound:'../../invalid'})).status,400);
     const firstReadId=chat.messages.at(-1).id;
     const accessId='11111111-1111-4111-8111-111111111111';
     assert.equal((await call(`/api/chats/${a.id}/access`,'POST',{requestId:accessId})).data.count,1);

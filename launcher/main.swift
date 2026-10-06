@@ -22,6 +22,7 @@ func available() async -> Bool {
 final class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNavigationDelegate, WKScriptMessageHandler {
  var window:NSWindow!
  var web:WKWebView!
+ var pendingChatId:String?
  func applicationDidFinishLaunching(_ notification:Notification) {
   let menu=NSMenu(),appMenu=NSMenu(),appItem=NSMenuItem()
   let settings=NSMenuItem(title:"Podešavanja…",action:#selector(openSettings),keyEquivalent:",");settings.target=self;appMenu.addItem(settings);appMenu.addItem(.separator())
@@ -45,6 +46,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNaviga
   NSApplication.shared.activate(ignoringOtherApps:true)
   web.loadHTMLString("<html style='background:#111;color:#ddd;font:16px system-ui'><body style='display:grid;place-items:center;height:90vh'>Povezivanje…</body></html>",baseURL:nil)
   Task { await startServer() }
+ }
+ func application(_ application:NSApplication,open urls:[URL]) {
+  guard let url=urls.first,url.scheme=="agentdesk",url.host=="chat" else{return}
+  let id=url.lastPathComponent
+  guard !id.isEmpty,id.range(of:"^[A-Za-z0-9_-]+$",options:.regularExpression) != nil else{return}
+  pendingChatId=id
+  window?.makeKeyAndOrderFront(nil);NSApplication.shared.activate(ignoringOtherApps:true)
+  if web?.url?.host=="127.0.0.1" {openPendingChat()}
+ }
+ func openPendingChat(){
+  guard let id=pendingChatId else{return}
+  let encoded=String(data:try! JSONSerialization.data(withJSONObject:id,options:.fragmentsAllowed),encoding:.utf8)!
+  web.evaluateJavaScript("if(window.openNotificationChat){window.openNotificationChat(\(encoded));true}else{false}"){result,error in
+   if error==nil,(result as? Bool)==true {self.pendingChatId=nil}
+  }
+ }
+ func webView(_ webView:WKWebView,didFinish navigation:WKNavigation!){openPendingChat()}
+ func openInitialPage(){
+  var parts=URLComponents(url:address,resolvingAgainstBaseURL:false)!
+  if let id=pendingChatId {parts.fragment="chat="+id}
+  web.load(URLRequest(url:parts.url!))
  }
  @objc func openSettings(){web.evaluateJavaScript("if(!document.querySelector('dialog[open]'))document.querySelector('#defaults-open')?.click();",completionHandler:nil)}
  @objc func refresh(){web.reload()}
@@ -84,7 +106,7 @@ func startServer() async {
  for _ in 0..<60 {if await available(){ready=true;break};try? await Task.sleep(for:.milliseconds(250))}
  let isReady=ready
  await MainActor.run {
-  if isReady {delegate.web.load(URLRequest(url:address))}
+  if isReady {delegate.openInitialPage()}
   else {let alert=NSAlert();alert.messageText="Agent Desk nije pokrenut.";alert.informativeText="Proveri data/server.log.";alert.runModal();NSApplication.shared.terminate(nil)}
  }
 }

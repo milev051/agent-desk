@@ -49,7 +49,7 @@ export function createPhoneAccess({port, gatewayPort=port+2, origin:configuredOr
   if(!publicAsset && !auth.valid(cookie)){if(req.method==='GET' && url.pathname==='/'){res.writeHead(302,{Location:'/login'});return res.end();}return json(401,{error:'Prijavi se novim QR kodom sa računara.'});}
   active.set(res,cookie);res.on('close',()=>active.delete(res));
   // Local desktop actions never reach the loopback API through this gateway.
-  if(/^\/api\/(phone(?:\/|$)|title-settings(?:\/|$)|antigravity\/login|open-file(?:\/|$)|statistics\/reveal(?:\/|$))/.test(url.pathname) || /\/api\/chats\/[^/]+\/(reveal|record)$/.test(url.pathname))return json(403,{error:'Ova radnja je dostupna samo na računaru.'});
+  if(/^\/api\/(phone(?:\/|$)|title-settings(?:\/|$)|antigravity\/login|open-file(?:\/|$)|statistics\/reveal(?:\/|$)|notifications\/preview(?:\/|$))/.test(url.pathname) || /\/api\/chats\/[^/]+\/(reveal|record)$/.test(url.pathname))return json(403,{error:'Ova radnja je dostupna samo na računaru.'});
   const headers={...req.headers,host:`127.0.0.1:${port}`};delete headers.cookie;for(const k of Object.keys(headers))if(k.startsWith('tailscale-')||k.startsWith('x-forwarded-'))delete headers[k];if(headers.origin)headers.origin=`http://127.0.0.1:${port}`;
   const upstream=http.request({hostname:'127.0.0.1',port,path:req.url,method:req.method,headers},response=>{res.writeHead(response.statusCode,{...response.headers,'Cache-Control':'no-store','Referrer-Policy':'no-referrer'});response.pipe(res);});
   upstream.on('error',()=>{if(!res.headersSent)json(502,{error:'Server nije dostupan.'});else res.destroy();});req.pipe(upstream);res.on('close',()=>upstream.destroy());
