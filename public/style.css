@@ -261,3 +261,5 @@ body.dragging-chat #chat-drop-targets{display:flex}
 .chat-drag-zone{display:flex;align-items:center;justify-content:center;color:#777}.chat-drag-zone:hover{color:#bbb}.chat-drag-zone svg{pointer-events:none}
 
 #conversation{overflow-anchor:none}
+
+.paragraph-duration{display:block;margin-top:3px;color:#777;font-size:10px;line-height:1.2;user-select:none}.work-duration{color:#888;font-size:11px}

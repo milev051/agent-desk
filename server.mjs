@@ -1,3 +1,4 @@
+import {recordTextTiming} from './response-timing.mjs';
 import {sharedFolderContext} from './shared-folders.mjs';
 import {linkChat,unlinkChat,childUpdates} from './chat-links.mjs';
 import {createWarmup,lightModel} from './warmup.mjs';
@@ -222,12 +223,14 @@ async function send(chat, prompt, options={}) {
       } else reply.usage=e.usage;
     }
     if (e.session && chat.sessions[agent] !== e.session) { chat.sessions[agent] = e.session; reply.sessionId=e.session; save(); }
+    const previousText=reply.text;
     // Tekst između alata stiže kao zasebni blokovi; bez razmaka bi se rečenice slepile.
     if (e.textStart && reply.text && !reply.text.endsWith('\n\n')) reply.text += '\n\n';
     if (e.delta) { reply.text += e.delta; streamedBlock = true; }
     if (e.text) { if (!streamedBlock) reply.text += (reply.text ? '\n\n' : '') + e.text; streamedBlock = false; }
     if (typeof e.replace === 'string') reply.text = e.replace;
     if (e.final && !reply.text) reply.text = e.final;
+    recordTextTiming(reply,previousText);
     if (e.activity) reply.activity = e.activity;
     for (const a of e.actions || []) {
       reply.actions ||= [];
