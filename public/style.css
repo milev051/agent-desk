@@ -238,3 +238,5 @@ body.dragging-chat #chat-drop-targets{display:flex}
 @media(max-width:650px){body:not(.chat-view) .chat-row.subagent-card.active:not(.working):not(.completed):not(.has-draft):not(.pressed){background:#1c1924}}
 
 .chat-row.has-draft,.chat-row.has-draft:hover,.chat-row.has-draft.active,body:not(.chat-view) .chat-row.has-draft.active:not(.pressed){background:#363940;box-shadow:inset 2px 0 #b7bbc4}.chat-row.has-draft.working,.chat-row.has-draft.working:hover,body:not(.chat-view) .chat-row.has-draft.active.working:not(.pressed){background:#3e3824;box-shadow:inset 2px 0 #b7bbc4}
+
+.folder-row[data-unassigned]{cursor:default}
