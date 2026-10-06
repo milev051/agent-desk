@@ -107,6 +107,13 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal((await call(`/api/chats/${a.id}`, 'PATCH', { settings: { cwd: '/missing-folder-agent-desk' } })).status, 400);
     await call(`/api/chats/${a.id}/send`, 'POST', { text: 'Prva poruka' });
     let chat = await done(a.id);
+    const firstReadId=chat.messages.at(-1).id;
+    assert.equal((await call(`/api/chats/${a.id}/read`,'PUT',{messageId:'missing'})).status,400);
+    assert.equal((await call(`/api/chats/${a.id}/read`,'PUT',{messageId:firstReadId})).status,200);
+    await call(`/api/chats/${a.id}`,'PATCH',{title:'Pročitan čet'});
+    assert.equal((await call(`/api/chats/${a.id}`)).data.readMessageId,firstReadId);
+    assert.equal(JSON.parse(readFileSync(path.join(temp,'data','chats.json'),'utf8')).find(c=>c.id===a.id).readMessageId,firstReadId);
+
     // Sačuvani izbor se vraća bez ključa i bez novog poziva TTS servisu.
     const selectedText='Dva označena pasusa.\n\nSamo njih čitaj.';
     const clipId=speechHash(selectedText.replace(/\s+/g,' ').trim());
@@ -133,6 +140,12 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.ok(output.args.includes('sandbox_mode="read-only"'));
     await call(`/api/chats/${a.id}/send`, 'POST', { text: 'Druga poruka' });
     chat = await done(a.id);
+    const nextReadId=chat.messages.at(-1).id;
+    assert.notEqual(nextReadId,firstReadId);
+    assert.equal(chat.readMessageId,firstReadId);
+    await call(`/api/chats/${a.id}/read`,'PUT',{messageId:nextReadId});
+    assert.equal((await call(`/api/chats/${a.id}/read`,'PUT',{messageId:firstReadId})).data.messageId,nextReadId);
+
     const second = JSON.parse(chat.messages.at(-1).text);
     assert.ok(second.args.includes('resume')); assert.ok(second.args.includes('test-native-session'));
     const stored = JSON.parse(readFileSync(path.join(temp, 'data', 'chats.json')));

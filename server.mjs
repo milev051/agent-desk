@@ -397,9 +397,16 @@ const server = http.createServer(async (req, res) => {
     if(req.method==='POST' && emptyMatch){const chat=chats.find(c=>c.id===emptyMatch[1]);if(!chat)return json(200,{ok:true});
       if(running.has(chat.id)||chat.messages.length||chat.queue?.length||Object.keys(chat.sessions).length||chats.some(c=>c.parentChatId===chat.id)||chat.draft?.text?.trim())return json(409,{error:'Čet više nije prazan.'});
       chats=chats.filter(c=>c.id!==chat.id);update();return json(200,{ok:true});}
-    const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(draft|unlink|link|send|stop|reset-session|speak|speech|fork|delegate|reveal|record|count-tokens|files|upload|prilog)(?:\/([a-f0-9]{16}))?)?$/);
+    const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(read|draft|unlink|link|send|stop|reset-session|speak|speech|fork|delegate|reveal|record|count-tokens|files|upload|prilog)(?:\/([a-f0-9]{16}))?)?$/);
     if (match) {
       const chat = chats.find(c => c.id === match[1]); if (!chat) return json(404, { error: 'Čet nije pronađen.' });
+      if(req.method==='PUT' && match[2]==='read'){
+        const b=await body(req),index=chat.messages.findIndex(m=>m.id===b.messageId && m.role==='assistant' && ['done','stopped','error','interrupted'].includes(m.status));
+        if(index<0)throw Error('Završena poruka nije pronađena.');
+        const previous=chat.messages.findIndex(m=>m.id===chat.readMessageId);
+        if(index>previous){chat.readMessageId=b.messageId;save();broadcast(true);}
+        return json(200,{messageId:chat.readMessageId});
+      }
       if(req.method==='PUT' && match[2]==='draft'){
         const b=await body(req),current=chat.draft || {text:'',revision:0};
         if(typeof b.text!=='string' || b.text.length>200000 || !Number.isInteger(b.revision) || b.revision<0)throw Error('Neispravan nacrt poruke.');

@@ -257,3 +257,8 @@ body.dragging-chat #chat-drop-targets{display:flex}
 @media(max-width:650px){#mobile-agent-header #model-library{padding-top:7px}#new-models{max-height:180px}}
 
 @media(max-width:650px){#new-models{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-height:220px}#new-models[hidden]{display:none}#new-models .model-card{min-width:0;padding:7px;font-size:11px}#new-models .model-card>span:first-child{overflow-wrap:anywhere}}
+
+.chat-row.subagent-card[data-agent="codex"]{box-shadow:inset 2px 0 #aa83d1}
+.chat-row.subagent-card[data-agent="claude"]{box-shadow:inset 2px 0 #edaa79}
+.chat-row.subagent-card[data-agent="antigravity"]{box-shadow:inset 2px 0 #78aeea}
+.chat-row.subagent-card[data-agent="grok"]{box-shadow:inset 2px 0 #ddd}
