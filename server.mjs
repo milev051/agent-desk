@@ -22,7 +22,7 @@ import zlib from 'node:zlib';
 import { command, parseEvent, names } from './adapters.mjs';
 import { catalog, quickCatalog, validateEffort } from './models.mjs';
 import { transferableMessages, transferPlan, historyText, contextEstimate } from './context.mjs';
-import { createTitleManager } from './titles.mjs';
+import { createTitleManager,recentTitleSeed } from './titles.mjs';
 import { createSpeech, spokenText, speechInput, speechSlice, speechHash, speechLabel, speechModel, joinWavs } from './speech.mjs';
 import { usageDelta } from './usage.mjs';
 import { buildAccounting } from './accounting.mjs';
@@ -126,6 +126,7 @@ function broadcast(immediate = false) {
 function update() { usageCache=null;save(); broadcast(true); }
 const googleKeyFile=path.join(process.env.AGENT_DESK_CONFIG || path.join(os.homedir(),'.config','agent-desk'),'google-api-key');
 const titleManager=createTitleManager({settingsFile:path.join(dataDir,'title-settings.json'),keyFile:googleKeyFile,getChat:id=>chats.find(c=>c.id===id),changed:update});
+const titleRefreshes=new Set();
 const folderNameAttempts=new Map();let namingFolders=false;
 async function nameUnnamedFolders(){if(namingFolders || !titleManager.settings().configured)return;namingFolders=true;try{for(const folder of folders.list()){if(!(folder.nameAuto===true || (folder.nameAuto===undefined && automaticFolderName(folder.name))))continue;if(Date.now()-(folderNameAttempts.get(folder.id)||0)<60000)continue;const seed=chats.filter(c=>c.folderId===folder.id && !c.parentChatId).slice(0,8).map(c=>[!/^Empty$|^Novi čet$|^New chat$/i.test(c.title)?c.title:'',...c.messages.filter(m=>m.role==='user').slice(0,2).map(m=>m.text?.slice(0,350)||'')].filter(Boolean).join(': ')).filter(Boolean).join('\n');if(!seed.trim())continue;folderNameAttempts.set(folder.id,Date.now());try{const name=await titleManager.nameFolder(seed);if(folders.applyGeneratedName(folder.id,name,folder.name))broadcastFolders();}catch(error){console.error('Naziv foldera:',error.message);}}}finally{namingFolders=false;}}
 const folderNameTimer=setInterval(()=>void nameUnnamedFolders(),5000);folderNameTimer.unref();
@@ -403,9 +404,16 @@ const server = http.createServer(async (req, res) => {
     if(req.method==='POST' && emptyMatch){const chat=chats.find(c=>c.id===emptyMatch[1]);if(!chat)return json(200,{ok:true});
       if(chat.keepEmpty||running.has(chat.id)||chat.messages.length||chat.queue?.length||Object.keys(chat.sessions).length||chats.some(c=>c.parentChatId===chat.id)||chat.draft?.text?.trim())return json(409,{error:'Čet više nije prazan.'});
       chats=chats.filter(c=>c.id!==chat.id);update();return json(200,{ok:true});}
-    const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(access|read|draft|unlink|link|send|stop|reset-session|speak|speech|fork|delegate|reveal|record|count-tokens|files|upload|prilog)(?:\/([a-f0-9]{16}))?)?$/);
+    const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(access|read|draft|unlink|link|send|stop|generate-title|reset-session|speak|speech|fork|delegate|reveal|record|count-tokens|files|upload|prilog)(?:\/([a-f0-9]{16}))?)?$/);
     if (match) {
       const chat = chats.find(c => c.id === match[1]); if (!chat) return json(404, { error: 'Čet nije pronađen.' });
+      if(req.method==='POST' && match[2]==='generate-title'){
+        if(titleRefreshes.has(chat.id))return json(409,{error:'Naslov se već generiše.'});
+        const seed=recentTitleSeed(chat.messages);if(!seed.trim())throw Error('Pošalji prvu poruku da bi Gemini imao kontekst za naslov.');
+        const previousTitle=chat.title;titleRefreshes.add(chat.id);
+        try{const title=await titleManager.nameChat(seed);if(!chats.includes(chat))return json(404,{error:'Čet više nije dostupan.'});if(chat.title!==previousTitle)return json(409,{error:'Naslov je u međuvremenu promenjen. Tvoja izmena je sačuvana.'});chat.title=title;chat.titleManual=true;update();return json(200,publicChat(chat));}
+        finally{titleRefreshes.delete(chat.id);}
+      }
       if(req.method==='POST' && match[2]==='access'){
         const b=await body(req);if(typeof b.requestId!=='string' || !/^[a-f0-9-]{36}$/.test(b.requestId))throw Error('Neispravan pristup.');
         chat.accessLog ||= [];if(!chat.accessLog.some(a=>a.id===b.requestId)){chat.accessLog.push({id:b.requestId,at:Date.now()});save();scheduleChatFiles();}

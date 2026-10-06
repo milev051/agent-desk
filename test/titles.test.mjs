@@ -39,3 +39,16 @@ test('ime foldera koristi Flash-Lite i ograničen sadržaj, bez punih istorija',
  f.manager.configure({key:'test-only-key'});
  assert.equal(await f.manager.nameFolder('Primer '.repeat(500)),'Razvoj aplikacije');
 });
+
+
+test('izričit zahtev generiše naslov i za ručno imenovan čet',async t=>{
+ const f=fixture(t,async(url,opts)=>{
+ assert.match(url,/gemini-3\.5-flash-lite:generateContent$/);
+ const payload=JSON.parse(JSON.parse(opts.body).contents[0].parts[0].text);
+ assert.equal(payload.zadatak,'Korisnik: Popravi prikaz');
+ return {ok:true,json:async()=>({candidates:[{content:{parts:[{text:'{"title":"Popravka prikaza"}'}]}}]})};
+ });
+ f.manager.configure({key:'test-only-key'});f.chat.titleManual=true;
+ assert.equal(await f.manager.nameChat(recentTitleSeed([{role:'user',text:'Popravi prikaz'}])),'Popravka prikaza');
+ assert.equal(f.chat.title,'Prva poruka');
+});
