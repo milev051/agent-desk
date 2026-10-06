@@ -302,3 +302,8 @@ body #chats .chat-row.working,body #agent-tree .agent-tree-item.working{backgrou
 @media(max-width:650px),(pointer:coarse){.notification-sound-settings{display:none}}
 
 #composer-joystick[data-action="bottom"]{border-color:#84b9ef}
+
+/* Short bubbles follow the text. Long ones wrap inside the reading column. */
+#conversation .message{width:fit-content;max-width:min(850px,100%);margin-left:max(0px,calc((100% - 850px)/2));margin-right:auto;align-items:stretch}
+#conversation .message.user{margin-left:auto;margin-right:max(0px,calc((100% - 850px)/2));align-items:stretch}
+#conversation .message .message-body,#conversation .message.user .message-body{width:auto;max-width:100%;min-width:0}
