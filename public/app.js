@@ -169,7 +169,7 @@ function renderAgentPanel() {
   if($('#agent-tree').innerHTML!==html)$('#agent-tree').innerHTML=html;
 }
 function showChatList(){if(messageSelectionMode){clearMessageSelection();return;}discardEmpty(active);document.body.classList.remove('chat-view');setOpenFolder(null);showDefaults(false);closePanels();menuChat=null;renderPopover();const url=new URL(location.href);url.hash='';history.replaceState(history.state,'',url);}
-function backFromChat(){if(messageSelectionMode){clearMessageSelection();return;}const parent=current()?.parentChatId;if(document.body.classList.contains('chat-view') && chats.some(c=>c.id===parent))choose(parent,{replaceHistory:true});else showChatList();}
+function backFromChat(){if(!$('#defaults').hidden){showDefaults(false);return;}if(messageSelectionMode){clearMessageSelection();return;}const parent=current()?.parentChatId;if(document.body.classList.contains('chat-view') && chats.some(c=>c.id===parent))choose(parent,{replaceHistory:true});else showChatList();}
 $('#chat-back').onclick=backFromChat;
 $('#subagents-toggle').onclick=()=>{agentPanelOpen=!agentPanelOpen;localStorage.setItem('agent-desk-agent-panel',agentPanelOpen?'shown':'hidden');renderAgentPanel();};
 const mobileNavigation=()=>matchMedia('(max-width:650px)').matches;
@@ -179,7 +179,7 @@ function activateMobileHistory(e){if(!e.isTrusted || !mobileNavigation() || mobi
 document.addEventListener('click',activateMobileHistory,{capture:true});document.addEventListener('keydown',activateMobileHistory,{capture:true});
 
 function keepMobileHistory(){if(mobileNavigation())history.pushState({agentDesk:true,agentDeskGuard:true},'',location.href);}
-window.addEventListener('popstate',()=>{if($('#attachment-view').open){$('#attachment-view').close();attachmentHistory=false;keepMobileHistory();return;}if($('#files-dialog').open){guard(async()=>{if(!filePickerClosing && fileListing.path!==fileListing.home && fileListing.parent){history.pushState({agentDesk:true,filePicker:true},'',location.href);await browseFolder(fileListing.parent);}else{filePickerClosing=false;$('#files-dialog').close();keepMobileHistory();}});return;}if(mobileNavigation()){if(document.body.classList.contains('chat-view')){if($('#files-dialog').open)$('#files-dialog').close();if($('#delete-dialog').open)$('#delete-dialog').close();backFromChat();}else if(openFolder)setOpenFolder(null);else showChatList();keepMobileHistory();}});
+window.addEventListener('popstate',()=>{if(!$('#defaults').hidden){showDefaults(false);const url=new URL(location.href);url.hash=document.body.classList.contains('chat-view') && active?'chat='+encodeURIComponent(active):'';history.replaceState(history.state,'',url);keepMobileHistory();return;}if($('#attachment-view').open){$('#attachment-view').close();attachmentHistory=false;keepMobileHistory();return;}if($('#files-dialog').open){guard(async()=>{if(!filePickerClosing && fileListing.path!==fileListing.home && fileListing.parent){history.pushState({agentDesk:true,filePicker:true},'',location.href);await browseFolder(fileListing.parent);}else{filePickerClosing=false;$('#files-dialog').close();keepMobileHistory();}});return;}if(mobileNavigation()){if(document.body.classList.contains('chat-view')){if($('#files-dialog').open)$('#files-dialog').close();if($('#delete-dialog').open)$('#delete-dialog').close();backFromChat();}else if(openFolder)setOpenFolder(null);else showChatList();keepMobileHistory();}});
 
 $('#chat-parent').onclick=()=>{if(current()?.parentChatId)choose(current().parentChatId);};
 $('#chat-options').onclick=()=>{if(current()){menuChat=menuChat===active?null:active;renderPopover();}};
@@ -340,17 +340,22 @@ $('#chat-popover').onchange=e=>guard(async()=>{
   const chat=await api(`/api/chats/${id}`,'PATCH',{settings:model?{model:model.value,effort:preferredEffort(models,chats.find(c=>c.id===id)?.settings.agent,model.value)}:{effort:effort.value}});putChat(chat);renderSidebar();
 });
 document.addEventListener('pointerdown',e=>{if(menuFolder && !e.target.closest(`#chat-popover,[data-folder="${menuFolder}"]`)){menuFolder=null;renderPopover();}if(menuChat && !e.target.closest('#chat-popover,#chat-options,[data-row],[data-options],[data-chat],[data-agent-chat]')){menuChat=null;renderPopover();}});
-let warmupSettings=null,warmupPoll;
+let warmupSettings=null,warmupPoll,warmupWasRunning=false;
+const scheduleDayNames=['Ponedeljak','Utorak','Sreda','Četvrtak','Petak','Subota','Nedelja'];
+function renderWarmupDays(){const days=warmupSettings?.days ?? (warmupSettings?.enabled===false?[]:[1,2,3,4,5,6,7]);$('#warmup-days').innerHTML=scheduleDayNames.map((name,index)=>`<button type="button" data-warmup-day="${index+1}" aria-label="${name}" title="${name}" aria-pressed="${days.includes(index+1)}">${name.slice(0,2)}</button>`).join('');}
 function renderWarmupStatus(){
- const state=warmupSettings;
+ const state=warmupSettings,last=state?.runs?.[0],progress=$('#warmup-progress');
  $('#warmup-run').disabled=!state || state.running;
- const last=state?.runs?.[0];
- $('#warmup-status').textContent=!state?'Za ovu opciju potrebno je ponovno pokretanje servera.':state.running?`Slanje: ${state.currentAgent || 'pokretanje'}…`:last?`Poslednje slanje: ${new Date(last.startedAt).toLocaleString('sr-Latn')} · ${last.results.map(r=>`${r.agent}: ${r.status==='done'?'OK':r.error || r.status}`).join(' · ')}`:state.enabled?`Raspored je uključen: svakog dana u ${state.time}, Beograd.`:'Raspored je isključen dok ga ne uključiš. Slanje se ne ponavlja ako servis prijavi grešku.';
+ $('#warmup-status').textContent=!state?'Za ovu opciju potrebno je ponovno pokretanje servera.':'';
+ progress.hidden=!state?.running;
+ if(state?.running)progress.innerHTML=`<strong>Slanje kratkih poruka</strong>${(last?.agents || state.agents).map(agent=>{const result=last?.results?.find(r=>r.agent===agent);return `<div>${escape(agentName(agent))}<span>${result?result.status==='done'?'✓':'Greška':agent===state.currentAgent?'Odgovara…':'Čeka'}</span></div>`;}).join('')}`;
+ else if(warmupWasRunning){const failed=last?.results?.filter(r=>r.status!=='done').length || 0;toast(failed?`Slanje je završeno. ${failed} agenata je prijavilo grešku; detalji su sačuvani u zapisu.`:'Kratke poruke su poslate. Privremeni četovi su uklonjeni.');}
+ warmupWasRunning=!!state?.running;
  clearTimeout(warmupPoll);
- if(state?.running && !$('#defaults').hidden)warmupPoll=setTimeout(()=>guard(async()=>{warmupSettings=await api('/api/warmup');renderWarmupStatus();}),2000);
+ if(state?.running)warmupPoll=setTimeout(()=>guard(async()=>{warmupSettings=await api('/api/warmup');renderWarmupStatus();}),1500);
 }
 function renderWarmup(){
- $('#warmup-enabled').checked=warmupSettings?.enabled ?? true;
+ renderWarmupDays();
  $('#warmup-time').value=warmupSettings?.time || '08:00';
  $('#warmup-agents').innerHTML=meta.agents.map(a=>`<label class="warmup-agent" data-warmup-agent="${a.id}"><span><input type="checkbox" ${a.available && (warmupSettings?.agents || []).includes(a.id)?'checked':''} ${a.available?'':'disabled'}> ${escape(a.name)}</span><select aria-label="Model za kratku poruku ${escape(a.name)}" ${a.available?'':'disabled'}><option value="">Automatski: lakši model</option>${modelOptions({agent:a.id,model:warmupSettings?.models?.[a.id] || ''}).replace(/^<option[^>]*>Podrazumevani<\/option>/,'')}</select></label>`).join('');
  for(const row of $('#warmup-agents').children)row.querySelector('select').value=warmupSettings?.models?.[row.dataset.warmupAgent] || '';
@@ -358,11 +363,13 @@ function renderWarmup(){
 }
 async function saveWarmup(){
  const rows=[...$('#warmup-agents').children].filter(row=>row.querySelector('input').checked);
- warmupSettings=await api('/api/warmup','PUT',{enabled:$('#warmup-enabled').checked,time:$('#warmup-time').value,agents:rows.map(row=>row.dataset.warmupAgent),models:Object.fromEntries(rows.map(row=>[row.dataset.warmupAgent,row.querySelector('select').value]))});
+ const days=[...$('#warmup-days').querySelectorAll('[aria-pressed="true"]')].map(button=>Number(button.dataset.warmupDay));
+ warmupSettings=await api('/api/warmup','PUT',{enabled:days.length>0,days,time:$('#warmup-time').value,agents:rows.map(row=>row.dataset.warmupAgent),models:Object.fromEntries(rows.map(row=>[row.dataset.warmupAgent,row.querySelector('select').value]))});
  renderWarmupStatus();
 }
 let settingsSaveQueue=Promise.resolve();
 function queueSettingsSave(work){const pending=settingsSaveQueue.catch(()=>{}).then(work);settingsSaveQueue=pending;return pending;}
+$('#warmup-days').onclick=e=>{const button=e.target.closest('[data-warmup-day]');if(!button)return;button.setAttribute('aria-pressed',String(button.getAttribute('aria-pressed')!=='true'));guard(()=>queueSettingsSave(saveWarmup));};
 $('#warmup-settings').onchange=e=>{if(e.target.id==='warmup-time' && !e.target.validity.valid)return;guard(()=>queueSettingsSave(saveWarmup));};
 $('#warmup-time').oninput=e=>{const input=e.target;if(/^\d{4}$/.test(input.value))input.value=input.value.slice(0,2)+':'+input.value.slice(2);if(input.validity.valid && input.value.length===5)guard(()=>queueSettingsSave(saveWarmup));};
 $('#warmup-run').onclick=()=>guard(async()=>{await queueSettingsSave(saveWarmup);warmupSettings=await api('/api/warmup/run','POST',{});renderWarmupStatus();});

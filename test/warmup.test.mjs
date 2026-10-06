@@ -31,3 +31,17 @@ test('lakši model bira se iz dostupnog kataloga',()=>{
  assert.equal(lightModel('claude',[{id:'opus'},{id:'haiku'}]),'haiku');
  assert.equal(lightModel('grok',[]),'');
 });
+
+test('dani: slanje samo izabranim danima, isključivanje svih i trajno čuvanje',async t=>{
+ let time=new Date('2026-10-06T06:00:00Z'),calls=0;
+ const dir=mkdtempSync(path.join(tmpdir(),'warmup-days-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));const file=path.join(dir,'days.json');
+ const opts={now:()=>time,execute:async()=>{calls++;return {status:'done'};}};
+ const job=createWarmup(file,opts);job.configure({enabled:true,time:'08:00',agents:['codex'],days:[1,3,5]});
+ await job.tick();assert.equal(calls,0);
+ time=new Date('2026-10-07T06:00:00Z');await job.tick();assert.equal(calls,1);
+ const restored=createWarmup(file,opts);assert.deepEqual(restored.view().days,[1,3,5]);await restored.tick();assert.equal(calls,1);
+ time=new Date('2026-10-08T06:00:00Z');await restored.tick();assert.equal(calls,1);
+ restored.configure({enabled:true,time:'08:00',agents:['codex'],days:[]});assert.equal(restored.view().enabled,false);
+ time=new Date('2026-10-09T06:00:00Z');await restored.tick();assert.equal(calls,1);
+ assert.throws(()=>restored.configure({enabled:true,time:'08:00',agents:['codex'],days:[8]}));
+});
