@@ -50,7 +50,7 @@ const limits=createLimits({onSample:sample=>{if(quotaHistory.observe(sample)){br
 const phoneOriginFile=path.join(process.env.AGENT_DESK_CONFIG || path.join(os.homedir(),'.config','agent-desk'),'phone-origin');
 const savedPhoneOrigin=fs.existsSync(phoneOriginFile)?fs.readFileSync(phoneOriginFile,'utf8').trim():'';
 const phone=createPhoneAccess({sessionFile:path.join(path.dirname(phoneOriginFile),'phone-sessions.json'),port,gatewayPort:Number(process.env.AGENT_DESK_PHONE_PORT || port+2),origin:process.env.AGENT_DESK_PHONE_ORIGIN || savedPhoneOrigin});
-const batteryStatus=createBatteryStatus();
+const batteryStatus=createBatteryStatus({file:path.join(dataDir,'baterija.json')});
 const phonePush=createPush({keysFile:path.join(dataDir,'vapid.json'),subscriptionsFile:path.join(dataDir,'push-subscriptions.json'),sender:webpush});
 const chatFiles=createChatFiles(dataDir);
 let chatFilesTimer;

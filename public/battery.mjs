@@ -1,3 +1,8 @@
+export function batteryDuration(since,now=Date.now()){
+ if(!Number.isFinite(since))return '-';
+ const minutes=Math.max(0,Math.floor((now-since)/60000));
+ return `${Math.floor(minutes/60)}:${String(minutes%60).padStart(2,'0')}`;
+}
 export function startBatteryStatus(){
  const display=document.querySelector('#device-battery');if(!display)return;
  const phone=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
@@ -6,10 +11,12 @@ export function startBatteryStatus(){
  logo.innerHTML=phone
   ? '<path fill="currentColor" d="M16.5 1c.1 1.4-.5 2.8-1.4 3.8-.9 1-2.2 1.6-3.5 1.5-.2-1.4.5-2.8 1.3-3.7C13.9 1.5 15.4.8 16.5 1ZM20.4 17.5c-.5 1.2-.8 1.7-1.4 2.8-.9 1.3-2.1 3-3.5 3-1.3 0-1.6-.8-3.4-.8s-2.2.8-3.5.8c-1.4 0-2.5-1.5-3.4-2.8C2.7 16.8 2 11.6 3.6 9c1.1-1.9 2.8-3 4.5-3 1.5 0 2.4.8 3.7.8 1.2 0 2-.8 3.7-.8 1.5 0 3 .8 4 2.1-3.5 1.9-3 7 .9 9.4Z"/>'
   : '<g fill="currentColor"><path d="M4 11h16v8a2 2 0 0 1-2 2h-1v2h-2v-2H9v2H7v-2H6a2 2 0 0 1-2-2ZM1 11h2v8H1Zm20 0h2v8h-2ZM4 9a8 8 0 0 1 16 0Z"/><path d="m6 1 2 3m10-3-2 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></g><g fill="#000"><circle cx="8.5" cy="6.5" r=".8"/><circle cx="15.5" cy="6.5" r=".8"/></g>';
- const percent=document.createElement('small');percent.textContent='-';display.replaceChildren(logo,percent);
+ const percent=document.createElement('small');percent.textContent='-';const duration=document.createElement('small');duration.className='battery-duration';duration.textContent='-';display.replaceChildren(logo,percent,duration);
  function show(value){
   percent.textContent=value?.level!=null?String(value.level):'-';
   percent.className=value?.level==null?'battery-unknown':value.level<=20?'battery-low':value.level<=50?'battery-mid':'battery-good';
+  duration.textContent=!value?'-':value.charging?'⚡':batteryDuration(value.unpluggedAt);
+  duration.title=value?.charging?'Na punjaču':value?.unpluggedAt?`Bez punjača od ${new Date(value.unpluggedAt).toLocaleTimeString('sr-Latn-RS',{hour:'2-digit',minute:'2-digit',hour12:false})}`:'Skidanje sa punjača još nije zabeleženo.';
   display.classList.toggle('battery-stale',!!value?.stale);
  }
  let battery=null,busy=false;
