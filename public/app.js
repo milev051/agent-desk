@@ -263,6 +263,14 @@ async function saveTitleSettings(){
 }
 $('#title-check').onclick=()=>guard(async()=>{const b=$('#title-check');b.disabled=true;try{await saveTitleSettings();titleSettings=await api('/api/title-settings/check','POST',{});renderTitleStatus();}finally{b.disabled=false;}});
 function tokenRange(estimate) {return estimate ? `${estimate.minTokens.toLocaleString('sr-Latn-RS')}–${estimate.maxTokens.toLocaleString('sr-Latn-RS')}` : 'nepoznato';}
+function showCardPopover(pop,key){
+  const opening=pop.hidden || pop.dataset.cardKey!==key;
+  pop.dataset.cardKey=key;pop.hidden=false;positionPopover();
+  if(opening && !mobileNavigation()){
+    const input=pop.querySelector('[data-menu-rename],[data-menu-folder-name]');
+    input?.focus({preventScroll:true});input?.select();
+  }
+}
 function renderPopover() {
   const pop=$('#chat-popover');
   const folder=folders.find(item=>item.id===menuFolder);
@@ -272,15 +280,15 @@ function renderPopover() {
     if(input?.dataset.folderId!==folder.id)pop.innerHTML=content;
     else if(document.activeElement!==input)input.value=folder.name;
     pop.querySelector('[data-action="shared-folder"]')?.setAttribute('aria-pressed',String(folder.shared===true));
-    pop.hidden=false;positionPopover();return;
+    showCardPopover(pop,'folder:'+folder.id);return;
   }
   const c=chats.find(c=>c.id===menuChat);if(!c){pop.hidden=true;return;}
   const busy=c.running;
   const tool=(action,label,icon,disabled=false)=>`<button class="icon-action ${action==='delete'?'delete-chat':action==='stop'?'stop-chat':''}" data-action="${action}" data-id="${c.id}" aria-label="${escape(label)}" title="${escape(label)}" ${disabled?'disabled':''}>${icon}</button>`;
   const content=`<input data-menu-rename data-rename-chat="${c.id}" aria-label="Naziv četa" value="${escape(rename?.id===c.id?rename.value:c.title)}" maxlength="100"><div class="menu-agents" role="group" aria-label="Izaberi agenta">${agentOrder.map(id=>meta.agents.find(a=>a.id===id)).filter(a=>a && a.id!==c.settings.agent).map(a=>`<button class="menu-agent" data-card-agent="${a.id}" data-agent-source="${c.id}" aria-label="Promeni agenta · ${escape(a.name)}" title="${escape(a.name)} · prenos ${tokenRange(c.transfers?.[a.id])} tokena, procena; keš nije garantovan" ${!a.available || busy?'disabled':''}><img src="${agentLogos[a.id]}" alt="" width="21" height="21"></button>`).join('')}</div><div class="chat-tools" role="group" aria-label="Radnje četa">${tool('link','Kopiraj adresu četa',copyIcon)}${tool('copy-md','Kopiraj čet kao Markdown','MD')}${c.parentChatId?tool('unlink','Izdvoji podagenta u samostalan čet',actionIcon('<path d="M10 5H5v14h14v-5M12 12 21 3M15 3h6v6"/>'),busy):''}${tool('fork','Napravi granu četa',forkIcon,busy)}${tool('delete','Arhiviraj čet',actionIcon('<rect x="3" y="3" width="18" height="4" rx="1"/><path d="M5 7v13h14V7m-10 5h6"/>'),busy)}${tool('reveal','Prikaži u Finderu',folderIcon)}${tool('record','Otvori zapis četa',recordIcon)}${tool('reset-session',c.sessions?.[c.settings.agent]?'Nova sesija: poruke ostaju, sledeće slanje ide bez starog keša':'Nema sačuvane sesije',actionIcon('<path d="M21 12a9 9 0 1 1-2.6-6.3"/><path d="M21 3v6h-6"/>'),busy || !c.sessions?.[c.settings.agent])}${busy?tool('stop','Zaustavi',stopIcon):''}</div><label class="model-choice">Model<select data-chat-model="${c.id}" aria-label="Model četa" ${busy?'disabled':''}>${modelOptions(c.settings)}</select></label>${effortsFor(c.settings.agent,c.settings.model).length?`<label class="model-choice">Razmišljanje<select data-chat-effort="${c.id}" aria-label="Nivo razmišljanja" ${busy?'disabled':''}>${effortOptions(c.settings)}</select></label>`:''}`;
   const extras=`<div class="transfer-estimate">${transferLabel(c.context)}</div>`;
-  const titleInput=pop.querySelector('[data-menu-rename]');if(!(document.activeElement===titleInput && titleInput?.dataset.renameChat===c.id) && pop.innerHTML!==content+extras)pop.innerHTML=content+extras;pop.hidden=false;
-  positionPopover();autoCountHistory(c);
+  const titleInput=pop.querySelector('[data-menu-rename]');if(!(document.activeElement===titleInput && titleInput?.dataset.renameChat===c.id) && pop.innerHTML!==content+extras)pop.innerHTML=content+extras;
+  showCardPopover(pop,'chat:'+c.id);autoCountHistory(c);
 }
 async function autoCountHistory(c){if(c.historyTokenCount||c.running||!meta.titleSettings?.configured)return;const key=c.id+':'+JSON.stringify(c.messages.map(m=>[m.id,m.text,m.actions]));const previous=historyCounts.get(key);if(previous==='pending'||previous==='done'||typeof previous==='number'&&Date.now()-previous<120000)return;historyCounts.set(key,'pending');try{const chat=await api(`/api/chats/${c.id}/count-tokens`,'POST',{consent:true});if(chats.some(x=>x.id===c.id))putChat(chat);historyCounts.set(key,'done');renderPopover();}catch(e){historyCounts.set(key,Date.now());if(menuChat===c.id){const el=$('#chat-popover .context-info');if(el)el.title=e.message;}}}
 function positionPopover() {
