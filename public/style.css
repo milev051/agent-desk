@@ -206,6 +206,6 @@ body.dragging-chat #new-folder-drop{display:block}
 
 .settings-tools-section{margin:18px 0}.settings-tools{display:flex;align-items:center;gap:8px}.settings-tools button,.settings-tools a{display:flex;align-items:center;justify-content:center;width:40px;height:40px;padding:9px;border:0;border-radius:5px;background:none;color:#aaa;text-decoration:none}.settings-tools button:hover,.settings-tools a:hover{background:#202020;color:#eee}.settings-tools svg{flex-shrink:0}#notifications-status:empty{display:none}
 
-.settings-tools #mobile-autofocus{color:#666}.settings-tools #mobile-autofocus[aria-pressed="true"]{color:#93d9aa;background:#16291c}.settings-tools #mobile-autofocus[aria-pressed="true"] svg{filter:drop-shadow(0 0 4px #93d9aa55)}
+.settings-tools #mobile-autofocus,.settings-tools #response-colors{color:#666}.settings-tools #mobile-autofocus[aria-pressed="true"],.settings-tools #response-colors[aria-pressed="true"]{color:#93d9aa;background:#16291c}.settings-tools #mobile-autofocus[aria-pressed="true"] svg,.settings-tools #response-colors[aria-pressed="true"] svg{filter:drop-shadow(0 0 4px #93d9aa55)}
 
 .warmup-send-row{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap}.warmup-send-row label{display:flex;align-items:center;gap:8px;font-size:12px;color:#aaa}.warmup-send-row input{width:76px;text-align:center;font-variant-numeric:tabular-nums}.warmup-send-row input:invalid{border-color:#b56f61}
