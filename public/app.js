@@ -561,8 +561,8 @@ async function refreshPhone(){
  clearTimeout(phoneTimer);
  $('.phone-settings').hidden=phoneRemote;$('#token-count-settings').hidden=phoneRemote;if(phoneRemote)return;
  try {const info=await api('/api/phone');$('#phone-status').textContent=info.origin?'Link važi još '+Math.max(0,Math.ceil((info.expiresAt-Date.now())/1000))+' s. Prijava traje '+info.sessionDays+' dana.':'Tailscale nije povezan.';
- $('#phone-address').hidden=!info.origin;$('#phone-address').textContent=info.origin || '';if(info.origin)$('#phone-address').href=info.origin;
- $('#phone-link').hidden=!info.url;$('#phone-link').value=info.url || '';$('#phone-qr').hidden=!info.url;
+ $('#phone-address').hidden=true;$('#phone-address').textContent=info.origin || '';if(info.origin)$('#phone-address').href=info.origin;
+ $('#phone-link').hidden=true;$('#phone-link').value=info.url || '';$('#phone-copy').disabled=!info.url;$('#phone-qr').hidden=!info.url;
  if(info.url){const src='/api/phone/qr?v='+info.expiresAt;if($('#phone-qr').getAttribute('src')!==src)$('#phone-qr').src=src;}
  $('#phone-revoke').hidden=!info.origin;
  }catch(e){$('#phone-status').textContent=e.message;$('#phone-qr').hidden=true;$('#phone-link').hidden=true;$('#phone-address').hidden=true;}
