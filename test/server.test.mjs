@@ -262,6 +262,14 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     await call(`/api/chats/${b.id}`,'PATCH',{folderId:null});
     await call(`/api/chats/${b.id}/send`,'POST',{text:'Van grupe'});const departed=await done(b.id);
     assert.match(JSON.parse(departed.messages.at(-1).text).input,/Više nisi u zajedničkoj grupi/);
+    const savedChild=(await call(`/api/chats/${linkedChild.id}`)).data;
+    assert.equal((await call(`/api/chats/${linkedChild.id}/unlink`,'POST',{folderId:'nepostojeci'})).status,400);
+    assert.equal((await call(`/api/chats/${linkedChild.id}`)).data.parentChatId,linkedParent.id);
+    const unlinkedChat=(await call(`/api/chats/${linkedChild.id}/unlink`,'POST',{})).data;
+    assert.equal(unlinkedChat.parentChatId,undefined);assert.equal(unlinkedChat.folderId,team.id);
+    assert.equal(unlinkedChat.sessions.codex,savedChild.sessions.codex);assert.deepEqual(unlinkedChat.messages,savedChild.messages);
+    await call(`/api/chats/${linkedChild.id}/send`,'POST',{text:'Nastavi samostalno'});const independentReply=await done(linkedChild.id);
+    assert.match(JSON.parse(independentReply.messages.at(-1).text).input,/Sada si samostalan agent/);
   } finally { if(server.exitCode===null){server.kill('SIGTERM');await once(server,'exit');} rmSync(temp, { recursive: true, force: true }); }
 });
 test('stream parser prepoznaje tekst, alate i greške dobavljača', () => {

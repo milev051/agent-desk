@@ -1,5 +1,5 @@
 import {sharedFolderContext} from './shared-folders.mjs';
-import {linkChat,childUpdates} from './chat-links.mjs';
+import {linkChat,unlinkChat,childUpdates} from './chat-links.mjs';
 import {createWarmup,lightModel} from './warmup.mjs';
 import {createChatFiles} from './chat-files.mjs';
 import {preferredEffort} from './public/reasoning.mjs';
@@ -173,7 +173,7 @@ function appContext(chat) {
   const address=`http://127.0.0.1:${port}`;
   const structure=chatStructure(chats,chat.id,{isRunning:c=>running.has(c.id)});const children=structure.filter(c=>c.parentChatId===chat.id);const paths=linkedPaths(chat);
   const parent=chats.find(c=>c.id===chat.parentChatId);
-  const role=parent?`Sada si podagent glavnog četa ${parent.title} (${parent.id}). Nastavi u svojoj sesiji i izveštavaj glavnog agenta; ne kreiraj novi nivo podagenata. `:children.length?`Ti si glavni agent ovih podčetova. `:'';
+  const role=parent?`Sada si podagent glavnog četa ${parent.title} (${parent.id}). Nastavi u svojoj sesiji i izveštavaj glavnog agenta; ne kreiraj novi nivo podagenata. `:children.length?`Ti si glavni agent ovih podčetova. `:chat.previousParentChatId?`Sada si samostalan agent. Više nisi podagent četa ${chat.previousParentChatId}; ranije poruke i sesija su sačuvane. `:'';
   const brief=structure.map(({id,parentChatId,title,agent,status})=>({id,parentChatId,title,agent,status}));
   // Sesija agenta već ima pun tekst iz prve poruke, pa se ponavlja samo stanje.
   if(chat.sessions?.[chat.settings.agent])return `${role}Snimak strukture povezanih četova u trenutku slanja: ${JSON.stringify(brief)}.${paths.length?` Povezane putanje (sadržaj nije učitan): ${JSON.stringify(paths)}.`:''} Okruženje: Agent Desk; čet ${chat.id}; radni folder ${chat.settings.cwd}; agent ${chat.settings.agent}; model ${chat.settings.model || 'CLI podrazumevani'}. Datumi poruka su ISO UTC. Statistika tokena, procene cene i promena limita je u ${statisticsFile}; pročitaj samo kada je potrebna. Fajl koji korisnik treba da preuzme, i na telefonu, kopiraj u ${path.join(dataDir,'prilozi',chat.id)}/ i navedi punu putanju u odgovoru; interfejs prikazuje sliku ili link za preuzimanje. Podčetovi i dalje samo kroz POST ${address}/api/chats/${chat.id}/delegate (pravila iz prve poruke važe; "childId" nastavlja postojeći podčet).`;
@@ -392,9 +392,10 @@ const server = http.createServer(async (req, res) => {
     if(req.method==='POST' && emptyMatch){const chat=chats.find(c=>c.id===emptyMatch[1]);if(!chat)return json(200,{ok:true});
       if(running.has(chat.id)||chat.messages.length||chat.queue?.length||Object.keys(chat.sessions).length||chats.some(c=>c.parentChatId===chat.id))return json(409,{error:'Čet više nije prazan.'});
       chats=chats.filter(c=>c.id!==chat.id);update();return json(200,{ok:true});}
-    const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(link|send|stop|reset-session|speak|speech|fork|delegate|reveal|record|count-tokens|files|upload|prilog)(?:\/([a-f0-9]{16}))?)?$/);
+    const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(unlink|link|send|stop|reset-session|speak|speech|fork|delegate|reveal|record|count-tokens|files|upload|prilog)(?:\/([a-f0-9]{16}))?)?$/);
     if (match) {
       const chat = chats.find(c => c.id === match[1]); if (!chat) return json(404, { error: 'Čet nije pronađen.' });
+      if(req.method==='POST' && match[2]==='unlink'){const b=await body(req);if(b.folderId!==undefined && b.folderId!==null && !folders.has(b.folderId))throw Error('Folder nije pronađen.');unlinkChat(chats,chat,b.folderId,id=>running.has(id));update();return json(200,publicChat(chat));}
       if(req.method==='POST' && match[2]==='link'){const b=await body(req);const parent=chats.find(c=>c.id===b.parentChatId);linkChat(chats,chat,parent,id=>running.has(id));update();return json(200,publicChat(chat));}
       // Prilog sa telefona ili iz privremene memorije čuva se u data/prilozi/<čet>/ i povezuje kao obična putanja.
       if(req.method==='POST' && match[2]==='upload'){

@@ -312,3 +312,7 @@ Pri sledećem slanju podagent dobija opis nove uloge. Glavni agent prvo dobija p
 U meniju foldera uključi ikonicu „Zajednički kontekst agenata“. Zelena ikonica znači da članovi dobijaju razgovore jedni drugih pri sledećem slanju. Prvo se prenosi dosadašnja istorija; kasnije samo nove ili izmenjene završene poruke, uključujući zabeležene aktivnosti. Podagenti nasleđuju grupu glavnog četa. Obični folderi ne dele kontekst.
 
 Evidencija heševa poruka i članstva čuva se u `data/chats.json`, u `sharedFolderReads`, odvojeno po primaocu i CLI sesiji. Sačuvana je tek kada odgovor uspe. Izlazak, isključivanje deljenja i brisanje foldera javljaju se pri sledećoj poruci; raniji kontekst ostaje u CLI sesiji. Povratak u isti folder sa istom sesijom ne prenosi staru istoriju ponovo. Nova sesija dobija istoriju ponovo. Grupe ne pokreću automatski članove i ne prave kopije četova.
+
+### Izdvajanje podagenta
+
+Kartica podagenta ima iste dve zone kao običan čet: zadrži levu polovinu za radnje, desnu za prevlačenje. U meniju je „Izdvoji podagenta u samostalan čet“. Tokom prevlačenja pojavljuje se i polje „Izdvoji podagenta“. Izdvojen čet ostaje u folderu glavnog četa; spuštanje na drugi folder bira taj folder, a na prazan deo liste ili „Van foldera“ izdvaja ga van foldera. Može se prevući i na drugog glavnog agenta. Poruke, sesije i evidencija deljenog konteksta ostaju sačuvane. Promena veze dozvoljena je kad uključeni agenti miruju.

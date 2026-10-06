@@ -222,3 +222,7 @@ body.dragging-chat #new-folder-drop{display:block}
 .folder-shared[aria-pressed="true"],.folder-mark.shared{color:#93d9aa}.folder-shared[aria-pressed="true"]{background:#16291c}
 
 .phone-pairing{display:flex;align-items:center;gap:20px}.phone-settings #phone-qr{flex-shrink:0;width:144px;height:144px;margin:0}.phone-settings #phone-qr[hidden]{display:none}.phone-controls{min-width:0;display:flex;flex-direction:column;gap:12px}.phone-controls .settings-actions{display:flex;justify-content:flex-start;gap:8px;flex-wrap:wrap;margin:0}.phone-controls .settings-actions button{font-size:12px;padding:7px 10px}@media(max-width:650px){.phone-pairing{gap:12px}.phone-settings #phone-qr{width:128px;height:128px}}
+
+.agent-tree-item{position:relative}.agent-tree-item.drag-source{opacity:.35}.agent-tree-item.drop-hover,#chats.drop-hover{outline:1px solid #98cfa6}.agent-tree-item.drop-hover{background:#16211b}
+
+#agent-tree .child-out{display:none}body.dragging-subagent #agent-tree .child-out{display:flex;border-style:dashed;font-size:12px}.child-out.drop-hover{background:#16211b;border-color:#98cfa6}

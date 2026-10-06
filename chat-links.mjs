@@ -1,9 +1,9 @@
 export function linkChat(chats, child, parent, isRunning=()=>false) {
   if(!parent || child.id===parent.id)throw Error('Izaberi drugi glavni čet.');
-  if(child.parentChatId)throw Error('Čet je već podagent.');
+  if(child.parentChatId===parent.id)throw Error('Čet je već podagent ovog agenta.');
   if(parent.parentChatId || chats.some(c=>c.parentChatId===child.id))throw Error('Podržan je samo jedan nivo podagenata.');
-  if(isRunning(child.id) || isRunning(parent.id))throw Error('Sačekaj da oba agenta završe pre povezivanja.');
-  child.parentChatId=parent.id;
+  if(isRunning(child.id) || isRunning(parent.id) || child.parentChatId && isRunning(child.parentChatId))throw Error('Sačekaj da oba agenta završe pre povezivanja.');
+  child.parentChatId=parent.id;delete child.previousParentChatId;delete child.parentTurnId;
   delete child.folderId;delete child.formerParentChatId;delete child.formerParentTurnId;
   child.updatedAt=parent.updatedAt=Date.now();
 }
@@ -20,4 +20,15 @@ export function childUpdates(chats,parent,agent) {
     if(messages.length){updates.push({child,messages});consumed[child.id]=end;}
   }
   return {updates,consumed};
+}
+
+export function unlinkChat(chats,child,folderId,isRunning=()=>false){
+  if(!child.parentChatId)throw Error('Čet je već samostalan.');
+  const parent=chats.find(c=>c.id===child.parentChatId);
+  if(isRunning(child.id) || parent && isRunning(parent.id))throw Error('Sačekaj da podagent i glavni agent završe pre izdvajanja.');
+  child.previousParentChatId=child.parentChatId;
+  delete child.parentChatId;delete child.parentTurnId;delete child.formerParentChatId;delete child.formerParentTurnId;
+  const destination=folderId===undefined?parent?.folderId:folderId;
+  if(destination)child.folderId=destination;else delete child.folderId;
+  child.updatedAt=Date.now();if(parent)parent.updatedAt=child.updatedAt;
 }
