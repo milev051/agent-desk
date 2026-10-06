@@ -14,7 +14,6 @@
   <aside class="sidebar">
     <div class="sidebar-actions"><div id="new-agents" role="group" aria-label="Novi čet"><button id="defaults-open" type="button" aria-label="Podešavanja" title="Podešavanja"><span id="device-battery" role="status" title="Stanje baterije drugog uređaja"></span></button></div></div>
     <div id="pull-refresh" aria-live="polite"></div>
-    <div id="new-folder-drop" data-folder-new>Spusti čet ovde za novi folder</div>
     <nav id="chats" aria-label="Četovi"></nav>
   </aside>
   <aside id="agent-panel" aria-label="Pokrenuti agenti" hidden><nav id="agent-tree" aria-label="Agenti i podagenti"></nav></aside>
@@ -68,5 +67,9 @@
   <div id="new-models" role="menu" aria-label="Model novog četa" hidden></div><div id="chat-popover" role="dialog" aria-label="Opcije četa" hidden></div>
   <div id="warmup-progress" role="status" aria-live="polite" hidden></div>
   <div id="toast" role="alert" hidden></div><div id="completion-notices" aria-live="polite"></div>
+<div id="chat-drop-targets">
+  <div id="new-folder-drop" data-folder-new>Spusti čet ovde za novi folder</div>
+  <div class="child-out" data-child-out>Izdvoji podagenta</div>
+</div>
 </body>
 </html>

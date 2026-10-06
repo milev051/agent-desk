@@ -165,7 +165,7 @@ function renderAgentPanel() {
   if(chat)$('#chat-options').dataset.options=chat.id;
   if(chat)$('#chat-options').innerHTML=`<img src="${agentLogos[chat.settings.agent]}" alt="" width="20" height="20">`;
   const row=({chat:c,depth})=>`<button style="--tree-depth:${depth}" class="agent-tree-item ${c.id===active?'active':''} ${c.running?'working':notification(c)}" data-agent="${c.settings.agent}" data-agent-chat="${c.id}" title="${escape(agentName(c.settings.agent))} · ${escape(modelLabel(c))}"><span><span class="agent-card-title">${escape(c.title)}</span></span><span class="chat-drag-zone" aria-hidden="true"></span></button>`;
-  const html='<div class="folder-row child-out" data-child-out>Izdvoji podagenta</div>'+branch.map(row).join('');
+  const html=branch.map(row).join('');
   if($('#agent-tree').innerHTML!==html)$('#agent-tree').innerHTML=html;
 }
 function showChatList(){if(messageSelectionMode){clearMessageSelection();return;}discardEmpty(active);document.body.classList.remove('chat-view');setOpenFolder(null);showDefaults(false);closePanels();menuChat=null;renderPopover();const url=new URL(location.href);url.hash='';history.replaceState(history.state,'',url);}

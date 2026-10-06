@@ -179,8 +179,9 @@ body:not(.chat-view) .chat-row.working,body:not(.chat-view) .chat-row.working.pr
 .sidebar-actions #new-agents{grid-template-columns:repeat(5,minmax(0,1fr))}
 .sidebar-actions #defaults-open{padding:0;align-self:start;height:auto}
 .sidebar-actions #defaults-open #device-battery{width:100%;box-sizing:border-box}
-#new-folder-drop{display:none;border:1px dashed #666;border-radius:5px;padding:14px 10px;color:#aaa;text-align:center;font-size:12px;flex-shrink:0}
-body.dragging-chat #new-folder-drop{display:block}
+#chat-drop-targets{display:none;position:fixed;bottom:calc(12px + env(safe-area-inset-bottom));left:12px;right:12px;max-width:600px;margin:0 auto;gap:8px;z-index:50}
+body.dragging-chat #chat-drop-targets{display:flex}
+#new-folder-drop,#chat-drop-targets .child-out{flex:1;min-width:0;border:1px dashed #666;border-radius:8px;padding:16px 12px;background:#161616;color:#ccc;text-align:center;font-size:12px;box-shadow:0 4px 20px #0008}
 #new-folder-drop.drop-hover{border-color:#98cfa6;background:#16211b;color:#98cfa6}
 
 #chat-popover .folder-menu{display:flex;align-items:center;gap:8px}#chat-popover .folder-menu input{flex:1;min-width:0;width:100%;margin:0;padding:8px;font-size:13px}#chat-popover .folder-menu .delete-chat{border-left:0;flex-shrink:0}
@@ -225,4 +226,4 @@ body.dragging-chat #new-folder-drop{display:block}
 
 .agent-tree-item{position:relative}.agent-tree-item.drag-source{opacity:.35}.agent-tree-item.drop-hover,#chats.drop-hover{outline:1px solid #98cfa6}.agent-tree-item.drop-hover{background:#16211b}
 
-#agent-tree .child-out{display:none}body.dragging-subagent #agent-tree .child-out{display:flex;border-style:dashed;font-size:12px}.child-out.drop-hover{background:#16211b;border-color:#98cfa6}
+#chat-drop-targets .child-out{display:none}body.dragging-subagent #chat-drop-targets .child-out{display:block}#chat-drop-targets .child-out.drop-hover{background:#16211b;border-color:#98cfa6}
