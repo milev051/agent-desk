@@ -346,7 +346,7 @@ function render() {
   renderQueue();renderTransfer();renderChatNavigation();renderUsage();renderChatQuota();
   const chat=current();if(document.body.classList.contains('chat-view') && document.visibilityState==='visible' && document.hasFocus())markRead(chat);renderSidebar();
   $('#prompt').disabled=!connected || !meta.agents.find(a=>a.id===(chat?.settings.agent || selectedAgent))?.available;
-  $('#connection').hidden=connected;$('#stop-run').hidden=!chat?.running;$('#prompt').setAttribute('aria-busy',chat?.running?'true':'false');
+  $('#connection').hidden=connected;$('#stop-run').hidden=!chat?.running;const stick=$('#composer-joystick');stick.classList.toggle('working',!!chat?.running);stick.dataset.agent=chat?.messages.findLast(m=>m.role==='assistant' && m.status==='running')?.agent || chat?.settings.agent || '';$('#prompt').setAttribute('aria-busy',chat?.running?'true':'false');
   const messages=[...(chat?.messages || []),...(pendingMessages.has(active) && !chat?.messages.some(m=>m.requestId===pendingMessages.get(active).requestId)?[pendingMessages.get(active)]:[])];
   const quotaMessage=quotaTarget(chat);
   const key=JSON.stringify({id:chat?.id,messages,selectionMode:messageSelectionMode,selected:[...selectedMessages],speech:speakingId()});if(key===lastMessages)return;lastMessages=key;
