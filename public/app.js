@@ -168,7 +168,7 @@ function renderAgentPanel() {
   const html=branch.map(row).join('');
   if($('#agent-tree').innerHTML!==html)$('#agent-tree').innerHTML=html;
 }
-function showChatList(){if(messageSelectionMode){clearMessageSelection();return;}discardEmpty(active);document.body.classList.remove('chat-view');setOpenFolder(null);showDefaults(false);closePanels();menuChat=null;renderPopover();const url=new URL(location.href);url.hash='';history.replaceState(history.state,'',url);}
+function showChatList(){if(messageSelectionMode){clearMessageSelection();return;}const folderId=document.body.classList.contains('chat-view')?current()?.folderId:null;discardEmpty(active);document.body.classList.remove('chat-view');setOpenFolder(folderId);showDefaults(false);closePanels();menuChat=null;renderPopover();const url=new URL(location.href);url.hash='';history.replaceState(history.state,'',url);}
 function backFromChat(){if(!$('#defaults').hidden){showDefaults(false);return;}if(messageSelectionMode){clearMessageSelection();return;}const parent=current()?.parentChatId;if(document.body.classList.contains('chat-view') && chats.some(c=>c.id===parent))choose(parent,{replaceHistory:true});else showChatList();}
 $('#chat-back').onclick=backFromChat;
 $('#subagents-toggle').onclick=()=>{agentPanelOpen=!agentPanelOpen;localStorage.setItem('agent-desk-agent-panel',agentPanelOpen?'shown':'hidden');renderAgentPanel();};
