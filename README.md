@@ -133,7 +133,7 @@ Na prethodnoj lokaciji ostao je samo simbolički link ka novom folderu, da putan
 
 ## Panel agenata i imena četova
 
-Glavni čet sa podagentima ima strelicu i proširuje se klikom. Podčetovi stoje odmah ispod njega, bez dodatnog reda „Agenti“. Taster ↗ otvara razgovor glavnog agenta. Grupe se otvaraju nezavisno i pamte stanje. Žuta kartica označava rad, zelena nov nepročitan odgovor; čitanje se sinhronizuje između uređaja.
+Klik na glavni čet otvara njegov razgovor i prikazuje podčetove odmah ispod kartice, bez strelica i dodatnog reda „Agenti“. Žuta kartica označava rad, zelena nov nepročitan odgovor; čitanje se sinhronizuje između uređaja.
 
 Agenti znaju kako da pokrenu podagenta jer uz poruku dobijaju opis okruženja i lokalnog API-ja. Protokol nije zaseban alat modela: CLI agent izvršava HTTP zahtev preko svog terminala. POST `/api/chats/ID/delegate` sada prihvata opciono `name`, npr. `{"agent":"codex","name":"Provera testova","task":"Proveri ..."}`. Takav naziv se čuva. Bez naziva koristi se početak zadatka. Čet se više ne preimenuje u pozadini.
 
