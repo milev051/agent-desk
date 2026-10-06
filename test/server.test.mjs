@@ -109,6 +109,12 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     await call(`/api/chats/${a.id}/send`, 'POST', { text: 'Prva poruka' });
     let chat = await done(a.id);assert.notEqual(chat.title,'Empty');
     const firstReadId=chat.messages.at(-1).id;
+    const accessId='11111111-1111-4111-8111-111111111111';
+    assert.equal((await call(`/api/chats/${a.id}/access`,'POST',{requestId:accessId})).data.count,1);
+    assert.equal((await call(`/api/chats/${a.id}/access`,'POST',{requestId:accessId})).data.count,1);
+    const accessLog=JSON.parse(readFileSync(path.join(temp,'data','chats.json'),'utf8')).find(c=>c.id===a.id).accessLog;
+    assert.equal(accessLog.length,1);assert.ok(accessLog[0].at>0);
+    assert.equal((await call(`/api/chats/${a.id}`)).data.accessLog,undefined);
     assert.equal((await call(`/api/chats/${a.id}/read`,'PUT',{messageId:'missing'})).status,400);
     assert.equal((await call(`/api/chats/${a.id}/read`,'PUT',{messageId:firstReadId})).status,200);
     await call(`/api/chats/${a.id}`,'PATCH',{title:'Pročitan čet'});

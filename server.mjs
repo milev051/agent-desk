@@ -84,7 +84,7 @@ function estimates(c){
 }
 const publicChat = c => {
   const {hash,context,transferEstimates,transfers}=estimates(c);
-  const {sharedFolderReads,childReadOffsets,...visible}=c;
+  const {sharedFolderReads,childReadOffsets,accessLog,...visible}=c;
   return { ...visible, quotaChanges:quotaHistory.forChat(c.id), historyTokenCount:c.historyTokenCount?.hash===hash?c.historyTokenCount:null, usageSummary:accounting().chats[c.id], running: running.has(c.id), context, transferEstimates, transfers };
 };
 // Tok događaja posle prve pune liste šalje samo izmenjene četove, a u njima samo izmenjene poruke.
@@ -400,9 +400,14 @@ const server = http.createServer(async (req, res) => {
     if(req.method==='POST' && emptyMatch){const chat=chats.find(c=>c.id===emptyMatch[1]);if(!chat)return json(200,{ok:true});
       if(chat.keepEmpty||running.has(chat.id)||chat.messages.length||chat.queue?.length||Object.keys(chat.sessions).length||chats.some(c=>c.parentChatId===chat.id)||chat.draft?.text?.trim())return json(409,{error:'Čet više nije prazan.'});
       chats=chats.filter(c=>c.id!==chat.id);update();return json(200,{ok:true});}
-    const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(read|draft|unlink|link|send|stop|reset-session|speak|speech|fork|delegate|reveal|record|count-tokens|files|upload|prilog)(?:\/([a-f0-9]{16}))?)?$/);
+    const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(access|read|draft|unlink|link|send|stop|reset-session|speak|speech|fork|delegate|reveal|record|count-tokens|files|upload|prilog)(?:\/([a-f0-9]{16}))?)?$/);
     if (match) {
       const chat = chats.find(c => c.id === match[1]); if (!chat) return json(404, { error: 'Čet nije pronađen.' });
+      if(req.method==='POST' && match[2]==='access'){
+        const b=await body(req);if(typeof b.requestId!=='string' || !/^[a-f0-9-]{36}$/.test(b.requestId))throw Error('Neispravan pristup.');
+        chat.accessLog ||= [];if(!chat.accessLog.some(a=>a.id===b.requestId)){chat.accessLog.push({id:b.requestId,at:Date.now()});save();scheduleChatFiles();}
+        return json(200,{count:chat.accessLog.length,lastAccessAt:chat.accessLog.at(-1)?.at});
+      }
       if(req.method==='PUT' && match[2]==='read'){
         const b=await body(req),index=chat.messages.findIndex(m=>m.id===b.messageId && m.role==='assistant' && ['done','stopped','error','interrupted'].includes(m.status));
         if(index<0)throw Error('Završena poruka nije pronađena.');
@@ -525,7 +530,7 @@ const server = http.createServer(async (req, res) => {
         await send(chat, withFiles(b.text.trim(),b.files,chat.settings.cwd),{requestId:b.requestId}); return json(202, { ok: true });
       }
       if(req.method==='POST' && match[2]==='fork') {
-        const copy={...structuredClone(chat),id:randomUUID(),title:chat.title,createdAt:Date.now(),updatedAt:Date.now(),sessions:{},sessionOffsets:{},usageBaselines:{},sharedFolderReads:{},childReadOffsets:{},queue:[],queuePaused:false,queueError:null,messages:structuredClone(chat.messages).map(m=>({...m,id:randomUUID(),usageInherited:true})),accountingEvents:(chat.accountingEvents || []).map(e=>({...e,usageInherited:true})),duplicatedFrom:chat.id};
+        const copy={...structuredClone(chat),id:randomUUID(),title:chat.title,createdAt:Date.now(),updatedAt:Date.now(),accessLog:[],sessions:{},sessionOffsets:{},usageBaselines:{},sharedFolderReads:{},childReadOffsets:{},queue:[],queuePaused:false,queueError:null,messages:structuredClone(chat.messages).map(m=>({...m,id:randomUUID(),usageInherited:true})),accountingEvents:(chat.accountingEvents || []).map(e=>({...e,usageInherited:true})),duplicatedFrom:chat.id};
         chats.unshift(copy);update();return json(201,publicChat(copy));
       }
       if (req.method === 'PATCH' && !match[2]) {

@@ -17,10 +17,25 @@ export function chatStructure(chats,id,{isRunning=c=>c.running}={}){
  let root=current;const ancestors=new Set([root.id]);while(root.parentChatId){const p=chats.find(c=>c.id===root.parentChatId);if(!p||ancestors.has(p.id))break;root=p;ancestors.add(root.id);}
  const result=[],seen=new Set();function visit(c,depth){if(seen.has(c.id))return;seen.add(c.id);const last=[...(c.messages||[])].reverse().find(m=>m.role==='assistant');result.push({id:c.id,parentChatId:c.parentChatId || null,title:c.title,agent:c.settings.agent,model:c.settings.model || last?.model || '',status:isRunning(c)?'radi':({done:'završen',stopped:'zaustavljen',error:'greška',interrupted:'prekinut'}[last?.status] || 'nije pokrenut'),sessionSaved:!!c.sessions?.[c.settings.agent],cwd:c.settings.cwd,depth});for(const child of chats.filter(x=>x.parentChatId===c.id))visit(child,depth+1);}visit(root,0);return result;
 }
+export function messageStamp(time){
+ if(!Number.isFinite(time))return 'vreme nije zabeleženo';
+ const date=new Intl.DateTimeFormat('sr-Latn-RS',{timeZone:'Europe/Belgrade',day:'numeric',month:'numeric',year:'numeric'}).format(time);
+ const clock=new Intl.DateTimeFormat('sr-Latn-RS',{timeZone:'Europe/Belgrade',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(time);
+ return date+', '+clock;
+}
+export function copiedMessage(m,{modelName=(_agent,id)=>id}={}){
+ const model=modelName(m.agent,m.model),author=m.role==='user'?'Korisnik':(names[m.agent]||'Agent')+(model?' ('+model+')':'');
+ const text=(m.text||'').replaceAll('Povezane putanje na računaru (pročitaj po potrebi):','Fajlovi:');
+ return `[${messageStamp(m.sentAt || m.createdAt)}] ${author}: ${text}`;
+}
+export function chatActivityRecord(chat){
+ const sent=(chat.messages||[]).filter(m=>m.role==='user' && !m.usageInherited),accesses=chat.accessLog || [];
+ return [`Kreiran: ${messageStamp(chat.createdAt)}`,`Otvaranja: ${accesses.length}`,`Poslate poruke: ${sent.length}`,...(accesses.length?['','Pristupi:',...accesses.map(a=>'- '+messageStamp(a.at))]:[])].join('\n');
+}
 export function exportMessages(chats,id,ids,{includeContext=true,modelName=(_agent,id)=>id}={}){
  const chat=chats.find(c=>c.id===id);if(!chat)return '';const selected=new Set(ids);const messages=chat.messages.filter(m=>selected.has(m.id)&&m.text);if(!messages.length)return '';
- const header=[`# ${md(chat.title)}`];if(includeContext){header.push(`Izvorni čet: ${md(chat.id)}`,`Radni folder: ${md(chat.settings.cwd)}`,'','## Struktura izvornog četa');for(const c of chatStructure(chats,id))header.push(`${'  '.repeat(c.depth)}- ${md(c.title)} (${names[c.agent]||'Agent'} · ${md(modelName(c.agent,c.model)||'podrazumevani model')} · ${c.status}; ID ${md(c.id)}${c.sessionSaved?'; sesija sačuvana':''})`);const paths=linkedPaths(chat);if(paths.length)header.push('','## Povezane putanje',...paths.map(p=>'- '+md(p)));header.push('','IDs su reference na postojeće četove, ne kopije podagenata.');}
- return header.join('\n')+'\n\n'+messages.map(m=>`## ${m.role==='user'?'Korisnik':(names[m.agent]||'Agent')+' · '+md(modelName(m.agent,m.model)||'model nije prijavljen')} · ${Number.isFinite(m.createdAt)?new Date(m.createdAt).toISOString():'vreme nije zabeleženo'}\n\n${m.text}`).join('\n\n');
+ const header=[`# ${md(chat.title)}`];if(includeContext){header.push(`Čet: ${chat.id}`,`Folder: ${chat.settings.cwd}`);const tree=chatStructure(chats,id);if(tree.length>1){header.push('Povezani četovi:');for(const c of tree)header.push(`${'  '.repeat(c.depth)}- ${md(c.title)} · ${names[c.agent]||'Agent'} · ID ${c.id}`);}}
+ return header.join('\n')+'\n\n'+messages.map(m=>copiedMessage(m,{modelName})).join('\n\n');
 }
 
 // Roots in the expanded folder, or roots with no known folder.

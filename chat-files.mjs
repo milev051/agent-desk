@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import {exportMessages} from './public/sidebar-groups.mjs';
+import {exportMessages,chatActivityRecord} from './public/sidebar-groups.mjs';
 
 export function chatFilename(title,id,extension){
  if(!/^[\w-]+$/.test(id))throw new Error('Neispravan ID zapisa.');
@@ -17,9 +17,8 @@ export function createChatFiles(dataDir){
  return {sync(chats){
   const expected=new Set();paths.clear();
   for(const chat of chats){
-   if(!chat.messages?.some(m=>m.text))continue;
    const name=place(chats,chat),target=path.join(dir,name);expected.add(name);paths.set(chat.id,target);
-   const text=exportMessages(chats,chat.id,chat.messages.map(m=>m.id));
+   const text=chatActivityRecord(chat)+'\n\n'+exportMessages(chats,chat.id,chat.messages.map(m=>m.id));
    if(fs.existsSync(target) && fs.readFileSync(target,'utf8')===text)continue;
    fs.mkdirSync(path.dirname(target),{recursive:true,mode:0o700});fs.writeFileSync(target+'.tmp',text,{mode:0o600});fs.renameSync(target+'.tmp',target);
   }
