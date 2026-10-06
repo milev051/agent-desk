@@ -478,7 +478,7 @@ $('#chat-popover').onchange=e=>guard(async()=>{
   const chat=await api(`/api/chats/${id}`,'PATCH',{settings:model?{model:model.value,effort:preferredEffort(models,chats.find(c=>c.id===id)?.settings.agent,model.value)}:{effort:effort.value}});putChat(chat);renderSidebar();
 });
 document.addEventListener('pointerdown',e=>{if(newMenuAgent && !modelDrag?.active && !e.target.closest('#new-models,[data-new-agent]')){closeNewModels();modelDismissUntil=Date.now()+500;}if(menuFolder && !e.target.closest(`#chat-popover,[data-folder="${menuFolder}"]`)){menuFolder=null;renderPopover();}if(menuChat && !e.target.closest('#chat-popover,#chat-options,[data-row],[data-options],[data-chat],[data-agent-chat]')){menuChat=null;renderPopover();}});
-let warmupSettings=null,warmupPoll,warmupWasRunning=false;
+let warmupSettings=null,warmupPoll;
 const scheduleDayNames=['Ponedeljak','Utorak','Sreda','Četvrtak','Petak','Subota','Nedelja'];
 function excerptText(node){
  if(node.nodeType===3)return node.textContent;
@@ -494,10 +494,14 @@ function renderWarmupStatus(){
  const state=warmupSettings,last=state?.runs?.[0],progress=$('#warmup-progress');
  $('#warmup-run').disabled=!state || state.running;
  $('#warmup-status').textContent=!state?'Za ovu opciju potrebno je ponovno pokretanje servera.':'';
- progress.hidden=!state?.running;
- if(state?.running)progress.innerHTML=`<strong>Slanje kratkih poruka</strong>${(last?.agents || state.agents).map(agent=>{const result=last?.results?.find(r=>r.agent===agent);return `<div>${escape(agentName(agent))}<span>${result?result.status==='done'?'✓':'Greška':agent===state.currentAgent?'Odgovara…':'Čeka'}</span></div>`;}).join('')}`;
- else if(warmupWasRunning){const failed=last?.results?.filter(r=>r.status!=='done').length || 0;toast(failed?`Slanje je završeno. ${failed} agenata je prijavilo grešku; detalji su sačuvani u zapisu.`:'Kratke poruke su poslate. Privremeni četovi su uklonjeni.');}
- warmupWasRunning=!!state?.running;
+ progress.hidden=!last;
+ if(last)progress.innerHTML=(last.agents || state.agents).map(agent=>{
+  const result=last.results?.find(r=>r.agent===agent),busy=state.running && agent===state.currentAgent;
+  const status=result?(result.status==='done'?'done':'error'):busy?'running':'waiting';
+  const label=result?.model || state.models?.[agent],name=label?modelName(agent,label):agentName(agent);
+  const description={done:'Poruka poslata',error:result?.error || 'Slanje nije uspelo',running:'Slanje u toku',waiting:'Čeka slanje'}[status];
+  return `<span class="warmup-result" title="${escape(description)}"><span class="warmup-result-icon ${status}" role="img" aria-label="${escape(description)}">${status==='done'?'✓':status==='error'?'!':''}</span><span>${escape(name)}</span></span>`;
+ }).join('');
  clearTimeout(warmupPoll);
  if(state?.running)warmupPoll=setTimeout(()=>guard(async()=>{warmupSettings=await api('/api/warmup');renderWarmupStatus();}),1500);
 }
