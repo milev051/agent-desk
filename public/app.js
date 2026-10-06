@@ -3,7 +3,7 @@ import {preferredEffort} from './reasoning.mjs';
 import {exportMessages} from './sidebar-groups.mjs';
 import {advanceColumns} from './folder-columns.mjs';
 import { marked } from '/marked.js';
-import { sidebarGroups, placedChats } from '/sidebar-groups.mjs';
+import { sidebarGroups, placedChats, mergeDraft } from '/sidebar-groups.mjs';
 import DOMPurify from '/purify.js';
 const agentLogos = {"codex": "data:image/svg+xml;base64,PHN2ZyBjb2xvcj0iI2IzOGFmZiIgZmlsbD0iI2IzOGFmZiIgZmlsbC1ydWxlPSJldmVub2RkIiBoZWlnaHQ9IjFlbSIgc3R5bGU9ImZsZXg6bm9uZTtsaW5lLWhlaWdodDoxIiB2aWV3Qm94PSIwIDAgMjQgMjQiIHdpZHRoPSIxZW0iIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHRpdGxlPk9wZW5BSTwvdGl0bGU+PHBhdGggZD0iTTkuMjA1IDguNjU4di0yLjI2YzAtLjE5LjA3Mi0uMzMzLjIzOC0uNDI4bDQuNTQzLTIuNjE2Yy42MTktLjM1NyAxLjM1Ni0uNTIzIDIuMTE3LS41MjMgMi44NTQgMCA0LjY2MiAyLjIxMiA0LjY2MiA0LjU2NiAwIC4xNjcgMCAuMzU3LS4wMjQuNTQ3bC00LjcxLTIuNzU5YS43OTcuNzk3IDAgMDAtLjg1NiAwbC01Ljk3IDMuNDczem0xMC42MDkgOC44VjEyLjA2YzAtLjMzMy0uMTQzLS41Ny0uNDI5LS43MzdsLTUuOTctMy40NzMgMS45NS0xLjExOGEuNDMzLjQzMyAwIDAxLjQ3NiAwbDQuNTQzIDIuNjE3YzEuMzA5Ljc2IDIuMTg5IDIuMzc4IDIuMTg5IDMuOTQ4IDAgMS44MDgtMS4wNyAzLjQ3My0yLjc2IDQuMTYzek03LjgwMiAxMi43MDNsLTEuOTUtMS4xNDJjLS4xNjctLjA5NS0uMjM5LS4yMzgtLjIzOS0uNDI4VjUuODk5YzAtMi41NDUgMS45NS00LjQ3MiA0LjU5MS00LjQ3MiAxIDAgMS45MjcuMzMzIDIuNzEyLjkyOEw4LjIzIDUuMDY3Yy0uMjg1LjE2Ni0uNDI4LjQwNC0uNDI4LjczN3Y2Ljg5OHpNMTIgMTUuMTI4bC0yLjc5NS0xLjU3di0zLjMzTDEyIDguNjU4bDIuNzk1IDEuNTd2My4zM0wxMiAxNS4xMjh6bTEuNzk2IDcuMjNjLTEgMC0xLjkyNy0uMzMyLTIuNzEyLS45MjdsNC42ODYtMi43MTJjLjI4NS0uMTY2LjQyOC0uNDA0LjQyOC0uNzM3di02Ljg5OGwxLjk3NCAxLjE0MmMuMTY3LjA5NS4yMzguMjM4LjIzOC40Mjh2NS4yMzNjMCAyLjU0NS0xLjk3NCA0LjQ3Mi00LjYxNCA0LjQ3MnptLTUuNjM3LTUuMzAzbC00LjU0NC0yLjYxN2MtMS4zMDgtLjc2MS0yLjE4OC0yLjM3OC0yLjE4OC0zLjk0OEE0LjQ4MiA0LjQ4MiAwIDAxNC4yMSA2LjMyN3Y1LjQyM2MwIC4zMzMuMTQzLjU3MS40MjguNzM4bDUuOTQ3IDMuNDQ5LTEuOTUgMS4xMThhLjQzMi40MzIgMCAwMS0uNDc2IDB6bS0uMjYyIDMuOWMtMi42ODggMC00LjY2Mi0yLjAyMS00LjY2Mi00LjUxOSAwLS4xOS4wMjQtLjM4LjA0Ny0uNTdsNC42ODYgMi43MWMuMjg2LjE2Ny41NzEuMTY3Ljg1NiAwbDUuOTctMy40NDh2Mi4yNmMwIC4xOS0uMDcuMzMzLS4yMzcuNDI4bC00LjU0MyAyLjYxNmMtLjYxOS4zNTctMS4zNTYuNTIzLTIuMTE3LjUyM3ptNS44OTkgMi44M2E1Ljk0NyA1Ljk0NyAwIDAwNS44MjctNC43NTZDMjIuMjg3IDE4LjMzOSAyNCAxNS44NCAyNCAxMy4yOTZjMC0xLjY2NS0uNzEzLTMuMjgyLTEuOTk4LTQuNDQ4LjExOS0uNS4xOS0uOTk5LjE5LTEuNDk4IDAtMy40MDEtMi43NTktNS45NDctNS45NDYtNS45NDctLjY0MiAwLTEuMjYuMDk1LTEuODguMzFBNS45NjIgNS45NjIgMCAwMDEwLjIwNSAwYTUuOTQ3IDUuOTQ3IDAgMDAtNS44MjcgNC43NTdDMS43MTMgNS40NDcgMCA3Ljk0NSAwIDEwLjQ5YzAgMS42NjYuNzEzIDMuMjgzIDEuOTk4IDQuNDQ4LS4xMTkuNS0uMTkgMS0uMTkgMS40OTkgMCAzLjQwMSAyLjc1OSA1Ljk0NiA1Ljk0NiA1Ljk0Ni42NDIgMCAxLjI2LS4wOTUgMS44OC0uMzA5YTUuOTYgNS45NiAwIDAwNC4xNjIgMS43MTN6Ij48L3BhdGg+PC9zdmc+", "claude": "data:image/svg+xml;base64,PHN2ZyBjb2xvcj0iI2VmOTM1NCIgZmlsbD0iI2VmOTM1NCIgZmlsbC1ydWxlPSJldmVub2RkIiBoZWlnaHQ9IjFlbSIgc3R5bGU9ImZsZXg6bm9uZTtsaW5lLWhlaWdodDoxIiB2aWV3Qm94PSIwIDAgMjQgMjQiIHdpZHRoPSIxZW0iIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHRpdGxlPkNsYXVkZTwvdGl0bGU+PHBhdGggZD0iTTQuNzA5IDE1Ljk1NWw0LjcyLTIuNjQ3LjA4LS4yMy0uMDgtLjEyOEg5LjJsLS43OS0uMDQ4LTIuNjk4LS4wNzMtMi4zMzktLjA5Ny0yLjI2Ni0uMTIyLS41NzEtLjEyMUwwIDExLjc4NGwuMDU1LS4zNTIuNDgtLjMyMS42ODYuMDYgMS41Mi4xMDMgMi4yNzguMTU4IDEuNjUyLjA5NyAyLjQ0OS4yNTVoLjM4OWwuMDU1LS4xNTctLjEzNC0uMDk4LS4xMDMtLjA5Ny0yLjM1OC0xLjU5Ni0yLjU1Mi0xLjY4OC0xLjMzNi0uOTcyLS43MjQtLjQ5MS0uMzY0LS40NjItLjE1OC0xLjAwOC42NTYtLjcyMi44ODEuMDYuMjI1LjA2MS44OTMuNjg2IDEuOTA4IDEuNDc2IDIuNDkxIDEuODMzLjM2NS4zMDQuMTQ1LS4xMDMuMDE5LS4wNzMtLjE2NC0uMjc0LTEuMzU1LTIuNDQ2LTEuNDQ2LTIuNDktLjY0NC0xLjAzMi0uMTctLjYxOWEyLjk3IDIuOTcgMCAwMS0uMTA0LS43MjlMNi4yODMuMTM0IDYuNjk2IDBsLjk5Ni4xMzQuNDIuMzY0LjYyIDEuNDE0IDEuMDAyIDIuMjI5IDEuNTU1IDMuMDMuNDU2Ljg5OC4yNDMuODMyLjA5MS4yNTVoLjE1OFY5LjAxbC4xMjgtMS43MDYuMjM3LTIuMDk1LjIzLTIuNjk1LjA4LS43Ni4zNzYtLjkxLjc0Ny0uNDkyLjU4NC4yOC40OC42ODUtLjA2Ny40NDQtLjI4NiAxLjg1MS0uNTU5IDIuOTAzLS4zNjQgMS45NDJoLjIxMmwuMjQzLS4yNDIuOTg1LTEuMzA2IDEuNjUyLTIuMDY0LjczLS44Mi44NS0uOTA0LjU0Ny0uNDMxaDEuMDMzbC43NiAxLjEyOS0uMzQgMS4xNjYtMS4wNjQgMS4zNDctLjg4MSAxLjE0Mi0xLjI2NCAxLjctLjc5IDEuMzYuMDczLjExLjE4OC0uMDIgMi44NTYtLjYwNiAxLjU0My0uMjggMS44NDEtLjMxNS44MzMuMzg4LjA5MS4zOTUtLjMyOC44MDctMS45NjkuNDg2LTIuMzA5LjQ2Mi0zLjQzOS44MTMtLjA0Mi4wMy4wNDkuMDYxIDEuNTQ5LjE0Ni42NjIuMDM2aDEuNjIybDMuMDIuMjI1Ljc5LjUyMi40NzQuNjM4LS4wNzkuNDg1LTEuMjE1LjYyLTEuNjQtLjM4OS0zLjgyOS0uOTEtMS4zMTItLjMyOWgtLjE4MnYuMTFsMS4wOTMgMS4wNjggMi4wMDYgMS44MSAyLjUwOSAyLjMzLjEyNy41NzgtLjMyMi40NTUtLjM0LS4wNDktMi4yMDUtMS42NTctLjg1MS0uNzQ3LTEuOTI2LTEuNjJoLS4xMjh2LjE3bC40NDQuNjQ5IDIuMzQ1IDMuNTIxLjEyMiAxLjA4LS4xNy4zNTMtLjYwOC4yMTMtLjY2OC0uMTIyLTEuMzc0LTEuOTI1LTEuNDE1LTIuMTY3LTEuMTQzLTEuOTQzLS4xNC4wOC0uNjc0IDcuMjU0LS4zMTYuMzctLjcyOS4yOC0uNjA3LS40NjEtLjMyMi0uNzQ3LjMyMi0xLjQ3Ni4zODktMS45MjQuMzE1LTEuNTMuMjg2LTEuOS4xNy0uNjMyLS4wMTItLjA0Mi0uMTQuMDE4LTEuNDM0IDEuOTY3LTIuMTggMi45NDUtMS43MjYgMS44NDUtLjQxNC4xNjQtLjcxNy0uMzcuMDY3LS42NjIuNDAxLS41ODkgMi4zODgtMy4wMzYgMS40NC0xLjg4Mi45My0xLjA4Ni0uMDA2LS4xNThoLS4wNTVMNC4xMzIgMTguNTZsLTEuMTMuMTQ2LS40ODctLjQ1Ni4wNjEtLjc0Ni4yMzEtLjI0MyAxLjkwOC0xLjMxMi0uMDA2LjAwNnoiPjwvcGF0aD48L3N2Zz4=", "grok": "data:image/svg+xml;base64,PHN2ZyBjb2xvcj0iI2ZmZmZmZiIgZmlsbD0iI2ZmZmZmZiIgZmlsbC1ydWxlPSJldmVub2RkIiBoZWlnaHQ9IjFlbSIgc3R5bGU9ImZsZXg6bm9uZTtsaW5lLWhlaWdodDoxIiB2aWV3Qm94PSIwIDAgMjQgMjQiIHdpZHRoPSIxZW0iIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHRpdGxlPkdyb2s8L3RpdGxlPjxwYXRoIGQ9Ik05LjI3IDE1LjI5bDcuOTc4LTUuODk3Yy4zOTEtLjI5Ljk1LS4xNzcgMS4xMzcuMjcyLjk4IDIuMzY5LjU0MiA1LjIxNS0xLjQxIDcuMTY5LTEuOTUxIDEuOTU0LTQuNjY3IDIuMzgyLTcuMTQ5IDEuNDA2bC0yLjcxMSAxLjI1N2MzLjg4OSAyLjY2MSA4LjYxMSAyLjAwMyAxMS41NjItLjk1MyAyLjM0MS0yLjM0NCAzLjA2Ni01LjUzOSAyLjM4OC04LjQybC4wMDYuMDA3Yy0uOTgzLTQuMjMyLjI0Mi01LjkyNCAyLjc1LTkuMzgzLjA2LS4wODIuMTItLjE2NC4xNzktLjI0OGwtMy4zMDEgMy4zMDV2LS4wMUw5LjI2NyAxNS4yOTJNNy42MjMgMTYuNzIzYy0yLjc5Mi0yLjY3LTIuMzEtNi44MDEuMDcxLTkuMTg0IDEuNzYxLTEuNzYzIDQuNjQ3LTIuNDgzIDcuMTY2LTEuNDI1bDIuNzA1LTEuMjVhNy44MDggNy44MDggMCAwMC0xLjgyOS0xQTguOTc1IDguOTc1IDAgMDA1Ljk4NCA1LjgzYy0yLjUzMyAyLjUzNi0zLjMzIDYuNDM2LTEuOTYyIDkuNzY0IDEuMDIyIDIuNDg3LS42NTMgNC4yNDYtMi4zNCA2LjAyMi0uNTk5LjYzLTEuMTk5IDEuMjU5LTEuNjgyIDEuOTI1bDcuNjItNi44MTUiPjwvcGF0aD48L3N2Zz4=", "antigravity": "data:image/svg+xml;base64,PHN2ZyBjb2xvcj0iIzZhYWVmZiIgZmlsbD0iIzZhYWVmZiIgZmlsbC1ydWxlPSJldmVub2RkIiBoZWlnaHQ9IjFlbSIgc3R5bGU9ImZsZXg6bm9uZTtsaW5lLWhlaWdodDoxIiB2aWV3Qm94PSIwIDAgMjQgMjQiIHdpZHRoPSIxZW0iIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHRpdGxlPkFudGlncmF2aXR5PC90aXRsZT48cGF0aCBkPSJNMjEuNzUxIDIyLjYwN2MxLjM0IDEuMDA1IDMuMzUuMzM1IDEuNTA4LTEuNTA4QzE3LjczIDE1Ljc0IDE4LjkwNCAxIDEyLjAzNyAxIDUuMTcgMSA2LjM0MiAxNS43NC44MTUgMjEuMWMtMi4wMSAyLjAwOS4xNjcgMi41MTEgMS41MDcgMS41MDYgNS4xOTItMy41MTcgNC44NTctOS43MTQgOS43MTUtOS43MTQgNC44NTcgMCA0LjUyMiA2LjE5NyA5LjcxNCA5LjcxNXoiPjwvcGF0aD48L3N2Zz4="};
 const $ = s => document.querySelector(s);
@@ -35,6 +35,41 @@ document.body.classList.toggle('colored-responses',colorMode==='full');
 const selectedMessages=new Set();
 let messageSelectionMode=false,selectionAnchor=null;
 const drafts = new Map(), switchingChats = new Set();
+const draftDirty=new Map(),draftServer=new Map(),draftSaving=new Set();let draftTimer,draftSaveWarningShown=false;
+try{for(const [id,value] of JSON.parse(localStorage.getItem('agent-desk-drafts')||'[]')){draftDirty.set(id,value);drafts.set(id,value.text);}}catch{}
+function persistDrafts(){try{localStorage.setItem('agent-desk-drafts',JSON.stringify([...draftDirty]));}catch{}}
+function recordDraft(id,text){
+ if(!id){drafts.set(id,text);return;}
+ const before=draftDirty.get(id),base=draftServer.get(id) || chats.find(c=>c.id===id)?.draft || {text:'',revision:0};
+ drafts.set(id,text);draftDirty.set(id,{text,revision:before?.revision??base.revision,base:before?.base??base.text});persistDrafts();
+ clearTimeout(draftTimer);draftTimer=setTimeout(flushDrafts,500);if(meta)renderSidebar();
+}
+function receiveDrafts(){
+ for(const chat of chats){const received=chat.draft || {text:'',revision:0},known=draftServer.get(chat.id),remote=known?.revision>received.revision?known:received;draftServer.set(chat.id,remote);if(draftDirty.has(chat.id))continue;drafts.set(chat.id,remote.text);if(active===chat.id && $('#prompt').value!==remote.text){$('#prompt').value=remote.text;resizePrompt();}}
+}
+async function flushDrafts(){for(const id of draftDirty.keys())void saveDraft(id);}
+async function saveDraft(id){
+ if(draftSaving.has(id) || !draftDirty.has(id) || !chats.some(c=>c.id===id))return;draftSaving.add(id);
+ try{
+  const sent={...draftDirty.get(id)};
+  const response=await fetch(`/api/chats/${id}/draft`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:sent.text,revision:sent.revision})});
+  const result=await response.json();if(!response.ok && response.status!==409)throw Error(result.error||'Nacrt nije sinhronizovan.');
+  const remote=result.draft;draftSaveWarningShown=false;draftServer.set(id,remote);const chat=chats.find(c=>c.id===id);if(chat)chat.draft=remote;const pending=draftDirty.get(id);
+  if(response.status===409){
+   const merged=mergeDraft(pending.base,pending.text,remote.text);draftDirty.set(id,{text:merged,base:remote.text,revision:remote.revision});drafts.set(id,merged);
+   if(active===id && $('#prompt').value!==merged){$('#prompt').value=merged;resizePrompt();}
+   if(merged!==pending.text)toast('Spojeni su nacrti izmenjeni na oba uređaja.');
+  }else if(pending.text===sent.text){draftDirty.delete(id);drafts.set(id,remote.text);}
+  else draftDirty.set(id,{text:pending.text,base:remote.text,revision:remote.revision});
+  persistDrafts();if(meta)renderSidebar();
+ }catch{if(!draftSaveWarningShown){draftSaveWarningShown=true;toast('Nacrt je sačuvan na ovom uređaju. Sinhronizacija će se ponoviti kada server bude dostupan.');}}
+ finally{draftSaving.delete(id);}
+}
+setInterval(flushDrafts,3000);
+function keepDraftOnExit(){if(active && draftDirty.has(active)){const value=draftDirty.get(active);void fetch(`/api/chats/${active}/draft`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:value.text,revision:value.revision}),keepalive:true}).catch(()=>{});}}
+window.addEventListener('pagehide',keepDraftOnExit);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)keepDraftOnExit();else void flushDrafts();});
+
 const escape = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const current = () => chats.find(c => c.id === active);
 const agentName = id => meta.agents.find(a => a.id === id)?.name || id;
@@ -101,8 +136,10 @@ function resizePrompt() {
   if(matchMedia('(max-width:650px)').matches){if(before<90)view.scrollTop=view.scrollHeight;else view.scrollTop=saved+Math.max(0,prevClient-view.clientHeight);}
   else view.scrollTop=before<8?view.scrollHeight:saved;
 }
-function discardEmpty(id){const chat=chats.find(c=>c.id===id);if(!(newEmptyChats.has(id)||chat?.ephemeral)||!chat||chat.messages.length||chat.running||chat.queue?.length||pendingMessages.has(id))return;newEmptyChats.delete(id);api(`/api/chats/${id}/discard-empty`,'POST',{}).then(()=>{chats=chats.filter(c=>c.id!==id);drafts.delete(id);linkedFiles.delete(id);if(meta)renderSidebar();}).catch(()=>{});}
+function discardEmpty(id){const chat=chats.find(c=>c.id===id);if(!(newEmptyChats.has(id)||chat?.ephemeral)||!chat||chat.messages.length||chat.running||chat.queue?.length||pendingMessages.has(id)||drafts.get(id)?.trim())return;newEmptyChats.delete(id);api(`/api/chats/${id}/discard-empty`,'POST',{}).then(()=>{chats=chats.filter(c=>c.id!==id);drafts.delete(id);linkedFiles.delete(id);if(meta)renderSidebar();}).catch(()=>{});}
 function choose(id,{replaceHistory=false}={}) {
+  if(active && draftDirty.has(active))void saveDraft(active);
+  receiveDrafts();
   const changed=active!==id;
   const parent=chats.find(c=>c.id===id)?.parentChatId;if(parent)closedAgentGroups.delete(parent);
   if(active!==id){discardEmpty(active);selectedMessages.clear();messageSelectionMode=false;selectionAnchor=null;renderMessageSelection();}
@@ -140,7 +177,7 @@ function visibleSidebarChats(){
  return groups.flatMap(group=>[group.chat,...(closedAgentGroups.has(group.chat.id)?[]:group.children)]);
 }
 function renderSidebar() {
-  const row=(c,index)=>{const shortcut=index<9?` · ⌘${index+1}`:'';return `<div role="button" tabindex="0" aria-label="${escape(c.title)}${shortcut}" class="chat-row ${c.parentChatId?'subagent-card':''} ${c.id===active?'active':''} ${c.running?'working':notification(c)} ${drag?.active && drag.id===c.id?'drag-source':''}" data-row="${c.id}" data-agent="${c.settings.agent}" title="${escape(c.title)} · ${escape(agentName(c.settings.agent))} · ${escape(modelLabel(c))}${shortcut}">
+  const row=(c,index)=>{const shortcut=index<9?` · ⌘${index+1}`:'';return `<div role="button" tabindex="0" aria-label="${escape(c.title)}${shortcut}" class="chat-row ${c.parentChatId?'subagent-card':''} ${(drafts.has(c.id)?drafts.get(c.id):c.draft?.text||'').trim()?'has-draft':''} ${c.id===active?'active':''} ${c.running?'working':notification(c)} ${drag?.active && drag.id===c.id?'drag-source':''}" data-row="${c.id}" data-agent="${c.settings.agent}" title="${escape(c.title)} · ${escape(agentName(c.settings.agent))} · ${escape(modelLabel(c))}${shortcut}">
     <span class="chat-item"><span>${escape(c.title)}</span></span><span class="chat-drag-zone" aria-hidden="true" title="Zadrži desnu ivicu i prevuci čet"></span>
   </div>`;};
   const groups=sidebarGroups(chats),ids=folders.map(folder=>folder.id);
@@ -161,7 +198,7 @@ function addFolder(chatId=null){if(folderRename?.draft){$('[data-folder-name]')?
 function openFolderMenu(id){if(!folders.some(folder=>folder.id===id))return;menuFolder=id;menuChat=null;rename=null;if(folderRename){folderRename=null;lastSidebar='';renderSidebar();}renderPopover();}
 async function removeFolder(id){await api(`/api/folders/${id}`,'DELETE');folders=folders.filter(folder=>folder.id!==id);chats=chats.map(chat=>chat.folderId===id?{...chat,folderId:undefined}:chat);if(openFolder===id){openFolder=null;localStorage.removeItem('agent-desk-folder');}menuFolder=null;folderRename=null;pendingFolderDelete=null;lastSidebar='';closeDeleteDialog();render();}
 function closeDeleteDialog(){pendingFolderDelete=null;pendingReset=null;$('#delete-only').textContent='Arhiviraj ovaj čet';$('#delete-family').hidden=false;$('#delete-dialog').close();}
-function restoreQueued(text){const input=$('#prompt'),draft=input.value,next=draft.trim()?`${text}\n\n${draft}`:text;input.value=next;drafts.set(active,next);resizePrompt();input.focus();const cursor=draft.trim()?text.length:next.length;try{input.setSelectionRange(cursor,cursor);}catch{}}
+function restoreQueued(text){const input=$('#prompt'),draft=input.value,next=draft.trim()?`${text}\n\n${draft}`:text;input.value=next;recordDraft(active,next);resizePrompt();input.focus();const cursor=draft.trim()?text.length:next.length;try{input.setSelectionRange(cursor,cursor);}catch{}}
 function renderChatNavigation() {
   const chat=current();
   $('#chat-parent').hidden=!chats.some(c=>c.id===chat?.parentChatId);
@@ -283,6 +320,7 @@ let renderedChatId=null,stickToken=0,forceBottom=false;
 function cancelStick(){stickToken++;}
 function stickToBottom(view){const token=++stickToken;const go=()=>{if(token!==stickToken)return;view.scrollTop=view.scrollHeight;};go();requestAnimationFrame(()=>{go();requestAnimationFrame(go);});}
 function render() {
+  receiveDrafts();
   renderQueue();renderTransfer();renderChatNavigation();renderUsage();renderChatQuota();
   const chat=current();if(document.visibilityState==='visible' && document.hasFocus())markRead(chat);renderSidebar();
   $('#prompt').disabled=!connected || !meta.agents.find(a=>a.id===(chat?.settings.agent || selectedAgent))?.available;
@@ -460,10 +498,10 @@ async function speakMessage(messageId,selectedText=''){if(speechClip?.chatId===a
 function finishMessageInput(id){if(active!==id)return;const input=$('#prompt');if(mobileNavigation()){if(!input.value.trim())input.blur();}else input.focus();}
 $('#composer').onsubmit=e=>{e.preventDefault();guard(async()=>{
   const input=$('#prompt'),text=input.value.trim() || ((linkedFiles.get(active)||[]).length?'Pogledaj priložene fajlove.':'');if(!text || current()?.running || submitting || uploading || !connected)return;submitting=true;
-  const files=[...(linkedFiles.get(active)||[])],requestId=crypto.randomUUID();input.value='';drafts.delete(active);linkedFiles.delete(active);renderLinkedFiles();resizePrompt();if(!mobileNavigation())input.focus();
+  const files=[...(linkedFiles.get(active)||[])],requestId=crypto.randomUUID();input.value='';recordDraft(active,'');linkedFiles.delete(active);renderLinkedFiles();resizePrompt();if(!mobileNavigation())input.focus();
   let id=active;pendingMessages.set(id,{id:requestId,requestId,role:'user',text,status:'sending',createdAt:Date.now()});lastMessages='';render();
   try{if(!current()){const created=await create();if(!created)return;pendingMessages.delete(id);id=created.id;pendingMessages.set(id,{id:requestId,requestId,role:'user',text,status:'sending',createdAt:Date.now()});render();}newEmptyChats.delete(id);await api(`/api/chats/${id}/send`,'POST',{text,files,requestId});pendingMessages.delete(id);finishMessageInput(id);}
-  catch(error){let accepted=false;try{if(id){const chat=await api(`/api/chats/${id}`);putChat(chat);accepted=chat.messages.some(m=>m.requestId===requestId);}}catch{}pendingMessages.delete(id);if(!accepted){if(id && !chats.find(c=>c.id===id)?.messages.length)newEmptyChats.add(id);const old=drafts.get(id)||'';drafts.set(id,text+(old?'\n'+old:''));linkedFiles.set(id,files);if(active===id){input.value=text+(input.value?'\n'+input.value:'');renderLinkedFiles();resizePrompt();}throw error;}else finishMessageInput(id);}
+  catch(error){let accepted=false;try{if(id){const chat=await api(`/api/chats/${id}`);putChat(chat);accepted=chat.messages.some(m=>m.requestId===requestId);}}catch{}pendingMessages.delete(id);if(!accepted){if(id && !chats.find(c=>c.id===id)?.messages.length)newEmptyChats.add(id);const old=drafts.get(id)||'';recordDraft(id,text+(old?'\n'+old:''));linkedFiles.set(id,files);if(active===id){input.value=text+(input.value?'\n'+input.value:'');renderLinkedFiles();resizePrompt();}throw error;}else finishMessageInput(id);}
   finally{submitting=false;lastMessages='';render();}
 });};
 function renderQueue() {
@@ -475,7 +513,7 @@ async function enqueueMessage() {
   submitting=true;try {
     if(!current()){const created=await create();if(!created)return;}
     const id=active,chat=await api(`/api/chats/${id}/queue`,'POST',{text,files:linkedFiles.get(id)||[]});putChat(chat);
-    if(active===id && input.value.trim()===draft){input.value='';drafts.delete(id);linkedFiles.delete(id);renderLinkedFiles();resizePrompt();}
+    if(active===id && input.value.trim()===draft){input.value='';recordDraft(id,'');linkedFiles.delete(id);renderLinkedFiles();resizePrompt();}
     render();finishMessageInput(id);
   } finally {submitting=false;}
 }
@@ -499,7 +537,8 @@ joystick.addEventListener('pointercancel',resetJoystick);joystick.addEventListen
 joystick.onkeydown=e=>{const action={ArrowUp:'send',ArrowDown:'stop',ArrowLeft:'attach',ArrowRight:'computer',Enter:'send',' ':'send'}[e.key];if(action){e.preventDefault();if(!e.repeat)runJoystickAction(action);}};
 
 $('#prompt').onkeydown=e=>{if(e.key!=='Enter' || e.isComposing || e.shiftKey || matchMedia('(max-width:650px)').matches)return;e.preventDefault();if(current()?.running || e.metaKey || e.ctrlKey)guard(enqueueMessage);else $('#composer').requestSubmit();};
-$('#prompt').oninput=resizePrompt;
+$('#prompt').oninput=()=>{resizePrompt();recordDraft(active,$('#prompt').value);};
+$('#prompt').addEventListener('blur',flushDrafts);
 $('#prompt').addEventListener('focus',()=>{if(!matchMedia('(max-width:650px)').matches)return;setTimeout(fitViewport,50);setTimeout(()=>revealAboveComposer(0),80);setTimeout(fitViewport,320);});
 window.addEventListener('resize',()=>{resizePrompt();positionPopover();});
 window.addEventListener('focus',()=>{if(meta)render();});document.addEventListener('visibilitychange',()=>{if(meta)render();});
@@ -509,8 +548,9 @@ const isImage=name=>/\.(png|jpe?g|gif|webp)$/i.test(name);
 try {
   // Prva SSE poruka već nosi sve četove. Ako veza ne javi ništa, posle 8 s ostaje običan zahtev, da ekran ne ostane prazan.
   const initialChats=new Promise(resolve=>{let first=true;const finish=value=>{if(!first)return;first=false;clearTimeout(timer);resolve(value);};const timer=setTimeout(()=>{bootProgress('Veza za poruke','spora veza · pokušavam direktno preuzimanje');finish(api('/api/chats'));},8000);connectEvents(list=>{sawEvents=true;finish(list);return true;},()=>finish(api('/api/chats')));});
-  const [metaValue,listed,defaultsValue,folderValue]=await Promise.all([api('/api/meta'),initialChats,api('/api/defaults'),api('/api/folders').catch(()=>[])]);meta=metaValue;defaults=defaultsValue;folders=Array.isArray(folderValue)?folderValue:[];if(openFolder && !folders.some(folder=>folder.id===openFolder))openFolder=null;if(!sawEvents)chats=listed;appReady=true;
+  const [metaValue,listed,defaultsValue,folderValue]=await Promise.all([api('/api/meta'),initialChats,api('/api/defaults'),api('/api/folders').catch(()=>[])]);meta=metaValue;defaults=defaultsValue;folders=Array.isArray(folderValue)?folderValue:[];if(openFolder && !folders.some(folder=>folder.id===openFolder))openFolder=null;if(!sawEvents)chats=listed;receiveDrafts();appReady=true;
   const linked=new URLSearchParams(location.hash.slice(1)).get('chat');if(linked && chats.some(c=>c.id===linked))active=linked;if(!current())active=null;else selectedAgent=current().settings.agent;
+  $('#prompt').value=drafts.get(active)||'';
   document.body.classList.toggle('chat-view',!!linked && !!current());for(const c of chats)if(!Object.hasOwn(seen,c.id))markRead(c);
   if(mobileNavigation()){const entry=new URL(location.href);if(!(linked && current()))entry.hash='';history.replaceState({agentDesk:true,agentDeskGuard:true},'',entry);}
   render();resizePrompt();refreshLimits();import('/battery.mjs').then(({startBatteryStatus})=>startBatteryStatus()).catch(()=>{});document.body.classList.add('ready');api('/api/models').then(value=>{models=value;lastMessages='';render();if(newMenuAgent)showNewModels(newMenuAgent);}).catch(()=>{});enablePush(false);

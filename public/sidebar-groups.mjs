@@ -37,3 +37,14 @@ export function sidebarBranch(chats, id) {
   function visit(parent,depth){for(const chat of chats.filter(c=>c.parentChatId===parent.id).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)||a.id.localeCompare(b.id))){if(seen.has(chat.id))continue;seen.add(chat.id);rows.push({chat,depth});if(expanded.has(chat.id))visit(chat,depth+1);}}
   visit(root,0);return rows;
 }
+
+// Concurrent edits preserve both texts instead of silently discarding either device.
+export function mergeDraft(base,local,remote){
+ if(local===remote || remote===base)return local;
+ if(local===base || !local)return remote;
+ if(!remote)return local;
+ if(local.startsWith(remote))return local;
+ if(remote.startsWith(local))return remote;
+ if(local.startsWith(base) && remote.startsWith(base))return remote+local.slice(base.length);
+ return remote+'\n\n'+local;
+}

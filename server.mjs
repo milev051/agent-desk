@@ -390,11 +390,18 @@ const server = http.createServer(async (req, res) => {
     }
     const emptyMatch=url.pathname.match(/^\/api\/chats\/([\w-]+)\/discard-empty$/);
     if(req.method==='POST' && emptyMatch){const chat=chats.find(c=>c.id===emptyMatch[1]);if(!chat)return json(200,{ok:true});
-      if(running.has(chat.id)||chat.messages.length||chat.queue?.length||Object.keys(chat.sessions).length||chats.some(c=>c.parentChatId===chat.id))return json(409,{error:'Čet više nije prazan.'});
+      if(running.has(chat.id)||chat.messages.length||chat.queue?.length||Object.keys(chat.sessions).length||chats.some(c=>c.parentChatId===chat.id)||chat.draft?.text?.trim())return json(409,{error:'Čet više nije prazan.'});
       chats=chats.filter(c=>c.id!==chat.id);update();return json(200,{ok:true});}
-    const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(unlink|link|send|stop|reset-session|speak|speech|fork|delegate|reveal|record|count-tokens|files|upload|prilog)(?:\/([a-f0-9]{16}))?)?$/);
+    const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(draft|unlink|link|send|stop|reset-session|speak|speech|fork|delegate|reveal|record|count-tokens|files|upload|prilog)(?:\/([a-f0-9]{16}))?)?$/);
     if (match) {
       const chat = chats.find(c => c.id === match[1]); if (!chat) return json(404, { error: 'Čet nije pronađen.' });
+      if(req.method==='PUT' && match[2]==='draft'){
+        const b=await body(req),current=chat.draft || {text:'',revision:0};
+        if(typeof b.text!=='string' || b.text.length>200000 || !Number.isInteger(b.revision) || b.revision<0)throw Error('Neispravan nacrt poruke.');
+        if(b.revision!==current.revision && b.text!==current.text)return json(409,{error:'Nacrt je izmenjen na drugom uređaju.',draft:current});
+        if(b.text!==current.text){chat.draft={text:b.text,revision:current.revision+1,updatedAt:Date.now()};if(b.text.trim())delete chat.ephemeral;save();broadcast(true);}
+        return json(200,{draft:chat.draft || current});
+      }
       if(req.method==='POST' && match[2]==='unlink'){const b=await body(req);if(b.folderId!==undefined && b.folderId!==null && !folders.has(b.folderId))throw Error('Folder nije pronađen.');unlinkChat(chats,chat,b.folderId,id=>running.has(id));update();return json(200,publicChat(chat));}
       if(req.method==='POST' && match[2]==='link'){const b=await body(req);const parent=chats.find(c=>c.id===b.parentChatId);linkChat(chats,chat,parent,id=>running.has(id));update();return json(200,publicChat(chat));}
       // Prilog sa telefona ili iz privremene memorije čuva se u data/prilozi/<čet>/ i povezuje kao obična putanja.

@@ -50,6 +50,17 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal((await call('/api/folders','POST',{name:'Treći'})).status,201);
     assert.equal((await call(`/api/folders/${initialFolders[0].id}`,'PATCH',{name:'Kuća'})).data.name,'Kuća');
     const made=(await call('/api/chats','POST',{folderId:initialFolders[1].id})).data;assert.equal(made.folderId,initialFolders[1].id);
+    const draftChat=(await call('/api/chats','POST',{})).data;
+    const draftWrite=await call(`/api/chats/${draftChat.id}/draft`,'PUT',{text:'Nacrt sa telefona',revision:0});
+    assert.equal(draftWrite.status,200);assert.equal(draftWrite.data.draft.revision,1);
+    assert.equal((await call(`/api/chats/${draftChat.id}`)).data.draft.text,'Nacrt sa telefona');
+    assert.equal(JSON.parse(readFileSync(path.join(temp,'data','chats.json'),'utf8')).find(c=>c.id===draftChat.id).draft.text,'Nacrt sa telefona');
+    assert.equal((await call(`/api/chats/${draftChat.id}/discard-empty`,'POST',{})).status,409);
+    const conflict=await call(`/api/chats/${draftChat.id}/draft`,'PUT',{text:'Drugi uređaj',revision:0});assert.equal(conflict.status,409);assert.equal(conflict.data.draft.text,'Nacrt sa telefona');
+    assert.equal((await call(`/api/chats/${draftChat.id}/draft`,'PUT',{text:'Nacrt sa telefona',revision:0})).status,200);
+    assert.equal((await call(`/api/chats/${draftChat.id}/draft`,'PUT',{text:'',revision:1})).data.draft.revision,2);
+    await call(`/api/chats/${draftChat.id}`,'DELETE');
+
     const delta=await nextEvent();assert.deepEqual(delta.order,[made.id]);assert.deepEqual(delta.changed.map(x=>x.chat.id),[made.id]);assert.equal(delta.changed[0].chat.messages,undefined);assert.equal(delta.changed[0].chat.folderId,initialFolders[1].id);await stream.cancel();
     assert.equal((await call(`/api/chats/${made.id}`,'PATCH',{folderId:null})).data.folderId,undefined);
     await call(`/api/chats/${made.id}`,'PATCH',{folderId:initialFolders[1].id});
@@ -190,6 +201,7 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     const afterFork=(await call('/api/chats')).data;assert.equal(afterFork.length,countBeforeFork+1);assert.ok(!afterFork.some(c=>c.parentChatId===parentCopy.id));assert.equal(afterFork.find(c=>c.id===child.id).parentChatId,queued.id);
     await call(`/api/chats/${b.id}/send`, 'POST', { text: 'WAIT' });
     assert.equal((await call(`/api/chats/${b.id}`, 'PATCH', {title:'Aktivan čet'})).status, 200);
+    assert.equal((await call(`/api/chats/${b.id}/draft`,'PUT',{text:'Nacrt dok agent radi',revision:0})).status,200);
     assert.equal((await call(`/api/chats/${b.id}`, 'PATCH', {settings:{model:'test'}})).status, 409);
     assert.equal((await call(`/api/chats/${b.id}/send`, 'POST', { text: 'Nedozvoljena paralelna poruka' })).status, 409);
     assert.equal((await call(`/api/chats/${b.id}/reset-session`,'POST',{})).status,409);

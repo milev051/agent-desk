@@ -77,6 +77,8 @@ Radni folder ostaje isti, pa novi agent ima pristup istim projektnim fajlovima i
 Zbog toga dug razgovor pri prelasku na drugi agent troši ulazne tokene za istoriju, uz native sistemska uputstva, alate i generisani odgovor. Tačan broj zavisi od tokenizacije ciljnog modela, context obrade, alata i keširanja. CLI pretplatnički limiti i eventualni usage credits ostaju pod kontrolom prijavljenog naloga.
 
 
+Nacrt poruke se odmah čuva na uređaju, a posle 500 ms bez kucanja sinhronizuje sa serverom i drugim otvorenim uređajima. Četovi sa nacrtom imaju sivu karticu, a aktivni agent zadržava žutu pozadinu i sivu oznaku. Nesinhronizovane izmene preživljavaju osvežavanje kroz lokalnu rezervnu kopiju; verzije na serveru sprečavaju tiho prepisivanje, a istovremene izmene se spajaju. Nacrti nisu poruke agentu i ne troše AI tokene.
+
 ## Vreme, red čekanja i okruženje
 
 Svaka nova poruka prosleđuje ISO UTC vreme i autora. Preneta istorija uključuje model odgovora kada je poznat. Poruke iz reda imaju vreme kreiranja i vreme stvarnog slanja agentu. U interfejsu je diskretno lokalno vreme uz poruku.
