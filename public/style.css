@@ -186,7 +186,7 @@ body.dragging-chat #chat-drop-targets{display:flex}
 
 #chat-popover .folder-menu{display:flex;align-items:center;gap:8px}#chat-popover .folder-menu input{flex:1;min-width:0;width:100%;margin:0;padding:8px;font-size:13px}#chat-popover .folder-menu .delete-chat{border-left:0;flex-shrink:0}
 
-.chat-row{position:relative}.chat-drag-zone{position:absolute;top:0;right:0;bottom:0;width:50%;touch-action:none;cursor:grab}.chat-drag-zone:active{cursor:grabbing}
+.chat-row{position:relative}.chat-drag-zone{position:absolute;top:0;right:0;bottom:0;width:32px;touch-action:none;cursor:grab}.chat-drag-zone:active{cursor:grabbing}
 
 
 #composer .composer-actions #files-open,#composer .composer-actions #stop-run,#composer .composer-actions #send{display:none}
@@ -233,3 +233,6 @@ body.dragging-chat #chat-drop-targets{display:flex}
 #device-battery.charging svg{color:#89b992}#device-battery.charging .battery-duration{color:#89b992}
 
 .sidebar-folder{flex-shrink:0}.folder-chats{margin:0 0 10px 10px;padding:3px 0 3px 9px;border-left:1px solid #393939;min-height:40px}.folder-chats.drop-hover{background:#16211b;border-color:#98cfa6}.folder-row .folder-chevron{width:6px;height:6px;flex-shrink:0;border-right:1px solid #999;border-bottom:1px solid #999;transform:rotate(-45deg);margin-left:3px;margin-right:3px}.folder-row.open .folder-chevron{transform:rotate(45deg)}#chat-list-items{min-height:40px}
+
+.subagent-folder{margin:5px 0 10px 10px}.folder-row.agent-group{background:#242033;border-color:#49405e;color:#c2b2df}.folder-row.agent-group:hover{background:#2e2741}.subagent-chats{border-left:1px solid #49405e;padding-left:9px;margin-left:7px}.chat-row.subagent-card{background:#1c1924;box-shadow:inset 2px 0 #75628e}.chat-row.subagent-card:hover,.chat-row.subagent-card.active{background:#2a2338}.chat-row.subagent-card.working,.chat-row.subagent-card.working:hover{background:#3e3824}.chat-row.subagent-card.completed,.chat-row.subagent-card.completed:hover{background:#243e2c}.chat-row .chat-item{padding-right:32px}
+@media(max-width:650px){body:not(.chat-view) .chat-row.subagent-card.active:not(.working):not(.completed):not(.pressed){background:#1c1924}}
