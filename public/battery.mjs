@@ -18,6 +18,8 @@ export function startBatteryStatus(){
   duration.textContent=!value?'-':value.charging?'⚡':batteryDuration(value.unpluggedAt);
   duration.title=value?.charging?'Na punjaču':value?.unpluggedAt?`Bez punjača od ${new Date(value.unpluggedAt).toLocaleTimeString('sr-Latn-RS',{hour:'2-digit',minute:'2-digit',hour12:false})}`:'Skidanje sa punjača još nije zabeleženo.';
   display.classList.toggle('battery-stale',!!value?.stale);
+  display.classList.toggle('charging',!!value?.charging);
+  display.setAttribute('aria-label',`${phone?'Mac':'Telefon'}: ${value?.level??'nepoznato'}${value?.charging?' · puni se':''}`);
  }
  let battery=null,busy=false;
  async function refresh(){
