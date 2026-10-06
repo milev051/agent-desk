@@ -292,3 +292,11 @@ Klik na logo baterije otvara podešavanja. Novi folder se pravi prevlačenjem č
 Kružić desno od unosa je džojstik: nagore šalje poruku ili je dodaje u red čekanja, nadole zaustavlja aktivnog agenta, ulevo otvara priloge. Radnja se izvršava pri puštanju, tek posle pomeranja od najmanje 22 px. Dodir bez pomeranja ne šalje poruku. Tekst unosa se normalno selektuje. Kada je kružić fokusiran, iste radnje rade strelicama tastature.
 
 `data/statistika.json` je objedinjeni izvedeni zapis tokena, procene API cene po četu/modelu/projektu i promena limita. Ažurira se uz čitljive zapise četova i očitane promene limita. Agenti dobijaju putanju, sadržaj se ne šalje automatski u kontekst. Izvori ostaju `data/chats.json` i `data/limit-history.json`.
+
+### Jednokratna poruka agentima
+
+U podešavanjima, „Kratka poruka agentima“ omogućava ručno slanje ili dnevni raspored po vremenu u Beogradu. Raspored je početno isključen. Svaki izabrani agent dobija zasebnu privremenu sesiju bez istorije radnih četova, sa zahtevom da odgovori samo OK. Sesija ne ulazi u listu četova, a završetak ne šalje obaveštenje. CLI može zadržati sopstveni zapis sesije.
+
+Automatski izbor koristi poznate lakše modele iz dostupnog kataloga; ako takav model nije dostupan, agent se preskače uz grešku umesto pokretanja jačeg modela. Model se može izabrati i ručno. Slanje ide redom, sa najviše dva minuta po agentu i bez automatskih ponavljanja. Dnevni termin se izvršava jednom, uz najviše 15 minuta kašnjenja; Mac i server moraju raditi. Poziv troši limit, a njegov reset i deljenje kvote između modela određuje provajder.
+
+Podešavanja i poslednjih 100 rezultata sa prijavljenom potrošnjom čuvaju se u `data/provera-agenata.json`.

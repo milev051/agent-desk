@@ -1,3 +1,4 @@
+import {createWarmup,lightModel} from './warmup.mjs';
 import {createChatFiles} from './chat-files.mjs';
 import {preferredEffort} from './public/reasoning.mjs';
 import http from 'node:http';
@@ -189,7 +190,7 @@ async function send(chat, prompt, options={}) {
   const sentAt=Date.now(),createdAt=options.createdAt || sentAt;
   const newMessage=historyText([{role:'user',text:prompt,createdAt,sentAt}]);
   const history = historyTransferred ? `Prethodne poruke iz ovog četa (istorija razgovora${chat.sessions[agent]?', dopuna od prethodnog odgovora ovog agenta':''}):\n${plan.text}\n\nNova poruka korisnika:\n${newMessage}` : newMessage;
-  const spec = command(chat,`${appContext(chat)}\n\n${history}`, binaries[agent]);
+  const spec = command(chat,options.minimalContext?prompt:`${appContext(chat)}\n\n${history}`, binaries[agent]);
   const child = spawn(spec.executable, spec.args, { cwd: chat.settings.cwd, env: { ...process.env, NO_COLOR: '1' }, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
   const reply = { id: randomUUID(), role: 'assistant', agent, model: chat.settings.model || '', configuredModel: chat.settings.model || '', historyTransferred, usageTracked:true, usageCwd:chat.settings.cwd, text: '', status: 'running', activity: 'Pokrećem agenta…', createdAt: Date.now() };
   delete chat.ephemeral;
@@ -197,7 +198,7 @@ async function send(chat, prompt, options={}) {
   if (chat.title === 'Novi čet') chat.title = prompt.slice(0, 52);
   chat.updatedAt = Date.now();
   const run = { child, stopped: false }; run.done = new Promise(resolve=>run.resolve=resolve); running.set(chat.id, run); update();
-  const progressPush=createProgressPush({notify:body=>phonePush.notify({title:chat.title||'Agent Desk',body,chatId:chat.id,tag:chat.id})});
+  const progressPush=createProgressPush({notify:body=>!options.silent && phonePush.notify({title:chat.title||'Agent Desk',body,chatId:chat.id,tag:chat.id})});
   let buffer = '', stderr = '', streamedBlock = false, finished = false;
   function event(line) {
     if (!line.trim()) return;
@@ -250,13 +251,24 @@ async function send(chat, prompt, options={}) {
     if(reply.status==='error' || reply.status==='stopped')chat.queuePaused=true;
     chat.updatedAt = Date.now(); update();run.resolve(reply);setImmediate(()=>drainQueue(chat));
     const outcome={done:'Završeno',error:'Greška',stopped:'Zaustavljeno'}[reply.status];
-    if(outcome){void phonePush.notify({title:chat.title||'Agent Desk',body:outcome,chatId:chat.id,tag:chat.id});desktopNotify(chat.title||'Agent Desk',outcome);}
+    if(outcome && !options.silent){void phonePush.notify({title:chat.title||'Agent Desk',body:outcome,chatId:chat.id,tag:chat.id});desktopNotify(chat.title||'Agent Desk',outcome);}
   }
   child.on('error', error => finish(null, error)); child.on('close', code => finish(code));
   child.stdin.on('error', () => {}); child.stdin.end(spec.input || undefined);
-  run.timeout = setTimeout(() => { reply.error = 'Prekinuto posle 30 minuta. Možeš poslati novu poruku.'; stop(chat.id); }, 30 * 60 * 1000); run.timeout.unref();
+  run.timeout = setTimeout(() => { reply.error = `Prekinuto posle ${(options.timeoutMs || 1800000)/60000} minuta. Možeš poslati novu poruku.`; stop(chat.id); }, options.timeoutMs || 30 * 60 * 1000); run.timeout.unref();
   return run;
 }
+const warmup=createWarmup(path.join(dataDir,'provera-agenata.json'),{execute:async(agent,chosen,prompt)=>{
+ if(!binaries[agent])return {status:'skipped',error:'CLI nije dostupan.'};
+ const available=(await catalog(binaries))[agent]?.models||[],model=chosen||lightModel(agent,available);
+ if(!model)throw Error('Lakši model nije dostupan. Izaberi model u podešavanjima.');
+ if(!available.some(m=>m.id===model))throw Error('Model nije u spisku dostupnih modela.');
+ const efforts=available.find(m=>m.id===model)?.efforts||[],effort=efforts.some(e=>e.id==='low')?'low':preferredEffort(quickCatalog(binaries),agent,model);
+ const chat={id:randomUUID(),title:'Jednokratna provera · '+agent,createdAt:Date.now(),settings:validate({agent,model,access:'read',cwd:root,instructions:'',effort}),sessions:{},sessionOffsets:{},messages:[]};
+ // Temporary chat never enters the saved chat list. Only its outcome and usage remain.
+ const run=await send(chat,prompt,{origin:'warmup',minimalContext:true,silent:true,timeoutMs:120000});const reply=await run.done;
+ return {model,status:reply.status,usage:reply.usage||null,...(reply.error?{error:reply.error.slice(0,500)}:{})};
+}});
 const server = http.createServer(async (req, res) => {
   // Lista četova ima više od 1 MB; gzip je oko pet puta manji, što se oseća na telefonu.
   const gzip=/\bgzip\b/.test(req.headers['accept-encoding'] || '');
@@ -281,6 +293,8 @@ const server = http.createServer(async (req, res) => {
     }
     if(req.method==='GET' && url.pathname==='/api/limit-history')return json(200,quotaHistory.list());
     if(req.method==='GET' && url.pathname==='/api/limits')return json(200,limits.snapshot());
+    if(url.pathname==='/api/warmup'){if(req.method==='GET')return json(200,warmup.view());if(req.method==='PUT')return json(200,warmup.configure(await body(req)));}
+    if(req.method==='POST' && url.pathname==='/api/warmup/run'){if(warmup.view().running)return json(409,{error:'Provera agenata je već u toku.'});void warmup.run().catch(error=>console.error('Provera agenata:',error.message));return json(202,warmup.view());}
     if(req.method==='GET' && url.pathname==='/api/usage')return json(200,accounting());
     if(req.method==='GET' && url.pathname==='/api/battery')return json(200,await batteryStatus.status());
     if(req.method==='POST' && url.pathname==='/api/battery/phone'){batteryStatus.report(await body(req));return json(200,{ok:true});}
@@ -512,6 +526,6 @@ const server = http.createServer(async (req, res) => {
     json(404, { error: 'Nije pronađeno.' });
   } catch (error) { json(400, { error: error.message }); }
 });
-server.listen(port, '127.0.0.1', () => {phone.start();limits.start();console.log(`Agent Desk: http://127.0.0.1:${port}`);});
-function shutdown() {syncChatFiles();shuttingDown=true;clearInterval(archiveCleanup);limits.close();phone.close();titleManager.close();for (const id of running.keys()) stop(id); setTimeout(() => process.exit(0), 2200); server.close(); }
+server.listen(port, '127.0.0.1', () => {phone.start();limits.start();warmup.start();console.log(`Agent Desk: http://127.0.0.1:${port}`);});
+function shutdown() {syncChatFiles();shuttingDown=true;clearInterval(archiveCleanup);limits.close();warmup.stop();phone.close();titleManager.close();for (const id of running.keys()) stop(id); setTimeout(() => process.exit(0), 2200); server.close(); }
 process.on('SIGINT', shutdown); process.on('SIGTERM', shutdown);

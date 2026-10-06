@@ -19,6 +19,15 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     await once(server.stdout, 'data');
     async function call(url, method = 'GET', data, origin = base) { const r = await fetch(base + url, { method, headers: { Origin: origin, 'Content-Type': 'application/json' }, body: data ? JSON.stringify(data) : undefined }); return { status: r.status, data: await r.json() }; }
     async function done(id) { for(let i=0;i<100;i++){const c=(await call('/api/chats')).data.find(c=>c.id===id);if(!c.running)return c;await new Promise(r=>setTimeout(r,30));}throw Error('CLI nije završio'); }
+    assert.equal((await call('/api/warmup')).data.enabled,false);
+    assert.equal((await call('/api/warmup','PUT',{enabled:false,time:'08:00',agents:['codex'],models:{}})).status,200);
+    assert.equal((await call('/api/warmup/run','POST',{})).status,202);
+    let warmupResult;
+    for(let i=0;i<400;i++){warmupResult=(await call('/api/warmup')).data;if(!warmupResult.running)break;await new Promise(r=>setTimeout(r,50));}
+    assert.equal(warmupResult.running,false);
+    assert.equal(warmupResult.runs[0].results[0].status,'done');
+    assert.ok(warmupResult.runs[0].results[0].usage);
+    assert.deepEqual((await call('/api/chats')).data,[]);
     const script=await fetch(base+'/app.js',{headers:{'Accept-Encoding':'gzip'}});assert.equal(script.headers.get('content-encoding'),'gzip');assert.match(await script.text(),/import/);
     const entry=await (await fetch(base+'/app.js')).text();
     for(const match of entry.matchAll(/from\s+['"]([^'"]+)['"]/g)){

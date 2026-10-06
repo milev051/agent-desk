@@ -341,9 +341,33 @@ $('#chat-popover').onchange=e=>guard(async()=>{
   const chat=await api(`/api/chats/${id}`,'PATCH',{settings:model?{model:model.value,effort:preferredEffort(models,chats.find(c=>c.id===id)?.settings.agent,model.value)}:{effort:effort.value}});putChat(chat);renderSidebar();
 });
 document.addEventListener('pointerdown',e=>{if(menuFolder && !e.target.closest(`#chat-popover,[data-folder="${menuFolder}"]`)){menuFolder=null;renderPopover();}if(menuChat && !e.target.closest('#chat-popover,#chat-options,[data-row],[data-options],[data-chat],[data-agent-chat]')){menuChat=null;renderPopover();}});
+let warmupSettings=null,warmupPoll;
+function renderWarmupStatus(){
+ const state=warmupSettings;
+ $('#warmup-run').disabled=!state || state.running;
+ $('#warmup-save').disabled=!state || state.running;
+ const last=state?.runs?.[0];
+ $('#warmup-status').textContent=!state?'Za ovu opciju potrebno je ponovno pokretanje servera.':state.running?`Slanje: ${state.currentAgent || 'pokretanje'}…`:last?`Poslednje slanje: ${new Date(last.startedAt).toLocaleString('sr-Latn')} · ${last.results.map(r=>`${r.agent}: ${r.status==='done'?'OK':r.error || r.status}`).join(' · ')}`:state.enabled?`Raspored je uključen: svakog dana u ${state.time}, Beograd.`:'Raspored je isključen dok ga ne uključiš. Slanje se ne ponavlja ako servis prijavi grešku.';
+ clearTimeout(warmupPoll);
+ if(state?.running && !$('#defaults').hidden)warmupPoll=setTimeout(()=>guard(async()=>{warmupSettings=await api('/api/warmup');renderWarmupStatus();}),2000);
+}
+function renderWarmup(){
+ $('#warmup-enabled').checked=!!warmupSettings?.enabled;
+ $('#warmup-time').value=warmupSettings?.time || '08:00';
+ $('#warmup-agents').innerHTML=meta.agents.map(a=>`<label class="warmup-agent" data-warmup-agent="${a.id}"><span><input type="checkbox" ${a.available && (warmupSettings?.agents || []).includes(a.id)?'checked':''} ${a.available?'':'disabled'}> ${escape(a.name)}</span><select aria-label="Model za kratku poruku ${escape(a.name)}" ${a.available?'':'disabled'}><option value="">Automatski: lakši model</option>${modelOptions({agent:a.id,model:warmupSettings?.models?.[a.id] || ''}).replace(/^<option[^>]*>Podrazumevani<\/option>/,'')}</select></label>`).join('');
+ for(const row of $('#warmup-agents').children)row.querySelector('select').value=warmupSettings?.models?.[row.dataset.warmupAgent] || '';
+ renderWarmupStatus();
+}
+async function saveWarmup(){
+ const rows=[...$('#warmup-agents').children].filter(row=>row.querySelector('input').checked);
+ warmupSettings=await api('/api/warmup','PUT',{enabled:$('#warmup-enabled').checked,time:$('#warmup-time').value,agents:rows.map(row=>row.dataset.warmupAgent),models:Object.fromEntries(rows.map(row=>[row.dataset.warmupAgent,row.querySelector('select').value]))});
+ renderWarmupStatus();
+}
+$('#warmup-save').onclick=()=>guard(saveWarmup);
+$('#warmup-run').onclick=()=>guard(async()=>{await saveWarmup();warmupSettings=await api('/api/warmup/run','POST',{});renderWarmupStatus();});
 function renderDefaults() {$('#default-agents').innerHTML=meta.agents.map(a=>{const s={agent:a.id,...defaults[a.id]};return `<div class="default-agent" data-default-agent="${a.id}"><img src="${agentLogos[a.id]}" alt="${escape(a.name)}" title="${escape(a.name)}" width="22" height="22"><select data-default-model aria-label="Podrazumevani model ${escape(a.name)}">${modelOptions(s)}</select><select data-default-effort aria-label="Podrazumevano razmišljanje ${escape(a.name)}" ${effortsFor(a.id,s.model).length?'':'disabled'}>${effortOptions(s)}</select></div>`;}).join('');}
 function showDefaults(open) {document.body.classList.toggle('settings-view',open);if(open)refreshPhone();$('#defaults').hidden=!open;for(const el of [$('#conversation'),$('.composer-area'),$('#usage-details')].filter(Boolean))el.inert=open;if(open){closePanels();$('#defaults-close').focus();}else focusPrompt();}
-$('#defaults-open').onclick=()=>guard(async()=>{const form=$('#defaults');if(!form.hidden){showDefaults(false);return;}const button=$('#defaults-open');button.disabled=true;try{[defaults,models,titleSettings,usageReport]=await Promise.all([api('/api/defaults'),api('/api/models'),phoneRemote?Promise.resolve(titleSettings):api('/api/title-settings'),api('/api/usage')]);renderDefaults();fillTitleSettings();renderProjectUsage();$('#response-colors').value=colorMode;$('#mobile-autofocus').checked=mobileAutofocus;menuChat=null;renderPopover();showDefaults(true);}finally{button.disabled=false;}});
+$('#defaults-open').onclick=()=>guard(async()=>{const form=$('#defaults');if(!form.hidden){showDefaults(false);return;}const button=$('#defaults-open');button.disabled=true;try{[defaults,models,titleSettings,usageReport,warmupSettings]=await Promise.all([api('/api/defaults'),api('/api/models'),phoneRemote?Promise.resolve(titleSettings):api('/api/title-settings'),api('/api/usage'),api('/api/warmup').catch(()=>null)]);renderDefaults();renderWarmup();fillTitleSettings();renderProjectUsage();$('#response-colors').value=colorMode;$('#mobile-autofocus').checked=mobileAutofocus;menuChat=null;renderPopover();showDefaults(true);renderWarmupStatus();}finally{button.disabled=false;}});
 $('#defaults-close').onclick=()=>showDefaults(false);
 $('#default-agents').onchange=e=>{const row=e.target.closest('[data-default-agent]');if(!row || !e.target.matches('[data-default-model]'))return;const s={agent:row.dataset.defaultAgent,model:e.target.value,effort:preferredEffort(models,row.dataset.defaultAgent,e.target.value)},select=row.querySelector('[data-default-effort]');select.innerHTML=effortOptions(s);select.disabled=!effortsFor(s.agent,s.model).length;};
 $('#defaults-form').onsubmit=e=>{e.preventDefault();guard(async()=>{const next=Object.fromEntries([...$('#default-agents').querySelectorAll('[data-default-agent]')].map(row=>[row.dataset.defaultAgent,{model:row.querySelector('[data-default-model]').value,effort:row.querySelector('[data-default-effort]').value}]));if(!phoneRemote)await saveTitleSettings();defaults=await api('/api/defaults','PUT',next);mobileAutofocus=$('#mobile-autofocus').checked;localStorage.setItem('agent-desk-mobile-autofocus',mobileAutofocus?'1':'0');colorMode=$('#response-colors').value;localStorage.setItem('agent-desk-color-mode',colorMode);document.body.classList.toggle('colored-responses',colorMode==='full');showDefaults(false);});};

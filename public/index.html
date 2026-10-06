@@ -24,6 +24,14 @@
       <form id="defaults-form">
         <div class="defaults-heading"><span></span><span>Model</span><span>Razmišljanje</span></div>
         <div id="default-agents"></div>
+        <fieldset class="title-settings" id="warmup-settings"><legend>Kratka poruka agentima</legend>
+          <small>Jedna poruka „OK“ u privremenoj sesiji, bez zadržavanja četa. Troši deo limita; obnovu i zajedničku kvotu modela određuje servis. Mac mora biti uključen i budan.</small>
+          <label><input id="warmup-enabled" type="checkbox"> Svakog dana</label>
+          <label>Vreme u Beogradu <input id="warmup-time" type="time" value="08:00"></label>
+          <div id="warmup-agents"></div>
+          <div class="settings-actions"><button id="warmup-save" type="button">Sačuvaj raspored</button><button id="warmup-run" type="button">Pošalji svima sada</button></div>
+          <small id="warmup-status" aria-live="polite"></small>
+        </fieldset>
         <label class="color-setting">Boja odgovora<select id="response-colors"><option value="label">Samo oznaka modela</option><option value="full">Oznaka i tekst odgovora</option></select></label>
         <label class="color-setting">Tastatura pri otvaranju četa na telefonu<input id="mobile-autofocus" type="checkbox"></label>
         <fieldset class="title-settings"><legend>Brojanje tokena</legend>
