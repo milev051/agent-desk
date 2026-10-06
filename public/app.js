@@ -340,6 +340,10 @@ function renderParagraphTimings(view,messages){
 function messageTime(m) {if(!Number.isFinite(m.createdAt))return '';const date=new Date(m.createdAt);return `<time datetime="${date.toISOString()}" title="${escape(date.toLocaleString('sr-Latn-RS'))}${m.origin==='queue'?' · iz reda čekanja':m.origin==='coordination'?' · koordinacija':m.origin==='delegate'?' · podzadatak':''}">${escape(date.toLocaleTimeString('sr-Latn-RS',{hour:'2-digit',minute:'2-digit'}))}</time>`;}
 let renderedChatId=null,stickToken=0,forceBottom=false;
 function cancelStick(){stickToken++;}
+function conversationAtBottom(view){return view.scrollHeight-view.scrollTop-view.clientHeight<=2;}
+$('#conversation').addEventListener('scroll',()=>{if(!conversationAtBottom($('#conversation')))cancelStick();},{passive:true});
+$('#conversation').addEventListener('wheel',e=>{if(e.deltaY<0)cancelStick();},{passive:true});
+$('#conversation').addEventListener('touchstart',cancelStick,{passive:true});
 function stickToBottom(view){const token=++stickToken;const go=()=>{if(token!==stickToken)return;view.scrollTop=view.scrollHeight;};go();requestAnimationFrame(()=>{go();requestAnimationFrame(go);});}
 function render() {
   receiveDrafts();
@@ -350,7 +354,7 @@ function render() {
   const messages=[...(chat?.messages || []),...(pendingMessages.has(active) && !chat?.messages.some(m=>m.requestId===pendingMessages.get(active).requestId)?[pendingMessages.get(active)]:[])];
   const quotaMessage=quotaTarget(chat);
   const key=JSON.stringify({id:chat?.id,messages,selectionMode:messageSelectionMode,selected:[...selectedMessages],speech:speakingId()});if(key===lastMessages)return;lastMessages=key;
-  const view=$('#conversation'),switched=chat?.id!==renderedChatId,jump=forceBottom,savedScroll=view.scrollTop;renderedChatId=chat?.id || null;forceBottom=false;
+  const view=$('#conversation'),switched=chat?.id!==renderedChatId,jump=forceBottom,savedScroll=view.scrollTop,wasAtBottom=conversationAtBottom(view);renderedChatId=chat?.id || null;forceBottom=false;
   view.innerHTML=chat && !messages.length?'<div class="empty-chat" role="status">Čet je prazan. Pošalji prvu poruku.</div>':messages.map(m=>`<article data-message="${m.id}" class="message ${selectedMessages.has(m.id)?'message-selected':''} ${m.role} ${m.status==='running'?'writing':''} ${Object.hasOwn(agentLogos,m.agent)?m.agent:''}" aria-label="${m.role==='user'?'Tvoja poruka':'Odgovor agenta'}"><div class="message-body">${markdown(m.text)}</div>${attachmentThumbs(m.text)}${m.status==='running'?`<div class="activity">${escape(m.activity || 'Agent odgovara…')}</div>`:''}${m.status==='sending'?'<div class="activity">Šalje se…</div>':''}${m.status==='stopped'?'<div class="activity">Zaustavljeno.</div>':''}${m.error?`<div class="error">${escape(m.error)}</div>`:''}${m===messages.at(-1) && m.role==='assistant' && ['stopped','interrupted','error'].includes(m.status) && !current()?.running?'<button class="resume-queue" type="button" data-continue-reply>Nastavi odgovor</button>':''}<div class="message-footer"><span class="message-meta"><span class="response-model">${escape(m.role==='user'?'Korisnik':responseModel(m))}</span>${m.role==='assistant' && m.id===quotaMessage?.id?quotaInline():''}${messageTime(m)}${workDuration(m)}${m.text?`<span class="message-actions"><button class="speak-message${speakingId()===m.id?' speaking':''}" data-speak="${m.id}" aria-label="${speakingId()===m.id?'Zaustavi čitanje':'Pročitaj poruku'}" title="${speakingId()===m.id?'Zaustavi čitanje':'Pročitaj'}">${speakingId()===m.id?speakStopIcon:speakIcon}</button><button class="copy-message" data-copy-message="${m.id}" aria-label="Kopiraj poruku" title="Kopiraj">${copyIcon}</button><button class="select-message" data-select-message="${m.id}" aria-label="Izaberi poruku" aria-pressed="${selectedMessages.has(m.id)}" title="Izaberi poruku">${selectedMessages.has(m.id)?selectMark:selectBox}</button></span>`:''}</span>${m.role==='assistant'?tokenInfo(m):''}</div></article>`).join('');
   for(const a of view.querySelectorAll('a')){const href=a.getAttribute('href');const p=href?.startsWith('/files/')?decodeURIComponent(href.slice(6)):localFileHref(href);if(p){a.dataset.localFile=p;a.href='/files'+p.split('/').map(encodeURIComponent).join('/');}}
   for(const quote of view.querySelectorAll('.message-body > blockquote')){
@@ -360,7 +364,7 @@ function render() {
   }
   for(const pre of view.querySelectorAll('pre')){if(!pre.querySelector('code'))continue;const button=document.createElement('button');button.className='copy-code';button.dataset.copyCode='';button.setAttribute('aria-label','Kopiraj blok koda');button.title='Kopiraj blok koda';button.innerHTML=copyIcon;pre.append(button);}
   renderParagraphTimings(view,messages);
-  if(!messageSelectionMode && (jump || switched)){
+  if(!messageSelectionMode && (jump || switched || wasAtBottom)){
     stickToBottom(view);
     const openingToken=stickToken;
     for(const img of view.querySelectorAll('img'))if(!img.complete)img.addEventListener('load',()=>{if(openingToken===stickToken)view.scrollTop=view.scrollHeight;},{once:true});
