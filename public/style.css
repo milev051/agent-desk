@@ -240,3 +240,20 @@ body.dragging-chat #chat-drop-targets{display:flex}
 .chat-row.has-draft,.chat-row.has-draft:hover,.chat-row.has-draft.active,body:not(.chat-view) .chat-row.has-draft.active:not(.pressed){background:#363940;box-shadow:inset 2px 0 #b7bbc4}.chat-row.has-draft.working,.chat-row.has-draft.working:hover,body:not(.chat-view) .chat-row.has-draft.active.working:not(.pressed){background:#3e3824;box-shadow:inset 2px 0 #b7bbc4}
 
 .folder-row[data-unassigned]{cursor:default}
+
+/* Click-open model groups stay in the layout while a model is dragged. */
+.new-agent.expanded{background:#252525;border-color:#494949;border-radius:6px}
+#model-library:has(#new-models[hidden]){display:none}
+#model-library{min-height:0;flex-shrink:0;width:100%}
+#new-models{position:static;width:100%;max-height:210px;box-sizing:border-box;overflow:auto;padding:0;border:0;background:transparent;display:flex;flex-direction:column;gap:5px}
+#new-models[hidden]{display:none}
+#new-models .model-card{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:36px;width:100%;padding:8px 10px;border:1px solid var(--model-border);border-radius:5px;background:var(--model-bg);color:var(--model-color);font-size:12px;text-align:left;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}
+#new-models .model-card:hover{filter:brightness(1.2);background:var(--model-bg)}
+#new-models[data-agent="codex"]{--model-bg:#282035;--model-border:#57416e;--model-color:#d0b5ed}
+#new-models[data-agent="claude"]{--model-bg:#34251b;--model-border:#765039;--model-color:#edb18a}
+#new-models[data-agent="antigravity"]{--model-bg:#1c2b3c;--model-border:#385d85;--model-color:#a8cdff}
+#new-models[data-agent="grok"]{--model-bg:#e4e4e4;--model-border:#fff;--model-color:#222}
+.model-grip{opacity:.6;font-size:18px;flex-shrink:0}.model-drag-source{opacity:.45}
+@media(max-width:650px){#mobile-agent-header #model-library{padding-top:7px}#new-models{max-height:180px}}
+
+@media(max-width:650px){#new-models{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-height:220px}#new-models[hidden]{display:none}#new-models .model-card{min-width:0;padding:7px;font-size:11px}#new-models .model-card>span:first-child{overflow-wrap:anywhere}}

@@ -251,6 +251,14 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal((await call(`/api/chats/${a.id}`, 'DELETE')).status, 200);
     const linkedParent=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
     const linkedChild=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
+    const dropped=(await call('/api/chats','POST',{settings:{agent:'codex',model:'',effort:'',cwd:process.cwd()},parentChatId:linkedParent.id}));
+    assert.equal(dropped.status,201);assert.equal(dropped.data.parentChatId,linkedParent.id);assert.equal(dropped.data.settings.cwd,temp);
+    const beforeInvalidDrop=(await call('/api/chats')).data.length;
+    assert.equal((await call('/api/chats','POST',{parentChatId:dropped.data.id})).status,400);
+    assert.equal((await call('/api/chats','POST',{parentChatId:'missing-parent'})).status,400);
+    assert.equal((await call('/api/chats')).data.length,beforeInvalidDrop);
+    await call(`/api/chats/${dropped.data.id}`,'DELETE');
+
     await call(`/api/chats/${linkedChild.id}/send`,'POST',{text:'REZULTAT_PODAGENTA'});const beforeLink=await done(linkedChild.id);
     assert.equal((await call(`/api/chats/${linkedChild.id}/link`,'POST',{parentChatId:linkedParent.id})).status,200);
     assert.equal((await call(`/api/chats/${linkedChild.id}`)).data.sessions.codex,beforeLink.sessions.codex);

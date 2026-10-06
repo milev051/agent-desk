@@ -318,3 +318,5 @@ Evidencija heševa poruka i članstva čuva se u `data/chats.json`, u `sharedFol
 ### Izdvajanje podagenta
 
 Kartica podagenta ima iste dve zone kao običan čet: zadrži levu polovinu za radnje, desnu za prevlačenje. U meniju je „Izdvoji podagenta u samostalan čet“. Tokom prevlačenja pojavljuje se i polje „Izdvoji podagenta“. Izdvojen čet ostaje u folderu glavnog četa; spuštanje na drugi folder bira taj folder, a na prazan deo liste ili „Van foldera“ izdvaja ga van foldera. Može se prevući i na drugog glavnog agenta. Poruke, sesije i evidencija deljenog konteksta ostaju sačuvane. Promena veze dozvoljena je kad uključeni agenti miruju.
+
+Ikonice agenata otvaraju grupe modela klikom. Karticu modela možeš prevući na folder da napraviš novi čet u njemu, ili na glavni čet da napraviš podagenta. Podagent nasleđuje radni folder glavnog četa i čeka zadatak. Dodavanje je dozvoljeno kad glavni agent ne radi. Klik na karticu modela i dalje otvara novi čet.

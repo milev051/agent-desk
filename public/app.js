@@ -9,7 +9,7 @@ const agentLogos = {"codex": "data:image/svg+xml;base64,PHN2ZyBjb2xvcj0iI2IzOGFm
 const $ = s => document.querySelector(s);
 // One toolbar moves between the sidebar and the persistent phone header.
 const agentToolbar=$('.sidebar-actions'),mobileHeader=$('#mobile-agent-header'),mobileLayout=matchMedia('(max-width:650px)');
-function placeAgentToolbar(){if(mobileLayout.matches)mobileHeader.append(agentToolbar);else $('.sidebar').prepend(agentToolbar);}
+function placeAgentToolbar(){if(mobileLayout.matches)mobileHeader.append(agentToolbar,$('#model-library'));else{const sidebar=$('.sidebar');sidebar.prepend(agentToolbar);agentToolbar.after($('#model-library'));}}
 mobileLayout.addEventListener('change',placeAgentToolbar);placeAgentToolbar();
 
 // Tastatura na telefonu smanjuje vidljivi deo. Aplikacija staje u taj prozor, a čet se podiže da tekst ne ostane ispod nje.
@@ -169,7 +169,7 @@ function modelLabel(chat) {
 }
 const agentOrder=['codex','claude','antigravity','grok'];
 let limits={},lastNewAgents='';
-function renderNewAgents() {const settings=$('#defaults-open');const html=agentOrder.map(id=>meta.agents.find(a=>a.id===id)).filter(Boolean).map(a=>`<button class="new-agent" data-new-agent="${a.id}" title="Novi čet · ${escape(a.name)}" aria-label="Novi čet · ${escape(a.name)}" ${!a.available?'disabled':''}><img src="${agentLogos[a.id]}" alt="" width="21" height="21"><small class="agent-limits ${limits[a.id]?.stale?'limits-stale':''}" title="${escape(limitDescription(a.id))}">${limitDisplay(a.id)}</small></button>`).join('');if(html!==lastNewAgents){$('#new-agents').innerHTML=html;$('#new-agents').append(settings);lastNewAgents=html;}}
+function renderNewAgents() {const settings=$('#defaults-open');const html=agentOrder.map(id=>meta.agents.find(a=>a.id===id)).filter(Boolean).map(a=>`<button class="new-agent ${newMenuAgent===a.id?'expanded':''}" data-new-agent="${a.id}" title="Modeli · ${escape(a.name)}" aria-label="Modeli · ${escape(a.name)}" aria-expanded="${newMenuAgent===a.id}" ${!a.available?'disabled':''}><img src="${agentLogos[a.id]}" alt="" width="21" height="21"><small class="agent-limits ${limits[a.id]?.stale?'limits-stale':''}" title="${escape(limitDescription(a.id))}">${limitDisplay(a.id)}</small></button>`).join('');if(html!==lastNewAgents){$('#new-agents').innerHTML=html;$('#new-agents').append(settings);lastNewAgents=html;}}
 let lastSidebar='', paintingSidebar=false;
 function setOpenFolder(id){openFolder=folders.some(folder=>folder.id===id)?id:null;if(openFolder)localStorage.setItem('agent-desk-folder',openFolder);else localStorage.removeItem('agent-desk-folder');folderRename=null;renderSidebar();}
 function visibleSidebarChats(){
@@ -341,15 +341,29 @@ function render() {
 }
 function beginRename(id){const c=chats.find(c=>c.id===id);if(!c)return;rename={id,value:c.title};menuChat=id;renderPopover();const input=$('[data-menu-rename]');input.focus();input.select();}
 async function saveRename(){if(!rename)return;const edit=rename;if(edit.value.trim())putChat(await api(`/api/chats/${edit.id}`,'PATCH',{title:edit.value}));rename=null;renderSidebar();renderChatNavigation();}
-let newMenuAgent=null,newMenuTimer;
-function closeNewModels(){newMenuAgent=null;$('#new-models').hidden=true;}
-function showNewModels(agent){clearTimeout(newMenuTimer);newMenuAgent=agent;const popup=$('#new-models'),anchor=$(`[data-new-agent="${agent}"]`);if(!anchor || anchor.disabled)return closeNewModels();const options=[{id:defaults[agent]?.model||'',name:'Podrazumevani',isDefault:true},...(models[agent]?.models||[])];popup.innerHTML=options.map(m=>`<button type="button" role="menuitem" data-new-model="${escape(m.id)}" data-new-default="${!!m.isDefault}">${escape(m.name)}</button>`).join('');popup.hidden=false;const r=anchor.getBoundingClientRect();popup.style.left=Math.max(8,Math.min(r.left,innerWidth-250))+'px';popup.style.top=r.bottom+'px';}
-$('#new-agents').onpointerover=e=>{const b=e.target.closest('[data-new-agent]');if(b && e.pointerType!=='touch' && newMenuAgent!==b.dataset.newAgent)showNewModels(b.dataset.newAgent);else if(b)clearTimeout(newMenuTimer);};
-$('#new-agents').onpointerleave=()=>{newMenuTimer=setTimeout(closeNewModels,180);};
-$('#new-agents').onclick=e=>{const b=e.target.closest('[data-new-agent]');if(b)showNewModels(b.dataset.newAgent);else closeNewModels();};
-$('#new-models').onpointerenter=()=>clearTimeout(newMenuTimer);$('#new-models').onpointerleave=()=>{newMenuTimer=setTimeout(closeNewModels,180);};
-$('#new-models').onclick=e=>guard(async()=>{const b=e.target.closest('[data-new-model]');if(!b)return;const agent=newMenuAgent;closeNewModels();await create(agent,b.dataset.newModel,b.dataset.newDefault==='true'?defaults[agent]?.effort||preferredEffort(models,agent,b.dataset.newModel):preferredEffort(models,agent,b.dataset.newModel));});
-document.addEventListener('pointerdown',e=>{if(!e.target.closest('#new-models,#new-agents'))closeNewModels();});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeNewModels();});
+let newMenuAgent=null,modelDrag=null,modelClickUntil=0;
+function closeNewModels(){newMenuAgent=null;$('#new-models').hidden=true;lastNewAgents='';if(meta)renderNewAgents();}
+function showNewModels(agent){newMenuAgent=agent;const popup=$('#new-models'),anchor=$(`[data-new-agent="${agent}"]`);if(!anchor || anchor.disabled)return closeNewModels();const options=[{id:defaults[agent]?.model||'',name:'Podrazumevani',isDefault:true},...(models[agent]?.models||[])];popup.dataset.agent=agent;popup.innerHTML=options.map(m=>`<button type="button" class="model-card" data-new-model="${escape(m.id)}" data-new-default="${!!m.isDefault}" title="Klik za novi čet; prevuci na folder ili čet"><span>${escape(m.name)}</span><span class="model-grip" aria-hidden="true">⠿</span></button>`).join('');popup.hidden=false;lastNewAgents='';renderNewAgents();}
+$('#new-agents').onclick=e=>{const b=e.target.closest('[data-new-agent]');if(b){if(newMenuAgent===b.dataset.newAgent)closeNewModels();else showNewModels(b.dataset.newAgent);}};
+function modelChoice(button){const agent=newMenuAgent,model=button.dataset.newModel;return {agent,model,effort:!model?'':button.dataset.newDefault==='true'?defaults[agent]?.effort||preferredEffort(models,agent,model):preferredEffort(models,agent,model)};}
+async function createDroppedModel(choice,target){
+ const parentId=target.dataset.row || target.dataset.agentChat;
+ const parent=chats.find(c=>c.id===parentId);
+ if(parentId && (!parent || parent.parentChatId))throw Error('Spusti model na glavni čet, ne na podagenta.');
+ if(parent?.running)throw Error('Sačekaj da glavni agent završi pre dodavanja podagenta.');
+ const folderId=target.hasAttribute('data-folder-out') || target.id==='chats'?null:target.dataset.folder || target.dataset.folderTarget;
+ if(folderId==='draft')return;
+ const chat=await api('/api/chats','POST',{settings:choice,...(parent?{parentChatId:parent.id}:folderId?{folderId}:{})});
+ putChat(chat);newEmptyChats.add(chat.id);closeNewModels();if(folderId)setOpenFolder(folderId);else if(parent?.folderId)setOpenFolder(parent.folderId);choose(chat.id);toast(parent?'Novi podagent je spreman.':'Novi čet je spreman.');
+}
+function modelDropTarget(x,y){return document.elementFromPoint(x,y)?.closest('[data-row],[data-agent-chat],[data-folder],[data-folder-target],[data-folder-out],#chats');}
+function clearModelDrag(){document.querySelectorAll('.model-drag-source,.drop-hover').forEach(el=>el.classList.remove('model-drag-source','drop-hover'));const ghost=$('#drag-ghost');if(ghost)ghost.hidden=true;modelDrag=null;}
+$('#new-models').onpointerdown=e=>{const card=e.target.closest('[data-new-model]');if(!card || e.button!==0)return;modelDrag={pointerId:e.pointerId,x:e.clientX,y:e.clientY,choice:modelChoice(card),card,active:false};card.setPointerCapture(e.pointerId);};
+$('#new-models').onpointermove=e=>{const d=modelDrag;if(!d || d.pointerId!==e.pointerId)return;if(!d.active && Math.hypot(e.clientX-d.x,e.clientY-d.y)<9)return;d.active=true;d.card.classList.add('model-drag-source');e.preventDefault();const target=modelDropTarget(e.clientX,e.clientY);document.querySelectorAll('.drop-hover').forEach(el=>el.classList.remove('drop-hover'));target?.classList.add('drop-hover');const ghost=$('#drag-ghost')||document.body.appendChild(Object.assign(document.createElement('div'),{id:'drag-ghost'}));ghost.textContent=d.card.querySelector('span').textContent;ghost.hidden=false;ghost.style.left=(e.clientX+12)+'px';ghost.style.top=(e.clientY+12)+'px';};
+$('#new-models').onpointerup=e=>{const d=modelDrag;if(!d || d.pointerId!==e.pointerId)return;const target=d.active?modelDropTarget(e.clientX,e.clientY):null;if(d.active){modelClickUntil=Date.now()+500;e.preventDefault();}clearModelDrag();if(target)guard(()=>createDroppedModel(d.choice,target));};
+$('#new-models').onpointercancel=clearModelDrag;
+$('#new-models').onclick=e=>guard(async()=>{if(Date.now()<modelClickUntil)return;const b=e.target.closest('[data-new-model]');if(!b)return;const choice=modelChoice(b);closeNewModels();await create(choice.agent,choice.model,choice.effort);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){clearModelDrag();closeNewModels();}});
 
 function chooseAgentCard(id){const chat=chats.find(c=>c.id===id);choose(id===active && chats.some(c=>c.id===chat?.parentChatId)?chat.parentChatId:id);}
 function cardId(e){return e.target.closest('[data-row]')?.dataset.row || e.target.closest('[data-agent-chat]')?.dataset.agentChat;}

@@ -13,6 +13,7 @@
   <header id="mobile-agent-header"></header>
   <aside class="sidebar">
     <div class="sidebar-actions"><div id="new-agents" role="group" aria-label="Novi čet"><button id="defaults-open" type="button" aria-label="Podešavanja" title="Podešavanja"><span id="device-battery" role="status" title="Stanje baterije drugog uređaja"></span></button></div></div>
+    <div id="model-library" aria-label="Modeli za novi čet"><div id="new-models" aria-label="Model novog četa" hidden></div></div>
     <div id="pull-refresh" aria-live="polite"></div>
     <nav id="chats" aria-label="Četovi"></nav>
   </aside>
@@ -63,7 +64,7 @@
   <dialog id="local-file-dialog" aria-label="Fajl sa računara, prikaz"><iframe id="local-file-frame" title="Prikaz fajla" sandbox="allow-scripts"></iframe><button id="local-file-close" type="button">Zatvori</button></dialog>
   <dialog id="attachment-view" aria-label="Prilog"><img id="attachment-view-image" alt=""><div id="attachment-pdf" hidden></div><button id="attachment-view-close" type="button">Zatvori</button></dialog>
   <dialog id="delete-dialog" aria-label="Arhiviraj čet"><p id="delete-title"></p><div class="settings-actions"><button id="delete-cancel">Otkaži</button><button id="delete-only">Arhiviraj ovaj čet</button><button id="delete-family">Arhiviraj čet i podagente</button></div></dialog>
-  <div id="new-models" role="menu" aria-label="Model novog četa" hidden></div><div id="chat-popover" role="dialog" aria-label="Opcije četa" hidden></div>
+  <div id="chat-popover" role="dialog" aria-label="Opcije četa" hidden></div>
   <div id="warmup-progress" role="status" aria-live="polite" hidden></div>
   <div id="toast" role="alert" hidden></div><div id="completion-notices" aria-live="polite"></div>
 <div id="chat-drop-targets">

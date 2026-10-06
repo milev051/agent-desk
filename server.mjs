@@ -386,6 +386,11 @@ const server = http.createServer(async (req, res) => {
       if(b.folderId!==undefined){if(!folders.has(b.folderId))throw new Error('Folder nije pronađen.');chat.folderId=b.folderId;}
       if(b.settings?.model!==undefined && b.settings.effort===undefined)chat.settings.effort=preferredEffort(quickCatalog(binaries),chat.settings.agent,chat.settings.model);
       validateEffort(quickCatalog(binaries), chat.settings);
+      if(b.parentChatId!==undefined){
+        const parent=chats.find(c=>c.id===b.parentChatId);
+        linkChat(chats,chat,parent,id=>running.has(id));
+        chat.settings.cwd=parent.settings.cwd;
+      }
       chats.unshift(chat); update(); return json(201, publicChat(chat));
     }
     const emptyMatch=url.pathname.match(/^\/api\/chats\/([\w-]+)\/discard-empty$/);
