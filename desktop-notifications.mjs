@@ -6,5 +6,5 @@ export function createNotificationSettings(file){
 }
 export function desktopNotificationArgs({title,body,chatId,sound='default'}){
  if(!/^[\w-]+$/.test(chatId))throw Error('Čet nije ispravan.');
- return ['-title',String(title).slice(0,120),'-message',String(body).slice(0,300),'-group','agent-desk-'+chatId,'-open','agentdesk://chat/'+chatId,...(sound==='none'?[]:['-sound',notificationSounds.includes(sound)?sound:'default'])];
+ return ['-appIcon',new URL('./public/icon-512.png',import.meta.url).href,'-title',String(title).slice(0,120),'-message',String(body).slice(0,300),'-group','agent-desk-'+chatId,'-open','agentdesk://chat/'+chatId,...(sound==='none'?[]:['-sound',notificationSounds.includes(sound)?sound:'default'])];
 }

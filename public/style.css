@@ -300,3 +300,5 @@ body #chats .chat-row.working,body #agent-tree .agent-tree-item.working{backgrou
 .notification-sound-settings{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:12px 0;font-size:12px}.notification-sound-settings label{display:flex;align-items:center;gap:8px}.notification-sound-settings small{width:100%;color:#888}.notification-sound-settings select{min-width:130px}
 
 @media(max-width:650px),(pointer:coarse){.notification-sound-settings{display:none}}
+
+#composer-joystick[data-action="bottom"]{border-color:#84b9ef}
