@@ -203,7 +203,7 @@ async function send(chat, prompt, options={}) {
   const reply = { id: randomUUID(), role: 'assistant', agent, model: chat.settings.model || '', configuredModel: chat.settings.model || '', historyTransferred, usageTracked:true, usageCwd:chat.settings.cwd, text: '', status: 'running', activity: 'Pokrećem agenta…', createdAt: Date.now() };
   delete chat.ephemeral;
   chat.messages.push({ id: randomUUID(), role: 'user', text: prompt, createdAt,sentAt,origin:options.origin || 'user',...(options.requestId?{requestId:options.requestId}:{}) }, reply);
-  if (chat.title === 'Novi čet') chat.title = prompt.slice(0, 52);
+  if (!chat.titleManual && ['Empty','Novi čet'].includes(chat.title)) chat.title = prompt.slice(0, 52);
   chat.updatedAt = Date.now();
   const run = { child, stopped: false }; run.done = new Promise(resolve=>run.resolve=resolve); running.set(chat.id, run); update();
   const progressPush=createProgressPush({notify:body=>!options.silent && phonePush.notify({title:chat.title||'Agent Desk',body,chatId:chat.id,tag:chat.id})});
@@ -382,7 +382,7 @@ const server = http.createServer(async (req, res) => {
     if (folderMatch && req.method === 'DELETE') { folders.remove(folderMatch[1]); for (const chat of chats) if (chat.folderId===folderMatch[1]) delete chat.folderId; update(); broadcastFolders(); return json(200, {ok:true}); }
     if (req.method === 'POST' && url.pathname === '/api/chats') {
       const b = await body(req);
-      const chat = { id: randomUUID(), title: 'Novi čet', ephemeral:true, createdAt: Date.now(), updatedAt: Date.now(), settings: validate({ agent: 'codex', model: '', access: 'full', cwd: root, instructions: '', effort: '', ...defaults[b.settings?.agent || 'codex'], ...b.settings }), sessions: {}, sessionOffsets:{}, messages: [] };
+      const chat = { id: randomUUID(), title: 'Empty', keepEmpty:true, createdAt: Date.now(), updatedAt: Date.now(), settings: validate({ agent: 'codex', model: '', access: 'full', cwd: root, instructions: '', effort: '', ...defaults[b.settings?.agent || 'codex'], ...b.settings }), sessions: {}, sessionOffsets:{}, messages: [] };
       if(b.folderId!==undefined){if(!folders.has(b.folderId))throw new Error('Folder nije pronađen.');chat.folderId=b.folderId;}
       if(b.settings?.model!==undefined && b.settings.effort===undefined)chat.settings.effort=preferredEffort(quickCatalog(binaries),chat.settings.agent,chat.settings.model);
       validateEffort(quickCatalog(binaries), chat.settings);
@@ -395,7 +395,7 @@ const server = http.createServer(async (req, res) => {
     }
     const emptyMatch=url.pathname.match(/^\/api\/chats\/([\w-]+)\/discard-empty$/);
     if(req.method==='POST' && emptyMatch){const chat=chats.find(c=>c.id===emptyMatch[1]);if(!chat)return json(200,{ok:true});
-      if(running.has(chat.id)||chat.messages.length||chat.queue?.length||Object.keys(chat.sessions).length||chats.some(c=>c.parentChatId===chat.id)||chat.draft?.text?.trim())return json(409,{error:'Čet više nije prazan.'});
+      if(chat.keepEmpty||running.has(chat.id)||chat.messages.length||chat.queue?.length||Object.keys(chat.sessions).length||chats.some(c=>c.parentChatId===chat.id)||chat.draft?.text?.trim())return json(409,{error:'Čet više nije prazan.'});
       chats=chats.filter(c=>c.id!==chat.id);update();return json(200,{ok:true});}
     const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(read|draft|unlink|link|send|stop|reset-session|speak|speech|fork|delegate|reveal|record|count-tokens|files|upload|prilog)(?:\/([a-f0-9]{16}))?)?$/);
     if (match) {

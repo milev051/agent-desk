@@ -50,7 +50,7 @@ Codex povezivanje se zasniva na lokalnom `codex exec --help` i [zvaničnoj dokum
 
 ## Interfejs
 
-Na vrhu leve strane su četiri ikonice za novi čet. Ako je aktivni čet prazan i nema CLI sesiju, izbor drugog agenta menja taj čet i zadržava nacrt poruke. Svaki čet zauzima jedan red sa naslovom i logom aktivnog agenta. Hover prikazuje agenta i izabrani podmodel; ako CLI model još nije poznat, prikazuje „Podrazumevani CLI model“.
+Na vrhu su četiri grupe modela. Klik na model uvek pravi novi čet pod nazivom `Empty`; prazan čet ostaje sačuvan i nakon prelaska u drugi čet. Prva poruka daje naslov prema svom tekstu. Ručno izabran naslov ostaje.
 
 Duži pritisak na karticu otvara popup centriran uz karticu, sa ostala tri agenta, kantom, modelom i podržanim reasoning nivoima. Uz ivice ekrana položaj se prilagođava dostupnom prostoru. Klik na drugog agenta menja isti čet, bez kopiranja. Dugme za grananje pored kante pravi zasebnu kopiju sa vidljivim porukama i novom CLI sesijom. Red čekanja se ne kopira. Promena podmodela unutar istog agenta čuva native sesiju i važi za sledeću poruku. Promene modela su blokirane dok agent radi.
 
@@ -133,7 +133,7 @@ Na prethodnoj lokaciji ostao je samo simbolički link ka novom folderu, da putan
 
 ## Panel agenata i imena četova
 
-Dugme **Agenti** dole levo otvara dodatni panel uz listu četova. Prikazuje samo direktne podagente trenutno izabranog četa, sa nazivom zadatka. Žuta tačka označava rad, plava nepročitan odgovor, siva završetak. Klik otvara čet, ponovni klik izabranog otvara njegove opcije. Panel se može sakriti; izbor ostaje u browseru. Na manjim ekranima otvara se preko glavnog prostora. Pozadina aplikacije i četa je potpuno crna.
+Glavni čet sa podagentima ima strelicu i proširuje se klikom. Podčetovi stoje odmah ispod njega, bez dodatnog reda „Agenti“. Taster ↗ otvara razgovor glavnog agenta. Grupe se otvaraju nezavisno i pamte stanje. Žuta kartica označava rad, zelena nov nepročitan odgovor; čitanje se sinhronizuje između uređaja.
 
 Agenti znaju kako da pokrenu podagenta jer uz poruku dobijaju opis okruženja i lokalnog API-ja. Protokol nije zaseban alat modela: CLI agent izvršava HTTP zahtev preko svog terminala. POST `/api/chats/ID/delegate` sada prihvata opciono `name`, npr. `{"agent":"codex","name":"Provera testova","task":"Proveri ..."}`. Takav naziv se čuva. Bez naziva koristi se početak zadatka. Čet se više ne preimenuje u pozadini.
 

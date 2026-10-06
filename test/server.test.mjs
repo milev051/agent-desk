@@ -75,7 +75,8 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal((await fetch(`${base}/api/chats/${made.id}/prilog?name=${encodeURIComponent('../../chats.json')}`)).status,404);
     const doc=path.join(path.dirname(saved),'izveštaj.pdf');writeFileSync(doc,'pdf');const downloaded=await fetch(`${base}/api/chats/${made.id}/prilog?name=${encodeURIComponent('izveštaj.pdf')}`);assert.equal(downloaded.headers.get('content-type'),'application/octet-stream');assert.match(downloaded.headers.get('content-disposition'),/^attachment/);
     rmSync(path.dirname(saved),{recursive:true});
-    await call(`/api/chats/${made.id}/discard-empty`,'POST',{});
+    assert.equal((await call(`/api/chats/${made.id}/discard-empty`,'POST',{})).status,409);
+    assert.equal(made.title,'Empty');await call(`/api/chats/${made.id}`,'DELETE');
     assert.equal((await call('/api/chats', 'POST', {}, 'https://example.com')).status, 403);assert.deepEqual((await call('/api/limit-history')).data,[]);
     assert.equal((await call('/api/title-settings')).data.configured,false);
     assert.equal((await call('/api/title-settings','PUT',{key:'test-only-key',enabled:false},'https://example.com')).status,403);
@@ -106,7 +107,7 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
 
     assert.equal((await call(`/api/chats/${a.id}`, 'PATCH', { settings: { cwd: '/missing-folder-agent-desk' } })).status, 400);
     await call(`/api/chats/${a.id}/send`, 'POST', { text: 'Prva poruka' });
-    let chat = await done(a.id);
+    let chat = await done(a.id);assert.notEqual(chat.title,'Empty');
     const firstReadId=chat.messages.at(-1).id;
     assert.equal((await call(`/api/chats/${a.id}/read`,'PUT',{messageId:'missing'})).status,400);
     assert.equal((await call(`/api/chats/${a.id}/read`,'PUT',{messageId:firstReadId})).status,200);
@@ -238,7 +239,7 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     const childArchived=await call(`/api/chats/${child.id}`,'DELETE');const parentArchived=await call(`/api/chats/${queued.id}`,'DELETE');assert.equal(childArchived.status,200);assert.equal(parentArchived.status,200);
     assert.equal((await call(`/api/archive/${parentArchived.data.archiveId}/restore`,'POST',{})).status,200);assert.equal((await call(`/api/chats/${child.id}`)).data.parentChatId,queued.id);assert.ok(!(await call('/api/archive')).data.some(r=>r.id===childArchived.data.archiveId));
     const unused=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
-    assert.equal((await call(`/api/chats/${unused.id}/discard-empty`,'POST',{})).status,200);assert.equal((await call(`/api/chats/${unused.id}`)).status,404);
+    assert.equal((await call(`/api/chats/${unused.id}/discard-empty`,'POST',{})).status,409);assert.equal((await call(`/api/chats/${unused.id}`)).data.title,'Empty');await call(`/api/chats/${unused.id}`,'DELETE');
     assert.equal((await call(`/api/chats/${a.id}/discard-empty`,'POST',{})).status,409);
     const beforeResume=(await call('/api/chats')).data.length,childBefore=(await call(`/api/chats/${child.id}`)).data;
     const resumed=await call(`/api/chats/${queued.id}/delegate`,'POST',{childId:child.id,task:'Nastavi proveru istog zadatka'});assert.equal(resumed.status,202);assert.equal(resumed.data.id,child.id);

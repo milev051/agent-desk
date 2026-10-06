@@ -262,3 +262,13 @@ body.dragging-chat #chat-drop-targets{display:flex}
 .chat-row.subagent-card[data-agent="claude"]{box-shadow:inset 2px 0 #edaa79}
 .chat-row.subagent-card[data-agent="antigravity"]{box-shadow:inset 2px 0 #78aeea}
 .chat-row.subagent-card[data-agent="grok"]{box-shadow:inset 2px 0 #ddd}
+
+.empty-chat{color:#888;font-size:14px;text-align:center;padding:48px 16px}
+.chat-row[data-expand-parent]{position:relative;background:#242033;box-shadow:inset 2px 0 #75628e}
+.chat-row[data-expand-parent] .chat-item{padding-right:70px}
+.parent-card-actions{position:absolute;right:35px;display:flex;align-items:center;gap:9px;height:100%}
+.parent-card-actions button{border:0;background:none;color:#aaa;padding:3px;font-size:15px}
+.parent-chevron{width:6px;height:6px;border-right:1px solid #aaa;border-bottom:1px solid #aaa;transform:rotate(-45deg)}
+.parent-chevron.open{transform:rotate(45deg)}
+.chat-group>.subagent-chats{margin:4px 0 8px 10px}
+.chat-row[data-expand-parent].working{background:#3e3824}.chat-row[data-expand-parent].completed{background:#243e2c}.chat-row[data-expand-parent].has-draft:not(.working){background:#363940}
