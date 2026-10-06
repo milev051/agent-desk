@@ -32,10 +32,10 @@ test('nova instalacija dobija dva foldera i prima nove do granice',()=>{
   assert.throws(()=>folders.remove('nema'),/nije pronađen/);
 });
 
-test('početna lista prikazuje sve četove, a otvoren folder filtrira svoje četove',()=>{
+test('neraspoređeni četovi su odvojeni od četova u otvorenom folderu',()=>{
   const chats=[{id:'a',folderId:'home',updatedAt:3},{id:'lost',folderId:'gone',updatedAt:2},{id:'b',updatedAt:1},{id:'child',parentChatId:'a',folderId:'work'}];
-  assert.deepEqual(placedChats(chats,['home','work']).map(group=>group.chat.id),['a','lost','b']);
+  assert.deepEqual(placedChats(chats,['home','work']).map(group=>group.chat.id),['lost','b']);
   assert.deepEqual(placedChats(chats,['home','work'],'home').map(group=>group.chat.id),['a']);
   assert.deepEqual(placedChats(chats,['home','work'],'work').map(group=>group.chat.id),[]);
-  assert.deepEqual(placedChats(chats,['home']).map(group=>group.chat.id),['a','lost','b']);
+  assert.deepEqual(placedChats(chats,['home']).map(group=>group.chat.id),['lost','b']);
 });

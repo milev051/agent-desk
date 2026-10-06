@@ -23,9 +23,10 @@ export function exportMessages(chats,id,ids,{includeContext=true,modelName=(_age
  return header.join('\n')+'\n\n'+messages.map(m=>`## ${m.role==='user'?'Korisnik':(names[m.agent]||'Agent')+' · '+md(modelName(m.agent,m.model)||'model nije prijavljen')} · ${Number.isFinite(m.createdAt)?new Date(m.createdAt).toISOString():'vreme nije zabeleženo'}\n\n${m.text}`).join('\n\n');
 }
 
-// All roots on the main list, or only the roots of the folder that is open.
+// Roots in the expanded folder, or roots with no known folder.
 export function placedChats(chats, folderIds, openId=null) {
-  return sidebarGroups(chats).filter(group=>!openId || group.chat.folderId===openId);
+  const ids=new Set(folderIds);
+  return sidebarGroups(chats).filter(group=>openId?group.chat.folderId===openId:!ids.has(group.chat.folderId));
 }
 
 export function sidebarBranch(chats, id) {

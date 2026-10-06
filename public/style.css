@@ -231,3 +231,5 @@ body.dragging-chat #chat-drop-targets{display:flex}
 #chats{display:flex;flex-direction:column}#chats>.folder-row{flex-shrink:0}#chat-list-items{flex:1;min-height:100px}#chat-list-items.drop-hover{outline:1px dashed #98cfa6;outline-offset:-1px}
 #chat-drop-targets .folder-out-drop{flex:1;min-width:0;border:1px dashed #666;border-radius:8px;padding:16px 12px;background:#161616;color:#ccc;text-align:center;font-size:12px;box-shadow:0 4px 20px #0008}#chat-drop-targets .folder-out-drop.drop-hover{background:#16211b;border-color:#98cfa6}
 #device-battery.charging svg{color:#89b992}#device-battery.charging .battery-duration{color:#89b992}
+
+.sidebar-folder{flex-shrink:0}.folder-chats{margin:0 0 10px 10px;padding:3px 0 3px 9px;border-left:1px solid #393939;min-height:40px}.folder-chats.drop-hover{background:#16211b;border-color:#98cfa6}.folder-row .folder-chevron{width:6px;height:6px;flex-shrink:0;border-right:1px solid #999;border-bottom:1px solid #999;transform:rotate(-45deg);margin-left:3px;margin-right:3px}.folder-row.open .folder-chevron{transform:rotate(45deg)}#chat-list-items{min-height:40px}
