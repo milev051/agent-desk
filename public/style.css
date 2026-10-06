@@ -276,3 +276,5 @@ body #chats .chat-row.working,body #agent-tree .agent-tree-item.working{backgrou
 
 
 .folder-copy-actions{display:flex;gap:8px;margin-top:10px}.folder-copy-actions button{display:flex;align-items:center;gap:7px;flex:1;min-width:0;text-align:left;padding:8px}.folder-copy-actions svg{flex-shrink:0;width:16px;height:16px}.folder-copy-actions span{min-width:0;font-size:12px}.folder-copy-actions small{display:block;margin-top:3px;color:#999;font-size:10px;overflow-wrap:anywhere}
+
+#chat-search{display:flex;align-items:center;gap:6px;width:100%;max-width:900px;margin:0 auto;padding:7px 24px;flex-shrink:0}#chat-search[hidden]{display:none}#chat-search-input{flex:1;min-width:0;padding:6px 8px;font-size:13px}#chat-search-count{font-size:11px;color:#aaa;white-space:nowrap}#chat-search button{padding:4px 7px}.chat-search-match{background:#665a25;color:inherit}.chat-search-match.current{background:#a47927;color:#fff}#composer-joystick[data-action="search"]{border-color:#c7b1ec}
