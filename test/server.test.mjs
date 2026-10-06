@@ -13,6 +13,7 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
   const temp = mkdtempSync(path.join(tmpdir(), 'agent-desk-test-'));
   const bin = path.join(temp, 'bin'); mkdirSync(bin);
   writeFileSync(path.join(bin, 'codex'), `#!${process.execPath}\nlet input='';process.stdin.on('data',c=>input+=c);process.stdin.on('end',()=>{console.log(JSON.stringify({type:'thread.started',thread_id:'test-native-session'}));if(input.trimEnd().endsWith('WAIT'))setTimeout(()=>{},60000);else{if(input.includes('SLOW'))setTimeout(()=>{},300);console.log(JSON.stringify({type:'item.completed',item:{type:'agent_message',text:JSON.stringify({input,args:process.argv.slice(2)})}}));console.log(JSON.stringify({type:'turn.completed',usage:{input_tokens:process.argv.includes('resume')?240:120,cached_input_tokens:process.argv.includes('resume')?160:80,output_tokens:process.argv.includes('resume')?30:15}}));}});\n`, { mode: 0o755 });
+  mkdirSync(path.join(temp,'data'));writeFileSync(path.join(temp,'data','provera-agenata.json'),JSON.stringify({enabled:false}));
   const port = 4400 + Math.floor(Math.random() * 1000), base = `http://127.0.0.1:${port}`;
   const server = spawn(process.execPath, ['server.mjs'], { cwd: path.resolve(import.meta.dirname, '..'), env: { ...process.env, PORT: String(port), AGENT_DESK_DISABLE_LIMITS:'1', PATH: `${bin}${path.delimiter}${process.env.PATH}`, AGENT_DESK_CONFIG: path.join(temp, 'config'), AGENT_DESK_DATA: path.join(temp, 'data') }, stdio: ['ignore', 'pipe', 'pipe'] });
   try {

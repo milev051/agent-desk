@@ -264,7 +264,7 @@ const warmup=createWarmup(path.join(dataDir,'provera-agenata.json'),{execute:asy
  if(!model)throw Error('Lakši model nije dostupan. Izaberi model u podešavanjima.');
  if(!available.some(m=>m.id===model))throw Error('Model nije u spisku dostupnih modela.');
  const efforts=available.find(m=>m.id===model)?.efforts||[],effort=efforts.some(e=>e.id==='low')?'low':preferredEffort(quickCatalog(binaries),agent,model);
- const chat={id:randomUUID(),title:'Jednokratna provera · '+agent,createdAt:Date.now(),settings:validate({agent,model,access:'read',cwd:root,instructions:'',effort}),sessions:{},sessionOffsets:{},messages:[]};
+ const chat={id:randomUUID(),title:'Jednokratna provera · '+agent,createdAt:Date.now(),settings:validate({agent,model,access:['grok','antigravity'].includes(agent)?'full':'read',cwd:root,instructions:'',effort}),sessions:{},sessionOffsets:{},messages:[]};
  // Temporary chat never enters the saved chat list. Only its outcome and usage remain.
  const run=await send(chat,prompt,{origin:'warmup',minimalContext:true,silent:true,timeoutMs:120000});const reply=await run.done;
  return {model,status:reply.status,usage:reply.usage||null,...(reply.error?{error:reply.error.slice(0,500)}:{})};

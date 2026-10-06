@@ -350,7 +350,7 @@ function renderWarmupStatus(){
  if(state?.running && !$('#defaults').hidden)warmupPoll=setTimeout(()=>guard(async()=>{warmupSettings=await api('/api/warmup');renderWarmupStatus();}),2000);
 }
 function renderWarmup(){
- $('#warmup-enabled').checked=!!warmupSettings?.enabled;
+ $('#warmup-enabled').checked=warmupSettings?.enabled ?? true;
  $('#warmup-time').value=warmupSettings?.time || '08:00';
  $('#warmup-agents').innerHTML=meta.agents.map(a=>`<label class="warmup-agent" data-warmup-agent="${a.id}"><span><input type="checkbox" ${a.available && (warmupSettings?.agents || []).includes(a.id)?'checked':''} ${a.available?'':'disabled'}> ${escape(a.name)}</span><select aria-label="Model za kratku poruku ${escape(a.name)}" ${a.available?'':'disabled'}><option value="">Automatski: lakši model</option>${modelOptions({agent:a.id,model:warmupSettings?.models?.[a.id] || ''}).replace(/^<option[^>]*>Podrazumevani<\/option>/,'')}</select></label>`).join('');
  for(const row of $('#warmup-agents').children)row.querySelector('select').value=warmupSettings?.models?.[row.dataset.warmupAgent] || '';

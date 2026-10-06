@@ -9,6 +9,7 @@ test('raspored: lokalno vreme, jednom dnevno, bez nadoknade starih slanja',async
  let time=new Date('2026-10-06T06:00:00Z'),calls=[];
  const job=setup(t,{now:()=>time,execute:async agent=>{calls.push(agent);return {status:'done'};}});
  assert.deepEqual(localSchedule(time),{date:'2026-10-06',time:'08:00'});
+ assert.equal(job.view().enabled,true);job.configure({enabled:false,time:'08:00',agents:['codex','claude']});
  await job.tick();assert.equal(calls.length,0);
  job.configure({enabled:true,time:'08:00',agents:['codex','claude']});
  await job.tick();await job.tick();assert.deepEqual(calls,['codex','claude']);
