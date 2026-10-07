@@ -21,11 +21,14 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     async function call(url, method = 'GET', data, origin = base) { const r = await fetch(base + url, { method, headers: { Origin: origin, 'Content-Type': 'application/json' }, body: data ? JSON.stringify(data) : undefined }); return { status: r.status, data: await r.json() }; }
     async function done(id) { for(let i=0;i<100;i++){const c=(await call('/api/chats')).data.find(c=>c.id===id);if(!c.running)return c;await new Promise(r=>setTimeout(r,30));}throw Error('CLI nije završio'); }
     assert.equal((await call('/api/integrations/gmail')).data.state,'unconfigured');
-    const environment=(await call('/api/environment')).data;assert.equal(environment.app,'Agent Desk');assert.equal(environment.integrations.calendar.implemented,false);assert.equal(environment.chat,null);
+    const environment=(await call('/api/environment')).data;assert.equal(environment.app,'Agent Desk');assert.equal(environment.integrations.calendar.implemented,true);assert.equal(environment.chat,null);
     assert.equal((await call('/api/environment?chatId=missing')).status,404);
-    for(const service of ['drive','tasks']){assert.equal(environment.integrations[service].connected,false);assert.equal((await call('/api/integrations/'+service)).data.state,'unconfigured');assert.equal((await call('/api/integrations/'+service,'POST',{})).status,405);}
+    for(const service of ['drive','tasks','calendar']){assert.equal(environment.integrations[service].connected,false);assert.equal((await call('/api/integrations/'+service)).data.state,'unconfigured');assert.equal((await call('/api/integrations/'+service,'POST',{})).status,405);}
     assert.equal((await call('/api/integrations/drive/files?q=test')).status,400);
     assert.equal((await call('/api/integrations/tasks/lists')).status,400);
+    assert.equal((await call('/api/integrations/calendar/calendars')).status,400);
+    assert.equal((await call('/api/integrations/calendar/calendars/test%40example.test/events')).status,400);
+    assert.equal((await call('/api/integrations/calendar/calendars/primary/events/event1','DELETE',{})).status,405);
     assert.equal((await call('/api/integrations/gmail/messages?q=test')).status,400);
     assert.equal((await call('/api/integrations/gmail/send','POST',{})).status,404);
     assert.equal((await call('/api/integrations/gmail/connect','POST',{},'https://evil.test')).status,403);

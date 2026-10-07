@@ -3,6 +3,7 @@ import path from 'node:path';
 import http from 'node:http';
 import {randomBytes,createHash} from 'node:crypto';
 
+export const calendarScope='https://www.googleapis.com/auth/calendar.readonly';
 export const driveScope='https://www.googleapis.com/auth/drive.readonly';
 export const tasksScope='https://www.googleapis.com/auth/tasks.readonly';
 export const gmailScope='https://www.googleapis.com/auth/gmail.readonly';
@@ -35,12 +36,12 @@ export function gmailMessage(message){
 }
 
 export function createGmail({configDir,fetchImpl=fetch,now=Date.now,openBrowser=async()=>{},loginTimeoutMs=600000,scopes=[gmailScope]}={}){
-  if(!scopes.length || scopes.some(scope=>![gmailScope,driveScope,tasksScope].includes(scope)))throw Error('Nepodržana Google dozvola.');
+  if(!scopes.length || scopes.some(scope=>![gmailScope,driveScope,tasksScope,calendarScope].includes(scope)))throw Error('Nepodržana Google dozvola.');
   const clientFile=path.join(configDir,'gmail','oauth-client.json'),tokenFile=path.join(configDir,'gmail','tokens.json');
   let client=null,tokens=readPrivate(tokenFile),pending=null,starting=false,refreshing=null,epoch=0,error='',needsReconnect=false;
   try{const saved=readPrivate(clientFile);if(saved)client=clientFrom(saved).installed;}catch{error='OAuth podešavanje nije ispravno. Ponovo uvezi Desktop app JSON fajl.';}
   if(tokens && (!tokens.refresh_token || !tokens.email || !tokens.scope?.split(' ').includes(gmailScope))){tokens=null;needsReconnect=true;}
-  function status(){return {configured:!!client,connected:!!tokens && !needsReconnect,email:tokens?.email || '',state:starting || pending?'connecting':needsReconnect?'reconnect_required':tokens?'connected':client?'disconnected':'unconfigured',error,readOnly:true,services:Object.fromEntries([['gmail',gmailScope],['drive',driveScope],['tasks',tasksScope]].map(([name,scope])=>[name,{connected:!!tokens && !needsReconnect && tokens.scope.split(' ').includes(scope),readOnly:true}])),upgradeRequired:!!tokens && scopes.some(scope=>!tokens.scope.split(' ').includes(scope))};}
+  function status(){return {configured:!!client,connected:!!tokens && !needsReconnect,email:tokens?.email || '',state:starting || pending?'connecting':needsReconnect?'reconnect_required':tokens?'connected':client?'disconnected':'unconfigured',error,readOnly:true,services:Object.fromEntries([['gmail',gmailScope],['drive',driveScope],['tasks',tasksScope],['calendar',calendarScope]].map(([name,scope])=>[name,{connected:!!tokens && !needsReconnect && tokens.scope.split(' ').includes(scope),readOnly:true}])),upgradeRequired:!!tokens && scopes.some(scope=>!tokens.scope.split(' ').includes(scope))};}
   function cancel(){epoch++;starting=false;if(pending){clearTimeout(pending.timer);pending.server.close();pending.server.closeAllConnections();pending=null;}}
   async function google(url,options={},content=false){
     let response;
@@ -111,8 +112,8 @@ export function createGmail({configDir,fetchImpl=fetch,now=Date.now,openBrowser=
   return {
     status,connect,close:cancel,
     async serviceRequest(service,resource,params={},content=false){
-      const config={drive:['https://www.googleapis.com/drive/v3',driveScope],tasks:['https://tasks.googleapis.com/tasks/v1',tasksScope]}[service];
-      if(!config || typeof resource!=='string' || !/^\/[a-zA-Z0-9_@/.-]+$/.test(resource) || resource.includes('..'))throw Error('Neispravan Google servis ili putanja.');
+      const config={drive:['https://www.googleapis.com/drive/v3',driveScope],tasks:['https://tasks.googleapis.com/tasks/v1',tasksScope],calendar:['https://www.googleapis.com/calendar/v3',calendarScope]}[service];
+      if(!config || typeof resource!=='string' || !/^\/(?:[a-zA-Z0-9_@/.-]|%[a-fA-F0-9]{2})+$/.test(resource) || resource.includes('..'))throw Error('Neispravan Google servis ili putanja.');
       return request(resource,params,true,config[0],config[1],content);
     },
     async verify(){await request('/profile');return status();},

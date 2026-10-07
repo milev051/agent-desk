@@ -106,3 +106,13 @@ test('Google servis koristi GET i fiksnu API adresu, a veliko preuzimanje je ogr
   f.handler=()=>new Response('čćšđž');const content=await f.gmail.serviceRequest('drive','/files/doc/export',{mimeType:'text/plain'},true);assert.equal(content.toString(),'čćšđž');assert.equal(new URL(f.calls.at(-1).url).origin,'https://www.googleapis.com');assert.equal(f.calls.at(-1).opts.method,undefined);
   await assert.rejects(f.gmail.serviceRequest('drive','/../token'),/putanja/);f.handler=()=>new Response(Buffer.alloc(10*1024*1024+1));await assert.rejects(f.gmail.serviceRequest('drive','/files/doc',{alt:'media'},true),/10 MB/);
 });
+
+test('Calendar proširenje čuva Gmail vezu pri otkazu, proverava dozvolu i koristi fiksan Calendar GET',async t=>{
+  const {driveScope,tasksScope,calendarScope}=await import('../gmail.mjs');
+  const f=fixture(t,{scopes:[gmailScope,driveScope,tasksScope,calendarScope]});await f.login();assert.equal(f.gmail.status().services.calendar.connected,false);assert.equal(f.gmail.status().upgradeRequired,true);
+  await assert.rejects(f.gmail.serviceRequest('calendar','/users/me/calendarList'),/dozvola/);
+  await f.gmail.connect();f.gmail.cancel();assert.equal(f.gmail.status().connected,true);assert.equal(f.gmail.status().services.gmail.connected,true);
+  f.handler=url=>url.endsWith('/token')?result({access_token:'fake-access',refresh_token:'fake-refresh',scope:[gmailScope,driveScope,tasksScope,calendarScope].join(' '),expires_in:3600}):result({emailAddress:'test@example.test'});
+  await f.gmail.connect();const callback=new URL(f.auth.searchParams.get('redirect_uri'));callback.search=new URLSearchParams({state:f.auth.searchParams.get('state'),code:'fake-code'});assert.equal((await fetch(callback)).status,200);assert.equal(f.gmail.status().services.calendar.connected,true);assert.equal(f.gmail.status().upgradeRequired,false);
+  f.handler=()=>result({items:[]});await f.gmail.serviceRequest('calendar','/calendars/test%40example.test/events');const call=f.calls.at(-1);assert.equal(new URL(call.url).origin,'https://www.googleapis.com');assert.equal(new URL(call.url).pathname,'/calendar/v3/calendars/test%40example.test/events');assert.equal(call.opts.method,undefined);
+});

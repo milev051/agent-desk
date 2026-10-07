@@ -24,3 +24,14 @@ test('Tasks čita liste, zadatke i pojedinačan zadatak uz uključivanje završe
   const list=await f.services.tasks('list1',{showCompleted:true});assert.equal(list.tasks[0].id,'task');assert.equal(f.calls.at(-1)[2].showHidden,true);
   await f.services.task('list1','task1');assert.equal(f.calls.at(-1)[1],'/lists/list1/tasks/task1');await assert.rejects(f.services.tasks('list1',{showCompleted:'true'}));
 });
+
+test('Calendar čita kalendare i pojedinačne termine uz zonu, paginaciju i kodirane ID-je',async()=>{
+  const calls=[];const services=createGoogleServices({serviceRequest:async(...args)=>{calls.push(args);return {items:[{id:'event1',start:{date:'2026-10-07'}}],nextPageToken:'next',timeZone:'Europe/Belgrade'};}},{now:()=>Date.parse('2026-10-07T10:00:00Z')});
+  assert.equal((await services.calendars({maxResults:5,pageToken:'first'})).nextPageToken,'next');assert.equal(calls.at(-1)[1],'/users/me/calendarList');
+  const found=await services.events('en.serbian#holiday@group.v.calendar.google.com',{q:'sastanak',timeMin:'2026-10-07T00:00:00+02:00',timeMax:'2026-10-08T00:00:00+02:00',pageToken:'next'});
+  assert.equal(found.events[0].start.date,'2026-10-07');assert.equal(found.timeZone,'Europe/Belgrade');assert.equal(calls.at(-1)[1],'/calendars/en.serbian%23holiday%40group.v.calendar.google.com/events');
+  assert.equal(calls.at(-1)[2].singleEvents,true);assert.equal(calls.at(-1)[2].orderBy,'startTime');assert.equal(calls.at(-1)[2].timeMin,'2026-10-07T00:00:00+02:00');
+  const upcoming=await services.events();assert.equal(upcoming.timeMin,'2026-10-07T10:00:00.000Z');assert.equal(upcoming.timeMax,'2026-10-14T10:00:00.000Z');
+  await services.event('primary','event1');assert.equal(calls.at(-1)[1],'/calendars/primary/events/event1');
+  await assert.rejects(services.events('primary',{timeMin:'2026-10-07'}),/vremenskom zonom/);await assert.rejects(services.events('primary',{timeMin:'2026-10-07T00:00:00Z',timeMax:'2026-10-06T00:00:00Z'}),/posle/);await assert.rejects(services.events('../tokens'));
+});
