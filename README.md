@@ -15,6 +15,8 @@ Otvori http://127.0.0.1:4317. Za drugi port: `PORT=4318 npm start`.
 
 Na macOS-u dvoklikni `Agent Desk.app` u folderu aplikacije. Pokretač pokreće server u pozadini bez Terminal prozora i otvara zaseban Mac prozor sa ugrađenim WebView-om, sopstvenom ikonicom i nazivom u Docku. Pri pokretanju prozor popunjava dostupni ekran, uz prostor za Dock i gornju traku. Cmd+Q zatvara aplikaciju; server ostaje uključen za telefon i agente koji rade. Osvežavanje je Cmd+R, a kopiranje i lepljenje koriste standardne Mac prečice. Pokretač se pravi komandom `./launcher/build.sh`, bez dodatnih modula; `./launcher/build.sh --install` ga postavlja u `/Applications/Agent Desk.app`, uz vezu ka postojećem projektu i podacima; `Pokreni Agent Desk.command` otvara isti pokretač.
 
+Pri prvom pokretanju server sam instalira čuvara (`watchdog.mjs`) u `~/Library/LaunchAgents/local.agent-desk.watchdog.plist`. macOS ga pokreće pri prijavi i svakog minuta. Čuvar posle prijave na Mac pokreće server, da telefon radi bez otvaranja aplikacije, restartuje server ako ne odgovara dva minuta, briše zaostale `launchctl submit` poslove `local.agent-desk.*` i gasi `/tmp/agent-desk-*restart*` skripte kad se server restartuje u krug. Kad nešto uradi, šalje Mac obaveštenje i piše u `~/.config/agent-desk/watchdog.log`. Na novom računaru dovoljno je klonirati repo, pokrenuti `npm install` i jednom otvoriti aplikaciju.
+
 ## Uključeno
 
 - Kreiranje, preimenovanje i brisanje četova.

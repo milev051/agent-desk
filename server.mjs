@@ -36,6 +36,7 @@ import { buildAccounting } from './accounting.mjs';
 import {createBatteryStatus} from './battery.mjs';
 import { createPush } from './push.mjs';
 import webpush from 'web-push';
+import { installWatchdog } from './watchdog.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const dataDir = process.env.AGENT_DESK_DATA || path.join(root, 'data');
@@ -716,6 +717,6 @@ const server = http.createServer(async (req, res) => {
     json(404, { error: 'Nije pronađeno.' });
   } catch (error) { json(400, { error: error.message }); }
 });
-server.listen(port, '127.0.0.1', () => {phone.start();limits.start();warmup.start();console.log(`Agent Desk: http://127.0.0.1:${port}`);});
+server.listen(port, '127.0.0.1', () => {phone.start();limits.start();warmup.start();console.log(`Agent Desk: http://127.0.0.1:${port}`);if(process.platform==='darwin' && !process.env.AGENT_DESK_CONFIG){try{if(installWatchdog({configDir:path.dirname(phoneOriginFile)}))console.log('Čuvar instaliran.');}catch(e){console.error('Čuvar: '+e.message);}}});
 function shutdown() {clearInterval(folderNameTimer);syncChatFiles();shuttingDown=true;clearInterval(archiveCleanup);limits.close();warmup.stop();phone.close();gmail.close();titleManager.close();for (const id of running.keys()) stop(id); setTimeout(() => process.exit(0), 2200); server.close(); }
 process.on('SIGINT', shutdown); process.on('SIGTERM', shutdown);
