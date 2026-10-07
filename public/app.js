@@ -130,7 +130,17 @@ const recordIcon=actionIcon('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a
 let seen={};try {seen=JSON.parse(localStorage.getItem('agent-desk-seen') || '{}');} catch {}
 const syncedReads=new Map(),readRequests=new Set();
 let folders=[],openFolder=null,folderRename=null,drag=null;try{openFolder=localStorage.getItem('agent-desk-folder');}catch{}
-createDailyPrioritiesPanel({api,openChat:id=>window.openNotificationChat(id)});
+const prioritiesPanel=createDailyPrioritiesPanel({api,getAgent:id=>{
+ const chat=chats.find(c=>c.id===id);if(!chat)return null;
+ const parent=chats.find(c=>c.id===chat.parentChatId),folderId=parent?.folderId || chat.folderId;
+ return {name:meta?agentName(chat.settings.agent):chat.settings.agent,title:chat.title,logo:agentLogos[chat.settings.agent],folderName:folders.find(f=>f.id===folderId)?.name || 'Neraspoređeni'};
+},openAgentFolder:id=>{
+ const chat=chats.find(c=>c.id===id);if(!chat){toast('Čet nije dostupan.');return;}
+ const parent=chats.find(c=>c.id===chat.parentChatId),folderId=parent?.folderId || chat.folderId || null;
+ showChatList();setOpenFolder(folderId);
+ const target=folderId?[...document.querySelectorAll('[data-folder]')].find(el=>el.dataset.folder===folderId):document.querySelector('[data-unassigned]');
+ target?.scrollIntoView({block:'nearest'});
+}});
 createCliUpdatesPanel({api});
 function completion(chat) {const m=chat.latestReply || [...chat.messages].reverse().find(m=>m.role==='assistant');return m && ['done','stopped','error','interrupted'].includes(m.status) ? {token:`${m.id}:${m.status}`,messageId:m.id,status:m.status} : null;}
 function clearReadNotifications(chat) {
@@ -225,6 +235,7 @@ function visibleSidebarChats(){
  return groups.flatMap(group=>[group.chat,...(showChildren(group.chat.id)?group.children:[])]);
 }
 function renderSidebar() {
+  prioritiesPanel.render();
   const row=(c,index,hasChildren=false)=>{const shortcut=index<9?` · ⌘${index+1}`:'';return `<div role="button" tabindex="0" aria-label="${escape(c.title)}${shortcut}" class="chat-row ${c.parentChatId?'subagent-card':''} ${(drafts.has(c.id)?drafts.get(c.id):c.draft?.text||'').trim()?'has-draft':''} ${c.id===active?'active':''} ${c.running?'working':notification(c)} ${drag?.active && drag.id===c.id?'drag-source':''}" data-row="${c.id}" ${hasChildren?`data-expand-parent="${c.id}" aria-expanded="${showChildren(c.id)}"`:""} data-agent="${c.settings.agent}" title="${escape(c.title)} · ${escape(agentName(c.settings.agent))} · ${escape(modelLabel(c))}${shortcut}">
     <span class="chat-item">${agentLogos[c.settings.agent]?`<img class="chat-agent-icon" src="${agentLogos[c.settings.agent]}" alt="" width="16" height="16" draggable="false">`:""}<span>${escape(c.title)}</span></span><span class="chat-drag-zone" aria-hidden="true" title="Prevuci čet"><span class="chat-grip"><i></i><i></i><i></i><i></i><i></i><i></i></span></span>
   </div>`;};
