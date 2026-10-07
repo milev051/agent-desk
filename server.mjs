@@ -1,3 +1,4 @@
+import {createCliUpdates} from './cli-updates.mjs';
 import {plannerActivity,chatChanges} from './planner-activity.mjs';
 import {createDailyPriorities} from './daily-priorities.mjs';
 import {createGoogleWrite} from './google-write.mjs';
@@ -168,6 +169,7 @@ function locate(name) {
   return null;
 }
 const binaries = { codex: locate('codex'), claude: locate('claude'), grok: locate('grok'), antigravity: locate('agy') };
+const cliUpdates=createCliUpdates(path.join(dataDir,'cli-updates.json'),{binaries,npm:locate('npm'),isBusy:()=>running.size>0 || warmup.view().running});
 function metadata() { return { cwd: root, chatFork: true, limitHistory:true, titleSettings:titleManager.settings(), agents: Object.entries(names).map(([id, name]) => ({ id, name, available: !!binaries[id], detail: binaries[id] ? 'CLI pronađen · koristi postojeću prijavu' : 'CLI nije pronađen' })) }; }
 function validate(s) {
   if (!Object.hasOwn(names, s.agent)) throw new Error('Nepoznat agent.');
@@ -226,6 +228,7 @@ function drainQueue(chat) {
   send(chat,next.text,{createdAt:next.createdAt,origin:'queue'}).catch(error=>{chat.queue.unshift(next);chat.queueError=error.message;update();});
 }
 async function send(chat, prompt, options={}) {
+  if(cliUpdates.view().running)throw Error('CLI ažuriranje je u toku. Sačekaj završetak.');
   const agent = chat.settings.agent;
   const previousSession=chat.sessions[agent];
   const previousMessage=agent==='codex' && previousSession ? [...chat.messages.slice(0,chat.sessionOffsets?.codex ?? chat.messages.length)].reverse().find(m=>m.agent==='codex' && (m.usageTotal || m.usage?.scope==='session')) : null;
@@ -329,6 +332,8 @@ const server = http.createServer(async (req, res) => {
     if(req.method==='GET' && url.pathname==='/api/planner/activity')return json(200,{chats:plannerActivity(chats.map(c=>({...c,running:running.has(c.id)})),{folderId:url.searchParams.get('folderId'),since:url.searchParams.get('since') || 0})});
     const changesMatch=/^\/api\/chats\/([^/]+)\/changes$/.exec(url.pathname);
     if(req.method==='GET' && changesMatch){const chat=chats.find(c=>c.id===changesMatch[1]);if(!chat)return json(404,{error:'Čet nije pronađen.'});try{return json(200,chatChanges({...chat,running:running.has(chat.id)},{after:url.searchParams.get('after') || '',limit:url.searchParams.get('limit') || 10}));}catch(error){return json(error.status || 400,{error:error.message});}}
+    if(url.pathname==='/api/cli-updates'){if(req.method==='GET')return json(200,cliUpdates.view());if(req.method==='PUT')return json(200,cliUpdates.configure(await body(req)));return json(405,{error:'Podržani su GET i PUT.'});}
+    if(req.method==='POST' && url.pathname==='/api/cli-updates/run'){if(cliUpdates.view().running || running.size || warmup.view().running)return json(409,{error:'Sačekaj da svi agenti i provere završe.'});void cliUpdates.run().catch(error=>console.error('CLI ažuriranje:',error.message));return json(202,cliUpdates.view());}
     if(url.pathname==='/api/priorities'){
       if(req.method==='GET')return json(200,dailyPriorities.view(url.searchParams.get('date') || undefined));
       if(req.method==='PUT'){try{const value=await body(req);if(value.items?.some(item=>item.sourceChatId && !chats.some(chat=>chat.id===item.sourceChatId)))return json(400,{error:'Izvorni čet nije pronađen.'});const saved=dailyPriorities.update(value);return json(200,saved);}catch(error){return json(error.status || 400,{error:error.message});}}
@@ -427,7 +432,7 @@ const server = http.createServer(async (req, res) => {
     if(req.method==='GET' && url.pathname==='/api/limit-history')return json(200,quotaHistory.list());
     if(req.method==='GET' && url.pathname==='/api/limits')return json(200,limits.snapshot());
     if(url.pathname==='/api/warmup'){if(req.method==='GET')return json(200,warmup.view());if(req.method==='PUT')return json(200,warmup.configure(await body(req)));}
-    if(req.method==='POST' && url.pathname==='/api/warmup/run'){if(warmup.view().running)return json(409,{error:'Provera agenata je već u toku.'});void warmup.run().catch(error=>console.error('Provera agenata:',error.message));return json(202,warmup.view());}
+    if(req.method==='POST' && url.pathname==='/api/warmup/run'){if(cliUpdates.view().running)return json(409,{error:'CLI ažuriranje je u toku.'});if(warmup.view().running)return json(409,{error:'Provera agenata je već u toku.'});void warmup.run().catch(error=>console.error('Provera agenata:',error.message));return json(202,warmup.view());}
     if(req.method==='GET' && url.pathname==='/api/statistics/file'){
       syncChatFiles();const content=fs.readFileSync(statisticsFile);
       return respond(200,{'Content-Type':'application/json; charset=utf-8','Content-Disposition':'attachment; filename="statistika.json"','Cache-Control':'no-store'},content);
@@ -717,6 +722,6 @@ const server = http.createServer(async (req, res) => {
     json(404, { error: 'Nije pronađeno.' });
   } catch (error) { json(400, { error: error.message }); }
 });
-server.listen(port, '127.0.0.1', () => {phone.start();limits.start();warmup.start();console.log(`Agent Desk: http://127.0.0.1:${port}`);if(process.platform==='darwin' && !process.env.AGENT_DESK_CONFIG){try{if(installWatchdog({configDir:path.dirname(phoneOriginFile)}))console.log('Čuvar instaliran.');}catch(e){console.error('Čuvar: '+e.message);}}});
-function shutdown() {clearInterval(folderNameTimer);syncChatFiles();shuttingDown=true;clearInterval(archiveCleanup);limits.close();warmup.stop();phone.close();gmail.close();titleManager.close();for (const id of running.keys()) stop(id); setTimeout(() => process.exit(0), 2200); server.close(); }
+server.listen(port, '127.0.0.1', () => {phone.start();limits.start();warmup.start();if(process.env.AGENT_DESK_DISABLE_LIMITS!=='1')cliUpdates.start();console.log(`Agent Desk: http://127.0.0.1:${port}`);if(process.platform==='darwin' && !process.env.AGENT_DESK_CONFIG){try{if(installWatchdog({configDir:path.dirname(phoneOriginFile)}))console.log('Čuvar instaliran.');}catch(e){console.error('Čuvar: '+e.message);}}});
+function shutdown() {cliUpdates.close();clearInterval(folderNameTimer);syncChatFiles();shuttingDown=true;clearInterval(archiveCleanup);limits.close();warmup.stop();phone.close();gmail.close();titleManager.close();for (const id of running.keys()) stop(id); setTimeout(() => process.exit(0), 2200); server.close(); }
 process.on('SIGINT', shutdown); process.on('SIGTERM', shutdown);

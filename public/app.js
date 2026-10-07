@@ -1,3 +1,4 @@
+import {createCliUpdatesPanel} from './cli-updates.mjs';
 import {createDailyPrioritiesPanel} from './daily-priorities.mjs';
 import {createGmailSettings} from './gmail-settings.mjs';
 import {patchMessages} from './message-patch.mjs';
@@ -130,6 +131,7 @@ let seen={};try {seen=JSON.parse(localStorage.getItem('agent-desk-seen') || '{}'
 const syncedReads=new Map(),readRequests=new Set();
 let folders=[],openFolder=null,folderRename=null,drag=null;try{openFolder=localStorage.getItem('agent-desk-folder');}catch{}
 createDailyPrioritiesPanel({api,openChat:id=>window.openNotificationChat(id)});
+createCliUpdatesPanel({api});
 function completion(chat) {const m=chat.latestReply || [...chat.messages].reverse().find(m=>m.role==='assistant');return m && ['done','stopped','error','interrupted'].includes(m.status) ? {token:`${m.id}:${m.status}`,messageId:m.id,status:m.status} : null;}
 function clearReadNotifications(chat) {
  if(!chat.readMessageId && !chat.notificationReadAt)return;

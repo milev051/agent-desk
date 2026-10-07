@@ -340,3 +340,7 @@ Google Drive, Tasks i Calendar: [podešavanje i API za agente](docs/google.md).
 Nezavršeni zadaci ostaju na listi i narednih dana dok ih agent ne označi kao završene ili ukloni. Prethodne liste ostaju sačuvane preko date parametra. Vreme obaveze se pri prenosu prazni jer je važilo za prethodni dan. Završene stavke se ne šalju agentima.
 
 GET `/api/priorities?date=YYYY-MM-DD` čita listu; bez datuma bira današnju. PUT prima `date`, `enabled`, `revision` i `items` (najviše 20 sa `id`, `title` do 200 znakova, `time` HH:MM ili prazan string, `done` boolean). Istovremene izmene na telefonu i računaru vraćaju 409 umesto prepisivanja. Podaci su lokalno u `data/daily-priorities.json`, izvan Gita.
+
+## Ažuriranje CLI agenata
+
+Podešavanja imaju dugme „Ažuriraj agente“ i opciju automatskog ažuriranja jednom dnevno dok svi agenti miruju. Početno je automatsko ažuriranje isključeno. Instalacije preko npm ažuriraju isti paket u istom prefiksu, a native Claude/Grok/Antigravity koriste svoju update komandu. Neprepoznata instalacija Codexa zahteva ručno ažuriranje svojim upravljačem paketima. Tokom ažuriranja blokirani su novi CLI zadaci; rezultati i verzije su prikazani u podešavanjima. GET/PUT `/api/cli-updates` daje status i podešava `{auto:true/false}`; POST `/api/cli-updates/run` pokreće ažuriranje ili vraća 409 dok ima aktivnih agenata. Ovo nije restart servera.

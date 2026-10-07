@@ -22,6 +22,7 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     await once(server.stdout, 'data');
     async function call(url, method = 'GET', data, origin = base) { const r = await fetch(base + url, { method, headers: { Origin: origin, 'Content-Type': 'application/json' }, body: data ? JSON.stringify(data) : undefined }); return { status: r.status, data: await r.json() }; }
     async function done(id) { for(let i=0;i<100;i++){const c=(await call('/api/chats')).data.find(c=>c.id===id);if(!c.running)return c;await new Promise(r=>setTimeout(r,30));}throw Error('CLI nije završio'); }
+    assert.equal((await call('/api/cli-updates')).data.auto,false);assert.equal((await call('/api/cli-updates','PUT',{auto:true})).data.auto,true);assert.equal((await call('/api/cli-updates','PUT',{auto:false})).data.auto,false);assert.equal((await call('/api/cli-updates','PUT',{auto:true},'https://evil.test')).status,403);
     const priorities=(await call('/api/priorities')).data;assert.equal(priorities.enabled,true);assert.equal(priorities.timeZone,'Europe/Belgrade');
     const priorityData={date:priorities.today,enabled:true,revision:0,items:[{id:'test-priority',title:'VAŽAN PRIORITET DANAS',time:'14:00',done:false}]};
     assert.equal((await call('/api/priorities','PUT',priorityData,'https://evil.test')).status,403);assert.equal((await call('/api/priorities','PUT',priorityData)).status,200);assert.equal((await call('/api/priorities','PUT',priorityData)).status,409);
@@ -264,6 +265,7 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     const parentCopy=(await call(`/api/chats/${queued.id}/fork`,'POST',{})).data;
     const afterFork=(await call('/api/chats')).data;assert.equal(afterFork.length,countBeforeFork+1);assert.ok(!afterFork.some(c=>c.parentChatId===parentCopy.id));assert.equal(afterFork.find(c=>c.id===child.id).parentChatId,queued.id);
     await call(`/api/chats/${b.id}/send`, 'POST', { text: 'WAIT' });
+    assert.equal((await call('/api/cli-updates/run','POST',{})).status,409);assert.equal((await call('/api/cli-updates/run','POST',{},'https://evil.test')).status,403);
     assert.equal((await call(`/api/chats/${b.id}`, 'PATCH', {title:'Aktivan čet'})).status, 200);
     assert.equal((await call(`/api/chats/${b.id}/draft`,'PUT',{text:'Nacrt dok agent radi',revision:0})).status,200);
     assert.equal((await call(`/api/chats/${b.id}`, 'PATCH', {settings:{model:'test'}})).status, 409);
