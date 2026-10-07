@@ -30,10 +30,15 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal((await call('/api/integrations/calendar/calendars/primary/events','POST',{summary:'Test',start:{date:'2026-10-08'},end:{date:'2026-10-09'}})).status,400);
     assert.equal((await call('/api/integrations/calendar/calendars/primary/events','POST',{},'https://evil.test')).status,403);
     assert.equal((await call('/api/integrations/calendar/calendars/test%40example.test/events')).status,400);
-    assert.equal((await call('/api/integrations/calendar/calendars/primary/events/event1','DELETE',{})).status,405);
+    assert.equal((await call('/api/integrations/calendar/calendars/primary/events/event1','DELETE',{})).status,400);
     assert.equal((await call('/api/integrations/gmail/messages?q=test')).status,400);
-    assert.equal((await call('/api/integrations/gmail/send','POST',{})).status,404);
+    assert.equal((await call('/api/integrations/gmail/send','POST',{})).status,400);
     assert.equal((await call('/api/integrations/gmail/connect','POST',{},'https://evil.test')).status,403);
+    for(const [route,method,value] of [['/drive/files','POST',{name:'X',text:'Test'}],['/drive/files/file1','PATCH',{trashed:true}],['/tasks/lists','POST',{title:'X'}],['/tasks/lists/list1/tasks','POST',{title:'X'}],['/tasks/lists/list1/tasks/task1','PATCH',{status:'completed'}],['/gmail/drafts','POST',{to:'test@example.test',subject:'X',text:'Y'}],['/gmail/messages/abc123/modify','POST',{removeLabelIds:['UNREAD']}]]){
+      assert.equal((await call('/api/integrations'+route,method,value)).status,400,route);
+      assert.equal((await call('/api/integrations'+route,method,value,'https://evil.test')).status,403,route);
+    }
+
     assert.equal((await call('/api/warmup')).data.enabled,false);
     assert.equal((await call('/api/warmup','PUT',{enabled:false,time:'08:00',agents:['codex'],models:{}})).status,200);
     assert.equal((await call('/api/warmup/run','POST',{})).status,202);

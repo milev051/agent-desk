@@ -127,3 +127,24 @@ test('Calendar upis traži posebnu dozvolu, šalje JSON i If-Match i ne ponavlja
   let attempts=0;f.handler=()=>{attempts++;throw Error('offline');};await assert.rejects(f.gmail.calendarWrite('/calendars/primary/events',{summary:'Fake'}),/Google nije dostupan/);assert.equal(attempts,1);
   f.handler=()=>result({},412);await assert.rejects(f.gmail.calendarWrite('/calendars/primary/events/fakeevent',{summary:'Fake'},{method:'PATCH',etag:'"v1"'}),/u međuvremenu/);
 });
+
+test('Google upis zahteva grant za svaki servis, koristi fiksne adrese i ne šalje tajne u rezultat',async t=>{
+  const {driveScope,driveWriteScope,tasksScope,tasksWriteScope,gmailWriteScope,gmailComposeScope,calendarScope,calendarWriteScope}=await import('../gmail.mjs');
+  const scopes=[gmailScope,gmailWriteScope,gmailComposeScope,driveScope,driveWriteScope,tasksScope,tasksWriteScope,calendarScope,calendarWriteScope],f=fixture(t,{scopes});await f.login();
+  await assert.rejects(f.gmail.serviceWrite('tasks','/lists/list1/tasks',{title:'X'}),/dozvola/);
+  f.handler=url=>url.endsWith('/token')?result({access_token:'fake-access',refresh_token:'fake-refresh',scope:scopes.join(' '),expires_in:3600}):result({emailAddress:'test@example.test'});
+  await f.gmail.connect();const callback=new URL(f.auth.searchParams.get('redirect_uri'));callback.search=new URLSearchParams({state:f.auth.searchParams.get('state'),code:'fake-code'});assert.equal((await fetch(callback)).status,200);
+  for(const service of ['gmail','drive','tasks','calendar'])assert.equal(f.gmail.status().services[service].canWrite,true);assert.equal(f.gmail.status().upgradeRequired,false);
+  f.handler=()=>result({id:'fake'});await f.gmail.serviceWrite('tasks','/lists/list1/tasks/task1',{status:'completed'},{method:'PATCH'});assert.equal(new URL(f.calls.at(-1).url).origin,'https://tasks.googleapis.com');assert.equal(f.calls.at(-1).opts.method,'PATCH');assert.deepEqual(JSON.parse(f.calls.at(-1).opts.body),{status:'completed'});
+  await f.gmail.serviceWrite('drive','/files',undefined,{method:'POST',raw:Buffer.from('multipart bytes'),contentType:'multipart/related; boundary=fake',params:{uploadType:'multipart'}});assert.equal(new URL(f.calls.at(-1).url).pathname,'/upload/drive/v3/files');assert.equal(f.calls.at(-1).opts.body.toString(),'multipart bytes');
+  await f.gmail.serviceWrite('gmail','/messages/send',{raw:'fake'});assert.equal(new URL(f.calls.at(-1).url).origin,'https://gmail.googleapis.com');
+  await f.gmail.calendarWrite('/calendars/primary/events',{summary:'Test'},{notifyAttendees:true});assert.equal(new URL(f.calls.at(-1).url).searchParams.get('sendUpdates'),'all');
+  for(const route of ['/../token','/files%2f..%2ftoken','https://evil.test/files'])await assert.rejects(f.gmail.serviceWrite('drive',route,{}),/operacija/);
+  await assert.rejects(f.gmail.serviceWrite('unknown','/files',{}),/operacija/);await assert.rejects(f.gmail.serviceWrite('drive','/files',{}, {method:'GET'}),/operacija/);
+  let calls=0;f.handler=()=>{calls++;throw Error('offline');};await assert.rejects(f.gmail.serviceWrite('gmail','/messages/send',{raw:'fake'}),/Google nije dostupan/);assert.equal(calls,1);
+});
+
+test('Gmail prilog preuzima samo potvrđen ID i ograničava veličinu',async t=>{
+  const f=fixture(t);await f.login();f.handler=()=>result({data:Buffer.from('Prilog čćšđž').toString('base64url'),size:20});assert.equal((await f.gmail.attachment('abc123','attachment1')).toString(),'Prilog čćšđž');assert.match(f.calls.at(-1).url,/messages\/abc123\/attachments\/attachment1/);
+  await assert.rejects(f.gmail.attachment('abc123','../token'),/ID/);f.handler=()=>result({data:'',size:11*1024*1024});await assert.rejects(f.gmail.attachment('abc123','attachment1'),/10 MB/);
+});

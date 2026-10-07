@@ -6,9 +6,14 @@ function calendarId(value){if(typeof value!=='string' || !/^[a-zA-Z0-9_@.#-]{1,2
 function timestamp(value){if(typeof value!=='string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value) || !Number.isFinite(Date.parse(value)))throw Error('Calendar vreme mora biti RFC3339 sa vremenskom zonom.');return value;}
 function eventData(value,partial=false){
   if(!value || typeof value!=='object' || Array.isArray(value))throw Error('Unesi Calendar događaj kao JSON objekat.');
-  const allowed=['summary','description','location','start','end','id'];
+  const allowed=['summary','description','location','start','end','id','attendees','notifyAttendees','recurrence','reminders'];
   if(Object.keys(value).some(key=>!allowed.includes(key)) || partial && 'id' in value)throw Error('Dozvoljeni su summary, description, location, start i end; id samo pri kreiranju.');
   const data={...value};
+  if('notifyAttendees' in data && typeof data.notifyAttendees!=='boolean')throw Error('notifyAttendees mora biti boolean.');
+  if('attendees' in data){if(!data.notifyAttendees)throw Error('Dozvoljeni su učesnici samo uz notifyAttendees: true i odobrenje korisnika.');if(!Array.isArray(data.attendees) || data.attendees.length>100 || data.attendees.some(a=>!a || Object.keys(a).some(k=>!['email','optional'].includes(k)) || typeof a.email!=='string' || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(a.email) || /[\r\n]/.test(a.email) || a.optional!==undefined && typeof a.optional!=='boolean'))throw Error('Neispravni učesnici događaja.');}
+  if('recurrence' in data && (!Array.isArray(data.recurrence) || data.recurrence.length>20 || data.recurrence.some(r=>typeof r!=='string' || r.length>2000 || !/^(RRULE|RDATE|EXDATE|EXRULE):[^\r\n]+$/.test(r))))throw Error('Neispravno ponavljanje događaja.');
+  if('reminders' in data){const r=data.reminders;if(!r || typeof r.useDefault!=='boolean' || Object.keys(r).some(k=>!['useDefault','overrides'].includes(k)) || r.overrides!==undefined && (!Array.isArray(r.overrides) || r.overrides.length>5 || r.useDefault || r.overrides.some(o=>!o || Object.keys(o).some(k=>!['method','minutes'].includes(k)) || !['email','popup'].includes(o.method) || !Number.isInteger(o.minutes) || o.minutes<0 || o.minutes>40320)))throw Error('Neispravni podsetnici događaja.');}
+
   if(!partial && (!data.summary || !data.start || !data.end))throw Error('Novi događaj zahteva summary, start i end.');
   for(const key of ['summary','description','location'])if(key in data && (typeof data[key]!=='string' || data[key].length>(key==='description'?20000:2000)))throw Error('Neispravan tekst događaja.');
   if('id' in data && (typeof data.id!=='string' || !/^[0-9a-v]{5,100}$/.test(data.id)))throw Error('ID novog događaja mora imati 5 do 100 base32hex znakova.');
@@ -23,7 +28,7 @@ function eventData(value,partial=false){
     }
     if(!!data.start.date!==!!data.end.date || values[1]<=values[0])throw Error('Početak i kraj moraju imati isti format, a kraj mora biti posle početka.');
   }
-  if(partial && !Object.keys(data).length)throw Error('Nema izmena događaja.');
+  if(partial && !Object.keys(data).some(key=>key!=='notifyAttendees'))throw Error('Nema izmena događaja.');
   return data;
 }
 export function createGoogleServices(auth,{now=Date.now}={}){
@@ -59,8 +64,8 @@ export function createGoogleServices(auth,{now=Date.now}={}){
       const result=await request('calendar','/calendars/'+calendarId(calendar)+'/events',{...page(paging),q,timeMin,timeMax,singleEvents:true,orderBy:'startTime',showDeleted:false});
       return {events:result.items || [],nextPageToken:result.nextPageToken || null,timeZone:result.timeZone || '',timeMin,timeMax};
     },
-    async createEvent(calendar,value){const data=eventData(value);data.id ||= randomBytes(16).toString('hex');return auth.calendarWrite('/calendars/'+calendarId(calendar)+'/events',data);},
-    async updateEvent(calendar,eventId,value){const data=eventData(value,true),existing=await this.event(calendar,eventId);if(!existing.etag)throw Error('Google nije vratio verziju događaja. Ponovo pročitaj događaj.');if(existing.attendees?.length)throw Error('Izmena događaja sa učesnicima radi se u Google Calendaru. Ovde su podržani lični događaji.');return auth.calendarWrite('/calendars/'+calendarId(calendar)+'/events/'+id(eventId),data,{method:'PATCH',etag:existing.etag});},
+    async createEvent(calendar,value){const data=eventData(value);data.id ||= randomBytes(16).toString('hex');const notify=data.notifyAttendees;delete data.notifyAttendees;return auth.calendarWrite('/calendars/'+calendarId(calendar)+'/events',data,notify?{notifyAttendees:true}:undefined);},
+    async updateEvent(calendar,eventId,value){const data=eventData(value,true),existing=await this.event(calendar,eventId);if(!existing.etag)throw Error('Google nije vratio verziju događaja. Ponovo pročitaj događaj.');if(existing.attendees?.length && !data.notifyAttendees)throw Error('Izmena događaja sa učesnicima zahteva notifyAttendees: true i odobrenje korisnika.');const notify=data.notifyAttendees;delete data.notifyAttendees;return auth.calendarWrite('/calendars/'+calendarId(calendar)+'/events/'+id(eventId),data,{method:'PATCH',etag:existing.etag,...(notify?{notifyAttendees:true}:{})});},
     async event(calendar,eventId){return request('calendar','/calendars/'+calendarId(calendar)+'/events/'+id(eventId));},
     async task(listId,taskId){return request('tasks','/lists/'+id(listId)+'/tasks/'+id(taskId));}
   };
