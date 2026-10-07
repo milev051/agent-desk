@@ -31,9 +31,9 @@ Google Drive, Tasks i Calendar imaju pristup za čitanje i pisanje kada je koris
 
 Posle izmena pokreni `npm test`. Novi browser modul mora da vraća HTTP 200. Izmene serverskih modula traže restart tek kada nijedan agent ne radi. Git commit pokreće pre-commit testove i hook se ne zaobilazi.
 
-## Danas i planer
+## Taskovi i planer
 
-Danas je folder sa karticama zadataka. Korisnik ne popunjava formular: agent po njegovom zahtevu upisuje ili završava zadatke. Svaka poruka sadrži aktuelni datum/vreme i otvorene stavke. Novi dan ima novu listu; nema automatskog prenošenja ili podsetnika.
+Taskovi je folder sa karticama zadataka. Korisnik ne popunjava formular: agent po njegovom zahtevu upisuje ili završava zadatke. Svaka poruka sadrži aktuelni datum/vreme i otvorene stavke. Nezavršeni zadaci se prenose u novi dan dok se ne završe ili uklone; prethodne liste ostaju sačuvane. Pri prenosu se time prazni jer je vreme važilo za prethodni dan. Nema automatskih podsetnika.
 
 GET `/api/priorities` vraća date, revision, enabled i items. PUT iste rute prima date, enabled:true, revision i celu items listu. Sačuvaj postojeće tuđe stavke. Stavka: `{id:"jedinstveni-id",title:"Opis zadatka",time:"",done:false,sourceChatId:"ID_CETA"}`. time može biti HH:MM, sourceChatId je opcion. Pri 409 ponovo učitaj, objedini izmenu i ponovi. Ne prepisuj naslepo staru listu. Najviše 20 stavki po danu. Upis radi po korisnikovom zahtevu; zadatak nije ovlašćenje da se samostalno izvrši posao.
 

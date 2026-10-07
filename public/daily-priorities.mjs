@@ -6,7 +6,7 @@ export function createDailyPrioritiesPanel({api,root=document,openChat}){
   get('today-count').textContent=String(view.items.filter(item=>!item.done).length);
   get('today-clock').textContent=`${view.date} · ${view.time} · Beograd`;
   list.replaceChildren();
-  if(!view.items.length)list.append(element('p',{className:'today-empty',textContent:'Nema zadataka za danas. Reci agentu šta da doda ili zatraži predlog prioriteta.'}));
+  if(!view.items.length)list.append(element('p',{className:'today-empty',textContent:'Nema otvorenih zadataka. Reci agentu šta da doda ili zatraži predlog prioriteta.'}));
   for(const item of view.items){
    const card=element('article',{className:'today-task'+(item.done?' done':'')});
    card.append(element('span',{className:'today-task-title',textContent:item.title}),element('small',{textContent:(item.done?'✓ Završeno':'Otvoreno')+(item.time?' · '+item.time:'')}));
