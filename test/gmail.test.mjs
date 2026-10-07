@@ -116,3 +116,14 @@ test('Calendar proširenje čuva Gmail vezu pri otkazu, proverava dozvolu i kori
   await f.gmail.connect();const callback=new URL(f.auth.searchParams.get('redirect_uri'));callback.search=new URLSearchParams({state:f.auth.searchParams.get('state'),code:'fake-code'});assert.equal((await fetch(callback)).status,200);assert.equal(f.gmail.status().services.calendar.connected,true);assert.equal(f.gmail.status().upgradeRequired,false);
   f.handler=()=>result({items:[]});await f.gmail.serviceRequest('calendar','/calendars/test%40example.test/events');const call=f.calls.at(-1);assert.equal(new URL(call.url).origin,'https://www.googleapis.com');assert.equal(new URL(call.url).pathname,'/calendar/v3/calendars/test%40example.test/events');assert.equal(call.opts.method,undefined);
 });
+
+test('Calendar upis traži posebnu dozvolu, šalje JSON i If-Match i ne ponavlja mrežne greške',async t=>{
+  const {calendarScope,calendarWriteScope}=await import('../gmail.mjs');
+  const f=fixture(t,{scopes:[gmailScope,calendarScope,calendarWriteScope]});await f.login();await assert.rejects(f.gmail.calendarWrite('/calendars/primary/events',{summary:'Fake'}),/dozvola/);
+  f.handler=url=>url.endsWith('/token')?result({access_token:'fake-access',refresh_token:'fake-refresh',scope:[gmailScope,calendarScope,calendarWriteScope].join(' '),expires_in:3600}):result({emailAddress:'test@example.test'});
+  await f.gmail.connect();const callback=new URL(f.auth.searchParams.get('redirect_uri'));callback.search=new URLSearchParams({state:f.auth.searchParams.get('state'),code:'fake-code'});assert.equal((await fetch(callback)).status,200);assert.equal(f.gmail.status().services.calendar.canWrite,true);assert.equal(f.gmail.status().services.calendar.readOnly,false);assert.equal(f.gmail.status().services.gmail.readOnly,true);
+  f.handler=()=>result({id:'fakeevent'});await f.gmail.calendarWrite('/calendars/primary/events/fakeevent',{summary:'Fake'},{method:'PATCH',etag:'"v1"'});const call=f.calls.at(-1);assert.equal(call.opts.method,'PATCH');assert.equal(call.opts.headers['If-Match'],'"v1"');assert.equal(new URL(call.url).searchParams.get('sendUpdates'),'none');assert.deepEqual(JSON.parse(call.opts.body),{summary:'Fake'});
+  await assert.rejects(f.gmail.calendarWrite('/files',{},{method:'POST'}),/operacija/);await assert.rejects(f.gmail.calendarWrite('/calendars/primary/events/fakeevent',{},{method:'DELETE'}),/operacija/);
+  let attempts=0;f.handler=()=>{attempts++;throw Error('offline');};await assert.rejects(f.gmail.calendarWrite('/calendars/primary/events',{summary:'Fake'}),/Google nije dostupan/);assert.equal(attempts,1);
+  f.handler=()=>result({},412);await assert.rejects(f.gmail.calendarWrite('/calendars/primary/events/fakeevent',{summary:'Fake'},{method:'PATCH',etag:'"v1"'}),/u međuvremenu/);
+});

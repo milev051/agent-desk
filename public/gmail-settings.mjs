@@ -5,9 +5,9 @@ export function createGmailSettings({root,api,phoneRemote}){
   function render(data){
     view=data;
     const serviceNames={gmail:'Gmail',drive:'Drive',tasks:'Tasks',calendar:'Calendar'};
-    get('google-services-status').textContent=Object.entries(serviceNames).map(([key,name])=>name+': '+(data.services?.[key]?.connected?'povezan':'nije povezan')).join(' · ');
+    get('google-services-status').textContent=Object.entries(serviceNames).map(([key,name])=>name+': '+(data.services?.[key]?.connected?(data.services[key].canWrite?'čitanje i pisanje':'samo čitanje'):'nije povezan')).join(' · ');
     get('gmail-connect').textContent=data.upgradeRequired?'Dodaj Google dozvole':'Poveži Google';
-    const labels={unconfigured:'Google OAuth klijent nije podešen.',disconnected:'Google nije povezan.',connecting:'Završi Google prijavu u browseru na računaru.',connected:'Povezan nalog: '+data.email+' · samo čitanje',reconnect_required:'Potrebna je ponovna Google prijava.'};
+    const labels={unconfigured:'Google OAuth klijent nije podešen.',disconnected:'Google nije povezan.',connecting:'Završi Google prijavu u browseru na računaru.',connected:'Povezan nalog: '+data.email,reconnect_required:'Potrebna je ponovna Google prijava.'};
     status.textContent=(labels[data.state] || 'Gmail nije dostupan.')+(data.error?' '+data.error:'');
     get('gmail-connect').hidden=phoneRemote || data.state==='connecting' || (data.connected && !data.upgradeRequired);
     get('gmail-connect').disabled=busy || !data.configured;

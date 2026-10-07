@@ -35,3 +35,16 @@ test('Calendar čita kalendare i pojedinačne termine uz zonu, paginaciju i kodi
   await services.event('primary','event1');assert.equal(calls.at(-1)[1],'/calendars/primary/events/event1');
   await assert.rejects(services.events('primary',{timeMin:'2026-10-07'}),/vremenskom zonom/);await assert.rejects(services.events('primary',{timeMin:'2026-10-07T00:00:00Z',timeMax:'2026-10-06T00:00:00Z'}),/posle/);await assert.rejects(services.events('../tokens'));
 });
+
+test('Calendar kreira lični događaj i menja samo tražena polja uz ETag',async()=>{
+  const writes=[];const services=createGoogleServices({serviceRequest:async()=>({id:'event1',etag:'"version1"',description:'Staro'}),calendarWrite:async(...args)=>{writes.push(args);return {id:args[1].id || 'event1',...args[1]};}});
+  const data={summary:'Provera',start:{dateTime:'2026-10-08T10:00:00+02:00',timeZone:'Europe/Belgrade'},end:{dateTime:'2026-10-08T11:00:00+02:00',timeZone:'Europe/Belgrade'}};
+  const created=await services.createEvent('primary',data);assert.match(created.id,/^[0-9a-f]{32}$/);assert.equal(writes[0][0],'/calendars/primary/events');assert.equal(data.id,undefined);
+  await services.updateEvent('primary','event1',{summary:'Novi naziv'});assert.deepEqual(writes.at(-1)[1],{summary:'Novi naziv'});assert.deepEqual(writes.at(-1)[2],{method:'PATCH',etag:'"version1"'});
+  await services.createEvent('primary',{summary:'Celodnevni',start:{date:'2026-10-08'},end:{date:'2026-10-09'},id:'abc012345'});assert.equal(writes.at(-1)[1].id,'abc012345');
+  await assert.rejects(services.createEvent('primary',{...data,attendees:[{email:'fake@example.test'}]}),/Dozvoljeni/);
+  await assert.rejects(services.createEvent('primary',{...data,end:data.start}),/posle/);
+  await assert.rejects(services.updateEvent('primary','event1',{start:data.start}),/start i end/);
+  await assert.rejects(services.createEvent('primary',{summary:'X',start:{date:'2026-02-30'},end:{date:'2026-03-03'}}),/datum/);
+  const group=createGoogleServices({serviceRequest:async()=>({etag:'"version1"',attendees:[{email:'fake@example.test'}]}),calendarWrite:()=>assert.fail('Ne sme menjati sastanak sa učesnicima')});await assert.rejects(group.updateEvent('primary','event1',{summary:'X'}),/učesnicima/);
+});

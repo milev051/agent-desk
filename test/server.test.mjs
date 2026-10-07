@@ -27,6 +27,8 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal((await call('/api/integrations/drive/files?q=test')).status,400);
     assert.equal((await call('/api/integrations/tasks/lists')).status,400);
     assert.equal((await call('/api/integrations/calendar/calendars')).status,400);
+    assert.equal((await call('/api/integrations/calendar/calendars/primary/events','POST',{summary:'Test',start:{date:'2026-10-08'},end:{date:'2026-10-09'}})).status,400);
+    assert.equal((await call('/api/integrations/calendar/calendars/primary/events','POST',{},'https://evil.test')).status,403);
     assert.equal((await call('/api/integrations/calendar/calendars/test%40example.test/events')).status,400);
     assert.equal((await call('/api/integrations/calendar/calendars/primary/events/event1','DELETE',{})).status,405);
     assert.equal((await call('/api/integrations/gmail/messages?q=test')).status,400);
