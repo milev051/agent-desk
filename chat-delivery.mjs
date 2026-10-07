@@ -1,9 +1,10 @@
+import {chatActivity} from './planner-activity.mjs';
 // Browser views receive metadata and only the open conversation. CLI callers retain the full API.
 export function chatSummary(chat) {
  const {messages=[],context,transferEstimates,transfers,usageSummary,quotaChanges,sharedFolderReads,childReadOffsets,accessLog,...meta}=chat;
  const reply=messages.findLast(m=>m.role==='assistant');
  const {text,actions,textTimings,activity,...latestReply}=reply || {};
- return {...meta,messages:[],summary:true,messageCount:messages.length,historyChars:messages.reduce((n,m)=>n+(m.text?.length || 0),0),latestReply:reply?latestReply:null};
+ return {...meta,...chatActivity(chat),messages:[],summary:true,messageCount:messages.length,historyChars:messages.reduce((n,m)=>n+(m.text?.length || 0),0),latestReply:reply?latestReply:null};
 }
 export function chatPage(chat,{limit=50,before}={}) {
  const messages=chat.messages || [],end=before?messages.findIndex(m=>m.id===before):messages.length;

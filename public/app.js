@@ -129,7 +129,7 @@ const recordIcon=actionIcon('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a
 let seen={};try {seen=JSON.parse(localStorage.getItem('agent-desk-seen') || '{}');} catch {}
 const syncedReads=new Map(),readRequests=new Set();
 let folders=[],openFolder=null,folderRename=null,drag=null;try{openFolder=localStorage.getItem('agent-desk-folder');}catch{}
-createDailyPrioritiesPanel({api});
+createDailyPrioritiesPanel({api,openChat:id=>window.openNotificationChat(id)});
 function completion(chat) {const m=chat.latestReply || [...chat.messages].reverse().find(m=>m.role==='assistant');return m && ['done','stopped','error','interrupted'].includes(m.status) ? {token:`${m.id}:${m.status}`,messageId:m.id,status:m.status} : null;}
 function clearReadNotifications(chat) {
  if(!chat.readMessageId && !chat.notificationReadAt)return;

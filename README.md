@@ -333,8 +333,8 @@ Google Drive, Tasks i Calendar: [podešavanje i API za agente](docs/google.md).
 
 ## Današnji prioriteti
 
-Dugme „Danas“ u listi četova i zaglavlju razgovora otvara zajedničku listu za sve agente. Dodaj stavke, opciono vreme, označi završene i pomeri najvažnije nagore. Kvačica „Šalji današnje prioritete“ određuje da li svaka naredna poruka dobija današnju listu. Agent dobija trenutno vreme i datum u Europe/Belgrade i može predložiti sledeći korak, bez samostalnog pokretanja drugih poslova. Lista nije Google Calendar sinhronizacija ni automatski podsetnik.
+„Danas“ je folder sa karticama zadataka. Unos i označavanje završetka rade agenti po korisnikovom zahtevu preko GET/PUT `/api/priorities`, uz revision zaštitu od prepisivanja. Opcioni sourceChatId povezuje karticu sa izvornim četom. Otvorene stavke i vreme u Beogradu šalju se agentima kao kontekst. Nema ručnog formulara niti automatskih podsetnika. Planer može pregledati metapodatke preko `/api/planner/activity` i nove poruke preko `/api/chats/ID/changes`, sa ograničenjem veličine i granicom after. Detalji su u docs/agent-environment.md.
 
-Na početku novog dana koristi se nova prazna lista. Prethodne liste ostaju sačuvane; izaberi datum i „Prenesi nezavršene u danas“ ako želiš da nastaviš. Završene stavke se ne šalju agentima. Isključivanje i promena dana javljaju se i postojećim sesijama, da ne koriste raniji plan kao aktuelni.
+Na početku novog dana koristi se nova prazna lista. Prethodne liste ostaju sačuvane i dostupne agentima preko date parametra. Prenošenje radi agent samo na korisnikov zahtev. Završene stavke se ne šalju agentima.
 
 GET `/api/priorities?date=YYYY-MM-DD` čita listu; bez datuma bira današnju. PUT prima `date`, `enabled`, `revision` i `items` (najviše 20 sa `id`, `title` do 200 znakova, `time` HH:MM ili prazan string, `done` boolean). Istovremene izmene na telefonu i računaru vraćaju 409 umesto prepisivanja. Podaci su lokalno u `data/daily-priorities.json`, izvan Gita.

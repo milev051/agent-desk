@@ -8,10 +8,11 @@ function validDate(date){return typeof date==='string' && /^\d{4}-\d{2}-\d{2}$/.
 function items(value){
  if(!Array.isArray(value) || value.length>20)throw Error('Lista može imati najviše 20 stavki.');
  const ids=new Set();return value.map(item=>{
-  if(!item || typeof item!=='object' || Object.keys(item).some(k=>!['id','title','time','done'].includes(k)) || typeof item.id!=='string' || !/^[a-zA-Z0-9-]{1,100}$/.test(item.id) || ids.has(item.id))throw Error('Neispravna stavka prioriteta.');ids.add(item.id);
+  if(!item || typeof item!=='object' || Object.keys(item).some(k=>!['id','title','time','done','sourceChatId'].includes(k)) || typeof item.id!=='string' || !/^[a-zA-Z0-9-]{1,100}$/.test(item.id) || ids.has(item.id))throw Error('Neispravna stavka prioriteta.');ids.add(item.id);
   if(typeof item.title!=='string' || !item.title.trim() || item.title.length>200 || /[\r\n]/.test(item.title))throw Error('Naslov stavke mora imati od 1 do 200 znakova, u jednom redu.');
   if(typeof item.done!=='boolean' || typeof item.time!=='string' || item.time!=='' && !/^([01]\d|2[0-3]):[0-5]\d$/.test(item.time))throw Error('Vreme mora biti HH:MM, a done boolean.');
-  return {id:item.id,title:item.title.trim(),time:item.time,done:item.done};
+  if(item.sourceChatId!==undefined && (typeof item.sourceChatId!=='string' || !/^[a-zA-Z0-9-]{1,100}$/.test(item.sourceChatId)))throw Error('Neispravan izvorni čet.');
+  return {id:item.id,title:item.title.trim(),time:item.time,done:item.done,...(item.sourceChatId?{sourceChatId:item.sourceChatId}:{})};
  });
 }
 export function createDailyPriorities(file,{now=Date.now}={}){
@@ -27,7 +28,7 @@ export function createDailyPriorities(file,{now=Date.now}={}){
    fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file+'.tmp',JSON.stringify(next,null,2),{mode:0o600});fs.renameSync(file+'.tmp',file);state=next;return view(value.date);
   },
   context(){
-   const day=view();let text=`Dnevni prioriteti: sada je ${day.date} ${day.time}, vremenska zona ${zone}. Ovo je aktuelno stanje za ovu poruku; ranije liste iz sesije mogu biti zastarele.\n`;
+   const day=view();let text=`Dnevni prioriteti: sada je ${day.date} ${day.time}, vremenska zona ${zone}. Za upis zadataka po korisnikovom zahtevu koristi GET /api/priorities, pa PUT sa date, enabled:true, aktuelnim revision i celom items listom. Stavka ima id (jedinstven), title, time (HH:MM ili prazno), done i opciono sourceChatId. Sačuvaj tuđe stavke; kod 409 ponovo učitaj pre izmene. Planer prvo čita GET /api/planner/activity, zatim /api/chats/ID/changes?after=ID_POSLEDNJE_PROCITANE_PORUKE za nove poruke. Ovo je aktuelno stanje za ovu poruku; ranije liste iz sesije mogu biti zastarele.\n`;
    if(!day.enabled)return text+'Deljenje dnevnih prioriteta je isključeno. Ne koristi ranije podeljene prioritete kao aktuelni plan.\n';
    const pending=day.items.filter(item=>!item.done);
    if(!pending.length)return text+'Za danas nema otvorenih prioriteta. Ne prenosi jučerašnju listu automatski.\n';
