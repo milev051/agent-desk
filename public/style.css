@@ -334,9 +334,7 @@ body #chats .chat-row.working,body #agent-tree .agent-tree-item.working{backgrou
 
 #composer-joystick[data-action="read"]{border-color:#c7b1ec}
 
-#composer-joystick{position:relative}
-#composer-joystick.working:not(.dragging){border-color:transparent}
-#composer-joystick.working:not(.dragging)::before{content:"";position:absolute;left:calc(50% - 2px);top:calc(50% - 2px);width:4px;height:4px;border-radius:50%;pointer-events:none;box-shadow:0 -20px 0 #eeeeee,14px -14px 0 #ddddddd9,20px 0 0 #ccccccb3,14px 14px 0 #bbbbbb8c,0 20px 0 #aaaaaa66,-14px 14px 0 #aaaaaa4d,-20px 0 0 #aaaaaa33,-14px -14px 0 #aaaaaa1a;animation:joystick-ring 1.2s linear infinite}
+#composer-joystick.working:not(.dragging)>span{animation:joystick-orbit 1.4s linear infinite;background:#ddd;box-shadow:0 0 5px #ffffff40}
 #composer-joystick.dragging{cursor:grabbing}
-@keyframes joystick-ring{to{transform:rotate(360deg)}}
-@media(prefers-reduced-motion:reduce){#composer-joystick.working:not(.dragging)::before{animation:none}}
+@keyframes joystick-orbit{from{transform:rotate(0deg) translateY(-10px) rotate(0deg)}to{transform:rotate(360deg) translateY(-10px) rotate(-360deg)}}
+@media(prefers-reduced-motion:reduce){#composer-joystick.working:not(.dragging)>span{animation:none;box-shadow:0 0 0 3px #ffffff30}}
