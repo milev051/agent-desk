@@ -1,3 +1,4 @@
+import {createGmailSettings} from './gmail-settings.mjs';
 import {patchMessages} from './message-patch.mjs';
 import {mergeBrowserChats,mergeChatPage} from './chat-cache.mjs';
 import {createChatSearch} from './chat-search.mjs';
@@ -128,7 +129,13 @@ let seen={};try {seen=JSON.parse(localStorage.getItem('agent-desk-seen') || '{}'
 const syncedReads=new Map(),readRequests=new Set();
 let folders=[],openFolder=null,folderRename=null,drag=null;try{openFolder=localStorage.getItem('agent-desk-folder');}catch{}
 function completion(chat) {const m=chat.latestReply || [...chat.messages].reverse().find(m=>m.role==='assistant');return m && ['done','stopped','error','interrupted'].includes(m.status) ? {token:`${m.id}:${m.status}`,messageId:m.id,status:m.status} : null;}
-function markRead(chat,sync=true) {const c=chat && completion(chat);if(!c)return;if(seen[chat.id]!==c.token){seen[chat.id]=c.token;localStorage.setItem('agent-desk-seen',JSON.stringify(seen));}if(!sync || chat.readMessageId===c.messageId || syncedReads.get(chat.id)===c.messageId || readRequests.has(chat.id))return;readRequests.add(chat.id);api(`/api/chats/${chat.id}/read`,'PUT',{messageId:c.messageId}).then(data=>{syncedReads.set(chat.id,data.messageId);chat.readMessageId=data.messageId;}).catch(()=>{}).finally(()=>readRequests.delete(chat.id));}
+function clearReadNotifications(chat) {
+ if(!chat.readMessageId)return;
+ const message=chat.messages?.find(m=>m.id===chat.readMessageId) || (chat.latestReply?.id===chat.readMessageId ? chat.latestReply : null);
+ navigator.serviceWorker?.controller?.postMessage({type:'read',chatId:chat.id,messageId:chat.readMessageId,readBefore:message?.createdAt});
+}
+navigator.serviceWorker?.addEventListener('controllerchange',()=>{for(const chat of chats)clearReadNotifications(chat);});
+function markRead(chat,sync=true) {const c=chat && completion(chat);if(!c)return;if(seen[chat.id]!==c.token){seen[chat.id]=c.token;localStorage.setItem('agent-desk-seen',JSON.stringify(seen));}if(!sync || chat.readMessageId===c.messageId || syncedReads.get(chat.id)===c.messageId || readRequests.has(chat.id))return;readRequests.add(chat.id);api(`/api/chats/${chat.id}/read`,'PUT',{messageId:c.messageId}).then(data=>{syncedReads.set(chat.id,data.messageId);chat.readMessageId=data.messageId;clearReadNotifications(chat);}).catch(()=>{}).finally(()=>readRequests.delete(chat.id));}
 function notification(chat) {const c=completion(chat);if(chat.running || !c || (seen[chat.id]===c.token || chat.readMessageId===c.messageId || syncedReads.get(chat.id)===c.messageId))return '';return c.status==='done'?'completed':'unread';}
 function resizePrompt() {
   const input=$('#prompt'),view=$('#conversation'),wrap=input.closest('.prompt-wrap');
@@ -155,13 +162,13 @@ function choose(id,{replaceHistory=false}={}) {
   const changed=active!==id;
   if(active!==id){selectedMessages.clear();messageSelectionMode=false;selectionAnchor=null;renderMessageSelection();}
   showDefaults(false);document.body.classList.toggle('chat-view',!!id);
-  speechSelection=null;$('#speech-selection').hidden=true;clearTimeout(clickTimer);drafts.set(active,$('#prompt').value);active=id;$('#prompt').value=drafts.get(id)||'';resizePrompt();
+  speechSelection=null;clearTimeout(clickTimer);drafts.set(active,$('#prompt').value);active=id;$('#prompt').value=drafts.get(id)||'';resizePrompt();
   const url=new URL(location.href);if(id)url.hash='chat='+encodeURIComponent(id);else url.hash='';if(mobileNavigation() && changed && id && !replaceHistory)history.pushState({agentDesk:true,agentDeskGuard:true,chatId:id},'',url);else history.replaceState(history.state,'',url);
   closePanels();
   if(speechClip && speechClip.chatId!==id)speechAudio.pause();
   if(id)localStorage.setItem('agent-desk-active',id);else localStorage.removeItem('agent-desk-active');
   if(current()){selectedAgent=current().settings.agent;markRead(current());api(`/api/chats/${id}/access`,'POST',{requestId:crypto.randomUUID()}).catch(()=>{});}
-  chatSearch.close();menuChat=null;rename=null;lastMessages='';forceBottom=!!id;render();renderSpeechBar();renderLinkedFiles();focusPrompt();if(id)guard(()=>loadChatHistory(id));if(appReady)connectEvents();
+  chatSearch.close();menuChat=null;rename=null;lastMessages='';forceBottom=!!id;render();renderSpeechBar();renderLinkedFiles();if(id)$('#prompt').focus({preventScroll:true});if(id)guard(()=>loadChatHistory(id));if(appReady)connectEvents();
 }
 function mergeChatList(list){return list.map(chat=>{const old=chats.find(c=>c.id===chat.id);return chat.summary?{...old,...chat,messages:old?.messages || []}:chat;});}
 function putChat(chat){
@@ -189,8 +196,8 @@ async function openChatSearch(){if(!current())return;cancelStick();await loadFul
 async function create(agent=selectedAgent,model,effort='') {
   if(creating)return;creating=true;
   try {
-    const settings={agent,...(model!==undefined?{model,effort}:{})};const chat=await api('/api/chats','POST',{settings,...(openFolder?{folderId:openFolder}:{})});
-    putChat(chat);choose(chat.id);return chat;
+    const settings={agent,...(model!==undefined?{model,effort}:{})};const chat=await api('/api/chats','POST',{settings});
+    putChat(chat);setOpenFolder(null);choose(chat.id);return chat;
   } finally {creating=false;}
 }
 function modelLabel(chat) {
@@ -210,11 +217,11 @@ function visibleSidebarChats(){
 }
 function renderSidebar() {
   const row=(c,index,hasChildren=false)=>{const shortcut=index<9?` · ⌘${index+1}`:'';return `<div role="button" tabindex="0" aria-label="${escape(c.title)}${shortcut}" class="chat-row ${c.parentChatId?'subagent-card':''} ${(drafts.has(c.id)?drafts.get(c.id):c.draft?.text||'').trim()?'has-draft':''} ${c.id===active?'active':''} ${c.running?'working':notification(c)} ${drag?.active && drag.id===c.id?'drag-source':''}" data-row="${c.id}" ${hasChildren?`data-expand-parent="${c.id}" aria-expanded="${showChildren(c.id)}"`:""} data-agent="${c.settings.agent}" title="${escape(c.title)} · ${escape(agentName(c.settings.agent))} · ${escape(modelLabel(c))}${shortcut}">
-    <span class="chat-item">${agentLogos[c.settings.agent]?`<img class="chat-agent-icon" src="${agentLogos[c.settings.agent]}" alt="" width="16" height="16" draggable="false">`:""}<span>${escape(c.title)}</span></span><span class="chat-drag-zone" aria-hidden="true" title="Prevuci čet"><svg width="12" height="18" viewBox="0 0 12 18" fill="currentColor" aria-hidden="true"><circle cx="4" cy="4" r="1.1"/><circle cx="8" cy="4" r="1.1"/><circle cx="4" cy="9" r="1.1"/><circle cx="8" cy="9" r="1.1"/><circle cx="4" cy="14" r="1.1"/><circle cx="8" cy="14" r="1.1"/></svg></span>
+    <span class="chat-item">${agentLogos[c.settings.agent]?`<img class="chat-agent-icon" src="${agentLogos[c.settings.agent]}" alt="" width="16" height="16" draggable="false">`:""}<span>${escape(c.title)}</span></span><span class="chat-drag-zone" aria-hidden="true" title="Prevuci čet"><span class="chat-grip"><i></i><i></i><i></i><i></i><i></i><i></i></span></span>
   </div>`;};
   const groups=sidebarGroups(chats),ids=folders.map(folder=>folder.id);
   if(openFolder && !ids.includes(openFolder))openFolder=null;
-  const folderRow=folder=>{const inside=groups.filter(group=>group.chat.folderId===folder.id),count=inside.length,members=inside.flatMap(group=>[group.chat,...group.children]);const state=members.some(c=>c.running)?'working':members.some(c=>notification(c)==='completed')?'completed':members.some(c=>notification(c)==='unread')?'unread':'';const editing=folderRename?.id===folder.id;return `<div class="folder-row ${openFolder===folder.id?'open':state}" data-folder="${folder.id}" role="button" tabindex="0" aria-expanded="${openFolder===folder.id}" aria-label="${escape(folder.name || 'Naziv foldera')}, ${count} četova" title="Otvori folder. Drži za radnje."><span class="folder-mark ${folder.shared?'shared':''}" aria-hidden="true"></span>${editing?`<input data-folder-name aria-label="Naziv foldera" placeholder="Naziv foldera" value="${escape(folderRename.value)}" maxlength="40">`:`<span class="folder-name">${escape(folder.name)}</span>`}<small>${count}</small><span class="folder-chevron" aria-hidden="true"></span></div>`;};
+  const folderRow=folder=>{const inside=groups.filter(group=>group.chat.folderId===folder.id),count=inside.length,members=inside.flatMap(group=>[group.chat,...group.children]);const state=members.some(c=>c.running)?'working':members.some(c=>notification(c)==='completed')?'completed':members.some(c=>notification(c)==='unread')?'unread':'';const editing=folderRename?.id===folder.id;return `<div class="folder-row ${openFolder===folder.id?'open':state}" data-folder="${folder.id}" role="button" tabindex="0" aria-expanded="${openFolder===folder.id}" aria-label="${escape(folder.name || 'Naziv foldera')}, ${count} četova${folder.shared?', deljeni kontekst':''}" title="${folder.shared?'Deljeni kontekst. ':''}Otvori folder. Drži za radnje."><span class="folder-mark ${folder.shared?'shared':''}" aria-hidden="true">${folder.shared?actionIcon('<circle cx="7" cy="12" r="3"/><circle cx="17" cy="12" r="3"/><path d="M10 12h4"/>'):''}</span>${editing?`<input data-folder-name aria-label="Naziv foldera" placeholder="Naziv foldera" value="${escape(folderRename.value)}" maxlength="40">`:`<span class="folder-name">${escape(folder.name)}</span>`}<small>${count}</small><span class="folder-chevron" aria-hidden="true"></span></div>`;};
   const visible=openFolder?placedChats(chats,ids,openFolder):[],unassigned=placedChats(chats,ids);
   const shortcutOrder=visibleSidebarChats().map(c=>c.id);
   const folderItems=folderRename?.draft?[...folders,{id:folderRename.id,name:''}]:folders;
@@ -478,7 +485,7 @@ $('#chat-popover').onchange=e=>guard(async()=>{
   const chat=await api(`/api/chats/${id}`,'PATCH',{settings:model?{model:model.value,effort:preferredEffort(models,chats.find(c=>c.id===id)?.settings.agent,model.value)}:{effort:effort.value}});putChat(chat);renderSidebar();
 });
 document.addEventListener('pointerdown',e=>{if(newMenuAgent && !modelDrag?.active && !e.target.closest('#new-models,[data-new-agent]')){closeNewModels();modelDismissUntil=Date.now()+500;}if(menuFolder && !e.target.closest(`#chat-popover,[data-folder="${menuFolder}"]`)){menuFolder=null;renderPopover();}if(menuChat && !e.target.closest('#chat-popover,#chat-options,[data-row],[data-options],[data-chat],[data-agent-chat]')){menuChat=null;renderPopover();}});
-let warmupSettings=null,warmupPoll;
+let warmupSettings=null,warmupPoll,warmupExpiry;
 const scheduleDayNames=['Ponedeljak','Utorak','Sreda','Četvrtak','Petak','Subota','Nedelja'];
 function excerptText(node){
  if(node.nodeType===3)return node.textContent;
@@ -490,25 +497,38 @@ function excerptText(node){
  return text+(['P','H1','H2','H3','H4','H5','H6','UL','OL','BLOCKQUOTE','PRE'].includes(node.tagName)?'\n\n':'');
 }
 function renderWarmupDays(){const days=warmupSettings?.days ?? (warmupSettings?.enabled===false?[]:[1,2,3,4,5,6,7]);$('#warmup-days').innerHTML=scheduleDayNames.map((name,index)=>`<button type="button" data-warmup-day="${index+1}" aria-label="${name}" title="${name}" aria-pressed="${days.includes(index+1)}">${name.slice(0,2)}</button>`).join('');}
+const warmupMarkLifetime=60*60*1000;
+function warmupMark(agent){
+ const state=warmupSettings,last=state?.runs?.[0];
+ if(!last)return null;
+ if(state.running && agent===state.currentAgent)return {status:'running',label:'Slanje u toku'};
+ const result=last.results?.find(r=>r.agent===agent);
+ if(!result)return null;
+ const at=Date.parse(result.finishedAt || last.completedAt || '');
+ if(Number.isFinite(at) && Date.now()-at>=warmupMarkLifetime)return null;
+ return result.status==='done'?{status:'done',label:'Poruka poslata'}:{status:'error',label:result.error || 'Slanje nije uspelo'};
+}
 function renderWarmupStatus(){
- const state=warmupSettings,last=state?.runs?.[0],progress=$('#warmup-progress');
+ const state=warmupSettings,progress=$('#warmup-progress');
  $('#warmup-run').disabled=!state || state.running;
  $('#warmup-status').textContent=!state?'Za ovu opciju potrebno je ponovno pokretanje servera.':'';
- progress.hidden=!last;
- if(last)progress.innerHTML=(last.agents || state.agents).map(agent=>{
-  const result=last.results?.find(r=>r.agent===agent),busy=state.running && agent===state.currentAgent;
-  const status=result?(result.status==='done'?'done':'error'):busy?'running':'waiting';
-  const label=result?.model || state.models?.[agent],name=label?modelName(agent,label):agentName(agent);
-  const description={done:'Poruka poslata',error:result?.error || 'Slanje nije uspelo',running:'Slanje u toku',waiting:'Čeka slanje'}[status];
-  return `<span class="warmup-result" title="${escape(description)}"><span class="warmup-result-icon ${status}" role="img" aria-label="${escape(description)}">${status==='done'?'✓':status==='error'?'!':''}</span><span>${escape(name)}</span></span>`;
- }).join('');
- clearTimeout(warmupPoll);
+ progress.hidden=true;progress.replaceChildren();
+ for(const row of $('#warmup-agents').children){
+  const mark=row.querySelector('.warmup-send-mark'),info=warmupMark(row.dataset.warmupAgent);
+  if(!mark)continue;
+  mark.hidden=!info;mark.className='warmup-send-mark'+(info?' '+info.status:'');mark.textContent=info?.status==='done'?'✓':info?.status==='error'?'!':'';
+  mark.title=info?.label || '';if(info)mark.setAttribute('aria-label',info.label);else mark.removeAttribute('aria-label');
+ }
+ clearTimeout(warmupPoll);clearTimeout(warmupExpiry);
  if(state?.running)warmupPoll=setTimeout(()=>guard(async()=>{warmupSettings=await api('/api/warmup');renderWarmupStatus();}),1500);
+ const last=state?.runs?.[0];
+ const due=(last?.results||[]).map(r=>Date.parse(r.finishedAt || last.completedAt || '')).filter(t=>Number.isFinite(t)).map(t=>t+warmupMarkLifetime).filter(t=>t>Date.now());
+ if(due.length)warmupExpiry=setTimeout(()=>{if(!$('#defaults').hidden)renderWarmupStatus();},Math.min(...due)-Date.now()+200);
 }
 function renderWarmup(){
  renderWarmupDays();
  $('#warmup-time').value=warmupSettings?.time || '08:00';
- $('#warmup-agents').innerHTML=meta.agents.map(a=>`<label class="warmup-agent" data-warmup-agent="${a.id}"><span><input type="checkbox" ${a.available && (warmupSettings?.agents || []).includes(a.id)?'checked':''} ${a.available?'':'disabled'}> ${escape(a.name)}</span><select aria-label="Model za kratku poruku ${escape(a.name)}" ${a.available?'':'disabled'}><option value="">Automatski: lakši model</option>${modelOptions({agent:a.id,model:warmupSettings?.models?.[a.id] || ''}).replace(/^<option[^>]*>Podrazumevani<\/option>/,'')}</select></label>`).join('');
+ $('#warmup-agents').innerHTML=meta.agents.map(a=>`<label class="warmup-agent" data-warmup-agent="${a.id}"><span><input type="checkbox" ${a.available && (warmupSettings?.agents || []).includes(a.id)?'checked':''} ${a.available?'':'disabled'}> ${escape(a.name)}</span><span class="warmup-agent-choice"><span class="warmup-send-mark" hidden></span><select aria-label="Model za kratku poruku ${escape(a.name)}" ${a.available?'':'disabled'}><option value="">Automatski: lakši model</option>${modelOptions({agent:a.id,model:warmupSettings?.models?.[a.id] || ''}).replace(/^<option[^>]*>Podrazumevani<\/option>/,'')}</select></span></label>`).join('');
  for(const row of $('#warmup-agents').children)row.querySelector('select').value=warmupSettings?.models?.[row.dataset.warmupAgent] || '';
  renderWarmupStatus();
 }
@@ -525,8 +545,12 @@ $('#warmup-settings').onchange=e=>{if(e.target.id==='warmup-time' && !e.target.v
 $('#warmup-time').oninput=e=>{const input=e.target;if(/^\d{4}$/.test(input.value))input.value=input.value.slice(0,2)+':'+input.value.slice(2);if(input.validity.valid && input.value.length===5)guard(()=>queueSettingsSave(saveWarmup));};
 $('#warmup-run').onclick=()=>guard(async()=>{await queueSettingsSave(saveWarmup);warmupSettings=await api('/api/warmup/run','POST',{});renderWarmupStatus();});
 function renderDefaults() {$('#default-agents').innerHTML=meta.agents.map(a=>{const s={agent:a.id,...defaults[a.id]};return `<div class="default-agent" data-default-agent="${a.id}"><img src="${agentLogos[a.id]}" alt="${escape(a.name)}" title="${escape(a.name)}" width="22" height="22"><select data-default-model aria-label="Podrazumevani model ${escape(a.name)}">${modelOptions(s)}</select><select data-default-effort aria-label="Podrazumevano razmišljanje ${escape(a.name)}" ${effortsFor(a.id,s.model).length?'':'disabled'}>${effortOptions(s)}</select></div>`;}).join('');}
-function showDefaults(open) {document.body.classList.toggle('settings-view',open);if(open)refreshPhone();$('#defaults').hidden=!open;for(const el of [$('#conversation'),$('.composer-area'),$('#usage-details')].filter(Boolean))el.inert=open;if(open){closePanels();$('#default-agents select')?.focus();}else focusPrompt();}
-$('#defaults-open').onclick=()=>guard(async()=>{const form=$('#defaults');if(!form.hidden){showDefaults(false);return;}const button=$('#defaults-open');button.disabled=true;try{[defaults,models,titleSettings,warmupSettings]=await Promise.all([api('/api/defaults'),api('/api/models'),phoneRemote?Promise.resolve(titleSettings):api('/api/title-settings'),api('/api/warmup').catch(()=>null)]);renderDefaults();renderWarmup();$('#statistics-open').hidden=phoneRemote;$('#statistics-download').hidden=!phoneRemote;fillTitleSettings();renderColorToggle();renderKeyboardToggle();menuChat=null;renderPopover();showDefaults(true);renderWarmupStatus();}finally{button.disabled=false;}});
+const gmailSettings=createGmailSettings({root:$('#gmail-settings'),api,phoneRemote});
+function showDefaults(open) {document.body.classList.toggle('settings-view',open);if(open)refreshPhone();$('#defaults').hidden=!open;if(open)void gmailSettings.refresh();else gmailSettings.pause();for(const el of [$('#conversation'),$('.composer-area'),$('#usage-details')].filter(Boolean))el.inert=open;if(open){closePanels();if(!mobileNavigation() && !matchMedia('(pointer:coarse)').matches)$('#default-agents select')?.focus();}else focusPrompt();}
+function paintSettings(){renderDefaults();renderWarmup();$('#statistics-open').hidden=phoneRemote;$('#statistics-download').hidden=!phoneRemote;fillTitleSettings();renderColorToggle();renderKeyboardToggle();menuChat=null;renderPopover();}
+let settingsDirty=false,settingsGeneration=0;
+$('#defaults').addEventListener('change',()=>{settingsDirty=true;});
+$('#defaults-open').onclick=()=>guard(async()=>{const form=$('#defaults');if(!form.hidden){showDefaults(false);return;}const generation=++settingsGeneration;settingsDirty=false;paintSettings();showDefaults(true);const [nextDefaults,nextTitles,nextWarmup]=await Promise.all([api('/api/defaults'),phoneRemote?Promise.resolve(titleSettings):api('/api/title-settings'),api('/api/warmup').catch(()=>null)]);if(form.hidden || settingsDirty || generation!==settingsGeneration)return;defaults=nextDefaults;if(!phoneRemote)titleSettings=nextTitles;warmupSettings=nextWarmup;paintSettings();showDefaults(true);api('/api/models').then(value=>{const same=JSON.stringify(models)===JSON.stringify(value);models=value;if(same || form.hidden || settingsDirty || generation!==settingsGeneration)return;renderDefaults();}).catch(()=>{});});
 $('#default-agents').onchange=e=>{
  const row=e.target.closest('[data-default-agent]');if(!row)return;
  if(e.target.matches('[data-default-model]')){const s={agent:row.dataset.defaultAgent,model:e.target.value,effort:preferredEffort(models,row.dataset.defaultAgent,e.target.value)},select=row.querySelector('[data-default-effort]');select.innerHTML=effortOptions(s);select.disabled=!effortsFor(s.agent,s.model).length;}
@@ -549,17 +573,16 @@ function selectedSpeechText(){
   return text && messageId?{chatId:active,messageId,text}:null;
 }
 document.addEventListener('selectionchange',()=>{
-  if(document.activeElement===$('#speak-selection'))return;
+  if(joystickDrag)return;
   speechSelection=selectedSpeechText();
-  $('#speech-selection').hidden=!speechSelection;
 });
-$('#speak-selection').onpointerdown=e=>e.preventDefault();
-$('#speak-selection').onclick=()=>guard(async()=>{
-  const chosen=speechSelection;
-  if(!chosen || chosen.chatId!==active)return;
-  speechSelection=null;$('#speech-selection').hidden=true;
-  await speakMessage(chosen.messageId,chosen.text);
-});
+async function readFromJoystick(){
+  const chosen=speechSelection?.chatId===active?speechSelection:selectedSpeechText();
+  if(chosen){await speakMessage(chosen.messageId,chosen.text);return;}
+  const message=current()?.messages.findLast(m=>m.role==='assistant' && m.text?.trim());
+  if(message)await speakMessage(message.id);
+  else toast('Označi tekst poruke za čitanje.');
+}
 function speakingId(){const chat=current();return speechClip && speechClip.chatId===chat?.id && (speechClip.loading || !speechAudio.paused) ? speechClip.messageId : '';}
 function speechClock(seconds){const value=Number.isFinite(seconds)&&seconds>0?Math.floor(seconds):0;return `${Math.floor(value/60)}:${String(value%60).padStart(2,'0')}`;}
 function renderSpeechBar(){const bar=$('#speech-bar');if(!bar)return;if(!speechClip || speechClip.chatId!==active){bar.hidden=true;return;}bar.hidden=false;$('#speech-label').textContent=speechClip.label || '';const playing=!speechAudio.paused && !speechClip.loading;$('#speech-toggle').innerHTML=playing?speakStopIcon:speakIcon;$('#speech-toggle').setAttribute('aria-label',playing?'Pauziraj':'Pusti');const duration=speechAudio.duration,time=speechAudio.currentTime||0;if(!speechSeeking && Number.isFinite(duration) && duration>0)$('#speech-seek').value=String(Math.round(time/duration*1000));$('#speech-time').textContent=`${speechClock(time)} / ${speechClock(duration)}`;}
@@ -619,14 +642,14 @@ $('#send').onclick=e=>{if(current()?.running){e.preventDefault();guard(enqueueMe
 $('#stop-run').onclick=()=>{const id=active;if(!current()?.running)return;guard(()=>api(`/api/chats/${id}/stop`,'POST'));};
 // A dedicated control owns the gesture, leaving text selection untouched.
 const joystick=$('#composer-joystick'),joystickHint=$('#joystick-hint');let joystickDrag=null;
-function joystickDirection(dx,dy){if(dx<=-22 && dy>=22 && Math.abs(dx/dy)>=.8 && Math.abs(dx/dy)<=1.25)return 'bottom';if(dx<=-22 && dy<=-22 && Math.abs(dx/dy)>=.8 && Math.abs(dx/dy)<=1.25)return 'search';if(Math.max(Math.abs(dx),Math.abs(dy))<22)return null;if(Math.abs(dy)>Math.abs(dx)*1.25)return dy<0?'send':'stop';if(Math.abs(dx)>Math.abs(dy)*1.25)return dx<0?'attach':'computer';return null;}
+function joystickDirection(dx,dy){if(dx>=22 && dy<=-22 && Math.abs(dx/dy)>=.8 && Math.abs(dx/dy)<=1.25)return 'read';if(dx<=-22 && dy>=22 && Math.abs(dx/dy)>=.8 && Math.abs(dx/dy)<=1.25)return 'bottom';if(dx<=-22 && dy<=-22 && Math.abs(dx/dy)>=.8 && Math.abs(dx/dy)<=1.25)return 'search';if(Math.max(Math.abs(dx),Math.abs(dy))<22)return null;if(Math.abs(dy)>Math.abs(dx)*1.25)return dy<0?'send':'stop';if(Math.abs(dx)>Math.abs(dy)*1.25)return dx<0?'attach':'computer';return null;}
 function resetJoystick(){joystickDrag=null;joystick.style.removeProperty('--stick-x');joystick.style.removeProperty('--stick-y');delete joystick.dataset.action;joystickHint.hidden=true;}
-function runJoystickAction(action){if(action==='send')$('#send').click();else if(action==='stop' && current()?.running)$('#stop-run').click();else if(action==='attach')$('#files-open').click();else if(action==='computer' && !uploading)openComputerFiles();else if(action==='search' && current()){guard(openChatSearch);}else if(action==='bottom' && current()){chatSearch.close();stickToBottom($('#conversation'));}}
-joystick.addEventListener('pointerdown',e=>{if(e.button!==0 || !e.isPrimary)return;e.preventDefault();joystickDrag={id:e.pointerId,x:e.clientX,y:e.clientY,chatId:active};joystick.setPointerCapture(e.pointerId);});
-joystick.addEventListener('pointermove',e=>{const drag=joystickDrag;if(!drag || e.pointerId!==drag.id)return;e.preventDefault();if(active!==drag.chatId){resetJoystick();return;}const dx=e.clientX-drag.x,dy=e.clientY-drag.y,action=joystickDirection(dx,dy);joystick.style.setProperty('--stick-x',Math.max(-20,Math.min(20,dx/2))+'px');joystick.style.setProperty('--stick-y',Math.max(-20,Math.min(20,dy/2))+'px');joystick.dataset.action=action||'';joystickHint.textContent=action==='send'?(current()?.running?'U red čekanja':'Pošalji'):action==='stop'?(current()?.running?'Zaustavi':'Agent ne radi'):action==='attach'?'Fajl sa uređaja':action==='computer'?'Fajl sa Maca':action==='search'?'Pretraži čet':action==='bottom'?'Na dno četa':'';joystickHint.hidden=!action;});
+function runJoystickAction(action){if(action==='read')guard(readFromJoystick);else if(action==='send')$('#send').click();else if(action==='stop' && current()?.running)$('#stop-run').click();else if(action==='attach')$('#files-open').click();else if(action==='computer' && !uploading)openComputerFiles();else if(action==='search' && current()){guard(openChatSearch);}else if(action==='bottom' && current()){chatSearch.close();stickToBottom($('#conversation'));}}
+joystick.addEventListener('pointerdown',e=>{if(e.button!==0 || !e.isPrimary)return;e.preventDefault();speechSelection=selectedSpeechText() || speechSelection;joystickDrag={id:e.pointerId,x:e.clientX,y:e.clientY,chatId:active};joystick.setPointerCapture(e.pointerId);});
+joystick.addEventListener('pointermove',e=>{const drag=joystickDrag;if(!drag || e.pointerId!==drag.id)return;e.preventDefault();if(active!==drag.chatId){resetJoystick();return;}const dx=e.clientX-drag.x,dy=e.clientY-drag.y,action=joystickDirection(dx,dy);joystick.style.setProperty('--stick-x',Math.max(-20,Math.min(20,dx/2))+'px');joystick.style.setProperty('--stick-y',Math.max(-20,Math.min(20,dy/2))+'px');joystick.dataset.action=action||'';joystickHint.textContent=action==='send'?(current()?.running?'U red čekanja':'Pošalji'):action==='stop'?(current()?.running?'Zaustavi':'Agent ne radi'):action==='attach'?'Fajl sa uređaja':action==='computer'?'Fajl sa Maca':action==='read'?(speechSelection?'Pročitaj izbor':'Pročitaj poslednji odgovor'):action==='search'?'Pretraži čet':action==='bottom'?'Na dno četa':'';joystickHint.hidden=!action;});
 joystick.addEventListener('pointerup',e=>{const drag=joystickDrag;if(!drag || e.pointerId!==drag.id)return;e.preventDefault();const action=joystickDirection(e.clientX-drag.x,e.clientY-drag.y);resetJoystick();if(active===drag.chatId)runJoystickAction(action);});
 joystick.addEventListener('pointercancel',resetJoystick);joystick.addEventListener('lostpointercapture',resetJoystick);
-joystick.onkeydown=e=>{const action={ArrowUp:'send',ArrowDown:'stop',ArrowLeft:'attach',ArrowRight:'computer',Enter:'send',' ':'send'}[e.key];if(action){e.preventDefault();if(!e.repeat)runJoystickAction(action);}};
+joystick.onkeydown=e=>{const action={ArrowUp:'send',ArrowDown:'stop',ArrowLeft:'attach',ArrowRight:'computer',PageUp:'read',Enter:'send',' ':'send'}[e.key];if(action){e.preventDefault();if(!e.repeat)runJoystickAction(action);}};
 
 $('#prompt').onkeydown=e=>{if(e.key!=='Enter' || e.isComposing || e.shiftKey || matchMedia('(max-width:650px)').matches)return;e.preventDefault();if(current()?.running || e.metaKey || e.ctrlKey)guard(enqueueMessage);else $('#composer').requestSubmit();};
 $('#prompt').oninput=()=>{resizePrompt();recordDraft(active,$('#prompt').value);};
@@ -698,7 +721,7 @@ function bindPullToRefresh(){
 bindPullToRefresh();
 function connectEvents(initial,failed){
   events?.close();events=new EventSource('/api/events?summary=1'+(active && (document.body.classList.contains('chat-view') || !mobileNavigation())?'&chat='+encodeURIComponent(active):''));if(!appReady)bootProgress('Veza za poruke','povezujem se');events.onopen=()=>{if(!appReady)bootProgress('Veza za poruke','otvorena · čekam istoriju četova');};
-  events.onmessage=e=>{const data=JSON.parse(e.data),next=Array.isArray(data)?mergeChatList(data):data.lite?mergeBrowserChats(chats,data):mergeChats(data);connected=true;if(!appReady){bootProgress('Istorija četova',`učitano · ${bootSize(new TextEncoder().encode(e.data).length)} · ${next.length} četova`);bootProgress('Veza za poruke','povezana');chats=next;initial?.(next);return;}chats=next;void flushDrafts();if(active && !current())choose(null);else{render();if(current()?._needsHistory)guard(()=>loadChatHistory(active));}};
+  events.onmessage=e=>{const data=JSON.parse(e.data),next=Array.isArray(data)?mergeChatList(data):data.lite?mergeBrowserChats(chats,data):mergeChats(data);connected=true;if(!appReady){bootProgress('Istorija četova',`učitano · ${bootSize(new TextEncoder().encode(e.data).length)} · ${next.length} četova`);bootProgress('Veza za poruke','povezana');chats=next;initial?.(next);return;}chats=next;for(const chat of chats)clearReadNotifications(chat);void flushDrafts();if(active && !current())choose(null);else{render();if(current()?._needsHistory)guard(()=>loadChatHistory(active));}};
   events.addEventListener('folders',e=>{folders=JSON.parse(e.data);if(openFolder && !folders.some(folder=>folder.id===openFolder))setOpenFolder(null);else{lastSidebar='';if(appReady)renderSidebar();}});
   events.addEventListener('reload',()=>{if(!$('#prompt').value.trim() && !document.querySelector('dialog[open]'))location.reload();else toast('Interfejs je izmenjen. Osveži stranicu kad završiš unos.');});
   events.onerror=()=>{if(!appReady)bootProgress('Veza za poruke','veza prekinuta · pokušavam ponovo');failed?.();connected=false;if(appReady)render();};
@@ -775,11 +798,13 @@ async function browseFolder(p){const id=active,request=++folderRequest;const lis
 function renderFileColumns(){const desktop=!mobileNavigation(),columns=desktop?folderColumns:[fileListing];$('#file-entries').classList.toggle('columns',desktop);$('#file-entries').innerHTML=columns.map(listing=>{const column=folderColumns.indexOf(listing),next=folderColumns[column+1]?.path;return `<section class="file-column" aria-label="${escape(listing.path)}">${desktop?`<small class="column-title">${escape(listing.crumbs.at(-1)?.name||'Home')}</small>`:''}${listing.entries.map((e,i)=>`<button type="button" class="file-card ${e.directory?'directory':'file'} ${next===e.path?'selected':''}" data-file-column="${column}" data-file-entry="${i}" aria-label="${e.directory?'Folder':'Fajl'}: ${escape(e.name)}">${escape(e.name)}</button>`).join('')}${listing.truncated?'<small>Prvih 500 stavki. Otvori uži folder.</small>':''}</section>`;}).join('');if(desktop)$('#file-entries').lastElementChild?.scrollIntoView({block:'nearest',inline:'end'});}
 
 function closeFilePicker(){if(!$('#files-dialog').open || filePickerClosing)return;filePickerClosing=true;history.back();}
-$('#files-open').onclick=e=>{e.stopPropagation();if(uploading)return;if(mobileNavigation() || matchMedia('(pointer:coarse)').matches){$('#attach-menu').hidden=true;$('#device-files').click();return;}$('#attach-menu').hidden=!$('#attach-menu').hidden;};
-document.addEventListener('click',e=>{if(!e.target.closest('#attach-menu'))$('#attach-menu').hidden=true;});
-$('#attach-menu').onclick=e=>{const choice=e.target.closest('[data-attach]')?.dataset.attach;if(!choice)return;$('#attach-menu').hidden=true;if(choice==='device')$('#device-files').click();else openComputerFiles();};
+$('#files-open').onclick=e=>{e.stopPropagation();if(uploading)return;const phone=mobileNavigation() || matchMedia('(pointer:coarse)').matches;$('#attach-menu [data-attach="computer"]').hidden=phone;$('#attach-menu').hidden=!$('#attach-menu').hidden;};
+document.addEventListener('click',e=>{if(!e.target.closest('#attach-menu,#files-open,#composer-joystick'))$('#attach-menu').hidden=true;});
+$('#attach-menu').onclick=e=>{const choice=e.target.closest('[data-attach]')?.dataset.attach;if(!choice)return;$('#attach-menu').hidden=true;if(choice==='device')$('#device-files').click();else if(choice==='clipboard')guard(pasteClipboardImages);else openComputerFiles();};
 $('#device-files').onchange=e=>{const files=[...e.target.files];e.target.value='';guard(()=>uploadFiles(files));};
-$('#prompt').addEventListener('paste',e=>{const files=[...(e.clipboardData?.files || [])];if(!files.length)return;e.preventDefault();guard(()=>uploadFiles(files));});
+function clipboardImages(data){const files=[...(data?.files || [])];if(files.length)return files;return [...(data?.items || [])].filter(item=>item.kind==='file').map(item=>item.getAsFile()).filter(file=>file && (!file.type || file.type.startsWith('image/') || isImage(file.name || '')));}
+document.addEventListener('paste',e=>{if((e.target.closest('input,textarea,select') && e.target.id!=='prompt') || !$('#defaults').hidden || document.querySelector('dialog[open]'))return;const files=clipboardImages(e.clipboardData);if(!files.length)return;e.preventDefault();guard(()=>uploadFiles(files));});
+async function pasteClipboardImages(){if(!navigator.clipboard?.read)throw Error('Ovaj pregledač ne da sliku iz privremene memorije. Nalepi je u poruku.');let items;try{items=await navigator.clipboard.read();}catch{throw Error('Dozvoli pristup privremenoj memoriji i kopiraj sliku ponovo.');}const files=[];for(const item of items){const type=item.types.find(kind=>kind.startsWith('image/'));if(!type)continue;const blob=await item.getType(type);const ext=(type.split('/')[1] || 'png').replace('jpeg','jpg');files.push(new File([blob],`slika.${ext}`,{type}));}if(!files.length)throw Error('U privremenoj memoriji nema slike.');await uploadFiles(files);}
 // Fajl sa uređaja se kopira na računar, pa ga agent čita kao i svaku drugu povezanu putanju.
 async function uploadFiles(files){
   if(!files.length || uploading)return;

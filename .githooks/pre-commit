@@ -1,0 +1,8 @@
+#!/bin/sh
+# Commit prolazi samo ako svi testovi prolaze. Test proverava i da server isporučuje svaki modul koji app.js uvozi.
+echo "Agent Desk: pokrećem npm test pre commit-a…"
+if ! npm test --silent >/tmp/agent-desk-pre-commit.log 2>&1; then
+  grep -E "not ok|AssertionError|Error" /tmp/agent-desk-pre-commit.log | head -20
+  echo "Commit je odbijen: testovi ne prolaze. Ceo izveštaj: /tmp/agent-desk-pre-commit.log"
+  exit 1
+fi

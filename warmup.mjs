@@ -11,7 +11,7 @@ export function createWarmup(file,{execute,now=()=>new Date()}={}){
  const view=()=>({...state,running:busy,currentAgent,timeZone:'Europe/Belgrade',prompt:warmupPrompt});
  async function run(origin='manual'){
   if(busy)throw Error('Provera agenata je već u toku.');busy=true;const agents=[...state.agents],models={...state.models};const result={id:randomUUID(),origin,agents,startedAt:now().toISOString(),results:[]};state.runs.unshift(result);state.runs=state.runs.slice(0,100);
-  try{save();for(const agent of agents){currentAgent=agent;try{result.results.push({agent,...await execute(agent,models[agent]||'',warmupPrompt)});}catch(error){result.results.push({agent,status:'error',error:error.message});}save();}}
+  try{save();for(const agent of agents){currentAgent=agent;try{result.results.push({agent,...await execute(agent,models[agent]||'',warmupPrompt),finishedAt:now().toISOString()});}catch(error){result.results.push({agent,status:'error',error:error.message,finishedAt:now().toISOString()});}save();}}
   finally{currentAgent=null;busy=false;result.completedAt=now().toISOString();save();}
   return result;
  }

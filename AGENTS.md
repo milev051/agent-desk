@@ -1,0 +1,11 @@
+# Pravila za agente koji menjaju Agent Desk
+
+Ovu aplikaciju koristiš dok je menjaš. Ako `public/app.js` ne može da se pokrene, korisnik ostaje na ekranu „Preuzimam interfejs aplikacije…" i ne može da ti piše da je nešto pokvareno. Zato:
+
+1. **Posle svake izmene pokreni `npm test`** i ne završavaj odgovor dok svi testovi ne prođu. Ako test padne, popravi uzrok, ne test.
+2. **Nov browser modul** stavi u `public/` kao `ime-modula.mjs` (mala slova, cifre, crtica). Server takve fajlove isporučuje sam. Fajl drugog tipa ili iz `node_modules` mora da se upiše u spisak `files` u `server.mjs`.
+3. **Izmena u `server.mjs` ili drugom serverskom `.mjs` fajlu** važi tek posle restarta servera. Pre restarta proveri da nijedan agent ne radi, pa pokreni:
+   `launchctl kickstart -k gui/$(id -u)/local.agent-desk.server`
+   Restartom prekidaš i svoj sopstveni odgovor, zato ga radi poslednji i reci korisniku da je restart urađen.
+4. **Provera da se interfejs učitava:** `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4317/ime-modula.mjs` mora da vrati 200 za svaki modul koji uvoziš.
+5. Commit prolazi kroz `.githooks/pre-commit`, koji pokreće `npm test` i odbija commit ako test padne. Ne zaobilazi ga sa `--no-verify`.

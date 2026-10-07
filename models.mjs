@@ -59,22 +59,19 @@ export async function catalog(binaries) {
   if (pending) return pending;
   pending = (async () => {
     const result = JSON.parse(fs.readFileSync(new URL('./model-catalog.snapshot.json', import.meta.url), 'utf8'));
+    const [claude, grok, antigravity] = await Promise.all([
+      binaries.claude ? discoverClaude(binaries.claude) : [],
+      binaries.grok ? new Promise(resolve => execFile(binaries.grok, ['models'], { timeout: 8000, maxBuffer: 128 * 1024, env: { ...process.env, NO_COLOR: '1' } }, (error, stdout) => resolve(grokModels(stdout || error?.stdout || '')))) : [],
+      binaries.antigravity ? new Promise(resolve => execFile(binaries.antigravity, ['models'], { timeout: 12000, maxBuffer: 128 * 1024, env: { ...process.env, NO_COLOR: '1' } }, (error, stdout) => resolve(antigravityModels(stdout || '')))) : [],
+    ]);
     try {
       const data = JSON.parse(fs.readFileSync(path.join(process.env.CODEX_HOME || path.join(os.homedir(), '.codex'), 'models_cache.json'), 'utf8'));
       result.codex.models = codexModels(data); result.codex.source = 'Codex CLI cache'; result.codex.fetchedAt = data.fetched_at;
     } catch { result.codex.error = 'CLI spisak modela nije dostupan. Model možeš uneti ručno.'; }
-    if (binaries.claude) { const native = await discoverClaude(binaries.claude); if(native.length) result.claude = {...result.claude, models:native,source:'Claude Code initialize', fetchedAt:new Date().toISOString()}; }
-    if (binaries.grok) {
-      const native = await new Promise(resolve => {
-        execFile(binaries.grok, ['models'], { timeout: 8000, maxBuffer: 128 * 1024, env: { ...process.env, NO_COLOR: '1' } }, (error, stdout) => resolve(grokModels(stdout || error?.stdout || '')));
-      });
-      if (native.length) result.grok.models = native.map(m => ({...m, name: result.grok.models.find(x => x.id === m.id)?.name || m.name, efforts: result.grok.models.find(x => x.id === m.id)?.efforts || []}));
-      if (!result.grok.models.length) result.grok.error = 'CLI spisak modela nije dostupan. Model možeš uneti ručno.';
-    }
-    if (binaries.antigravity) {
-      const native = await new Promise(resolve => execFile(binaries.antigravity,['models'],{timeout:12000,maxBuffer:128*1024,env:{...process.env,NO_COLOR:'1'}},(error,stdout)=>resolve(antigravityModels(stdout || ''))));
-      if(native.length) result.antigravity = {...result.antigravity,models:native,source:'agy models',fetchedAt:new Date().toISOString()};
-    }
+    if (claude.length) result.claude = {...result.claude, models:claude, source:'Claude Code initialize', fetchedAt:new Date().toISOString()};
+    if (grok.length) result.grok.models = grok.map(m => ({...m, name: result.grok.models.find(x => x.id === m.id)?.name || m.name, efforts: result.grok.models.find(x => x.id === m.id)?.efforts || []}));
+    if (!result.grok.models.length) result.grok.error = 'CLI spisak modela nije dostupan. Model možeš uneti ručno.';
+    if (antigravity.length) result.antigravity = {...result.antigravity, models:antigravity, source:'agy models', fetchedAt:new Date().toISOString()};
     cached = result; fetched = Date.now(); return result;
   })();
   try { return await pending; } finally { pending = null; }

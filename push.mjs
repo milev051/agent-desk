@@ -55,7 +55,9 @@ export function createPush({keysFile, subscriptionsFile, sender, contact = 'mail
         title: String(payload.title || 'Agent Desk').slice(0, 120),
         body: String(payload.body || '').slice(0, 300),
         chatId: String(payload.chatId || ''),
-        tag: String(payload.tag || payload.chatId || 'agent-desk').slice(0, 120)
+        tag: String(payload.tag || payload.chatId || 'agent-desk').slice(0, 120),
+        ...(payload.messageId ? {messageId: String(payload.messageId)} : {}),
+        ...(payload.messageCreatedAt ? {messageCreatedAt: payload.messageCreatedAt} : {})
       });
       const gone = [];
       await Promise.all(subscriptions.map(async sub => {

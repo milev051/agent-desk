@@ -201,7 +201,7 @@ body.dragging-chat #chat-drop-targets{display:flex}
 
 .sidebar-actions{touch-action:pan-x}#chat-popover{max-height:calc(100dvh - 24px);overflow-y:auto}#chat-popover [data-menu-rename]{display:block;box-sizing:border-box;width:100%;margin:0 0 10px;padding:8px;font-size:13px}
 
-#warmup-settings{display:grid;gap:10px}#warmup-agents{display:grid;gap:8px}.warmup-agent{display:flex;align-items:center;justify-content:space-between;gap:12px}.warmup-agent select{min-width:0;width:60%}#warmup-status{overflow-wrap:anywhere}
+#warmup-settings{display:grid;gap:10px}#warmup-agents{display:grid;gap:8px}.warmup-agent{display:flex;align-items:center;justify-content:space-between;gap:12px}.warmup-agent-choice{display:flex;align-items:center;justify-content:flex-end;gap:8px;width:min(60%,320px);min-width:0}.warmup-agent-choice select{min-width:0;width:100%}#warmup-status{overflow-wrap:anywhere}
 
 .settings-tools-section{margin:18px 0 14px}.settings-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.settings-tools button,.settings-tools a{display:flex;align-items:center;justify-content:center;width:40px;height:40px;padding:9px;border:1px solid #3a3a3a;border-radius:5px;background:none;color:#aaa;text-decoration:none}.settings-tools button:hover,.settings-tools a:hover{background:#202020;color:#eee}.settings-tools svg{flex-shrink:0}#notifications-status:empty{display:none}
 
@@ -209,7 +209,7 @@ body.dragging-chat #chat-drop-targets{display:flex}
 
 .warmup-send-row{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap}.warmup-send-row label{display:flex;align-items:center;gap:8px;font-size:12px;color:#aaa}.warmup-send-row input{width:76px;text-align:center;font-variant-numeric:tabular-nums}.warmup-send-row input:invalid{border-color:#b56f61}
 
-#warmup-days{display:flex;gap:3px;flex:1}#warmup-days button{min-width:28px;padding:7px 4px;border:0;background:none;color:#666;font-size:11px}#warmup-days button[aria-pressed="true"]{color:#93d9aa;background:#16291c}#warmup-run{display:flex;align-items:center;justify-content:center;width:36px;height:36px;padding:7px;background:none;border:1px solid #3a3a3a;color:#aaa}.warmup-send-row{gap:7px}#warmup-progress{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin:0 0 14px;padding:0;font-size:12px;color:#aaa}#warmup-progress[hidden]{display:none}.warmup-result{display:inline-flex;align-items:center;gap:6px}.warmup-result-icon{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;flex-shrink:0}.warmup-result-icon.done{color:#93d9aa}.warmup-result-icon.error{color:#e3a39b}.warmup-result-icon.waiting{border:1px solid #444;border-radius:50%}.warmup-result-icon.running{border:2px solid #393939;border-top-color:#93d9aa;border-radius:50%;animation:warmup-spin .8s linear infinite}@keyframes warmup-spin{to{transform:rotate(360deg)}}
+#warmup-days{display:flex;gap:3px;flex:1}#warmup-days button{min-width:28px;padding:7px 4px;border:0;background:none;color:#666;font-size:11px}#warmup-days button[aria-pressed="true"]{color:#93d9aa;background:#16291c}#warmup-run{display:flex;align-items:center;justify-content:center;width:36px;height:36px;padding:7px;background:none;border:1px solid #3a3a3a;color:#aaa}.warmup-send-row{gap:7px}#warmup-progress{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin:0 0 14px;padding:0;font-size:12px;color:#aaa}#warmup-progress[hidden]{display:none}.warmup-result{display:inline-flex;align-items:center;gap:6px}.warmup-result-icon,.warmup-send-mark{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;flex-shrink:0}.warmup-send-mark{margin:0;vertical-align:0;pointer-events:none;flex-shrink:0}.warmup-send-mark[hidden]{display:none}.warmup-result-icon.done,.warmup-send-mark.done{color:#93d9aa}.warmup-result-icon.error,.warmup-send-mark.error{color:#e3a39b}.warmup-result-icon.waiting{border:1px solid #444;border-radius:50%}.warmup-result-icon.running,.warmup-send-mark.running{border:2px solid #393939;border-top-color:#93d9aa;border-radius:50%;animation:warmup-spin .8s linear infinite}@keyframes warmup-spin{to{transform:rotate(360deg)}}
 
 .message-body>blockquote{position:relative;padding:34px 12px 12px;border-left:2px solid #555;background:#ffffff04;border-radius:0 5px 5px 0}.copy-excerpt{position:absolute;top:5px;right:6px;display:flex;align-items:center;justify-content:center;min-width:28px;min-height:28px;padding:5px;border:0;background:none;color:#aaa}.copy-excerpt:hover{background:#303030;color:#eee}
 
@@ -217,7 +217,7 @@ body.dragging-chat #chat-drop-targets{display:flex}
 
 .chat-row.drop-hover{outline:1px solid #98cfa6;background:#16211b}
 
-.folder-shared[aria-pressed="true"],.folder-mark.shared{color:#93d9aa}.folder-shared[aria-pressed="true"]{background:#16291c}
+.folder-shared[aria-pressed="true"]{color:#93d9aa}.folder-mark.shared{display:flex;align-items:center;justify-content:center;height:14px;border:0;border-radius:0}.folder-mark.shared:before{content:none}.folder-mark.shared svg{width:18px;height:18px;flex-shrink:0}.folder-shared[aria-pressed="true"]{background:#16291c}
 
 .phone-pairing{display:flex;align-items:center;gap:20px}.phone-settings #phone-qr{flex-shrink:0;width:144px;height:144px;margin:0}.phone-settings #phone-qr[hidden]{display:none}.phone-controls{min-width:0;display:flex;flex-direction:column;gap:12px}.phone-controls .settings-actions{display:flex;justify-content:flex-start;gap:8px;flex-wrap:wrap;margin:0}.phone-controls .settings-actions button{font-size:12px;padding:7px 10px}@media(max-width:650px){.phone-pairing{gap:12px}.phone-settings #phone-qr{width:128px;height:128px}}
 
@@ -259,7 +259,26 @@ body.dragging-chat #chat-drop-targets{display:flex}
 .chat-row[data-expand-parent] .chat-item{padding-right:32px}
 .chat-group>.subagent-chats{margin:4px 0 8px 10px}
 
-.chat-drag-zone{display:flex;align-items:center;justify-content:center;color:#777}.chat-drag-zone:hover{color:#bbb}.chat-drag-zone svg{pointer-events:none}
+.chat-drag-zone{display:flex;align-items:center;justify-content:center;color:#777}.chat-drag-zone:hover{color:#bbb}.chat-drag-zone svg,.chat-grip{pointer-events:none}
+.chat-grip{position:relative;width:12px;height:18px;flex-shrink:0;transform-origin:center}
+.chat-grip i{position:absolute;width:2.2px;height:2.2px;margin:-1.1px 0 0 -1.1px;border-radius:50%;background:currentColor}
+.chat-grip i:nth-child(1){left:4px;top:4px}
+.chat-grip i:nth-child(2){left:8px;top:4px}
+.chat-grip i:nth-child(3){left:4px;top:9px}
+.chat-grip i:nth-child(4){left:8px;top:9px}
+.chat-grip i:nth-child(5){left:4px;top:14px}
+.chat-grip i:nth-child(6){left:8px;top:14px}
+/* U obradi: odmah prikaži četiri tačke u luku i pokreni rotaciju. */
+.chat-row.working .chat-grip{animation:grip-spin .9s linear infinite}
+.chat-row.working .chat-grip i:nth-child(1){transform:translate(4.27px,.54px);opacity:.22}
+.chat-row.working .chat-grip i:nth-child(2){transform:translate(2.67px,3.21px);opacity:.45}
+.chat-row.working .chat-grip i:nth-child(3){transform:translate(6.67px,1.79px);opacity:.72}
+.chat-row.working .chat-grip i:nth-child(4){transform:translate(.27px,4.46px);opacity:1}
+.chat-row.working .chat-grip i:nth-child(5),.chat-row.working .chat-grip i:nth-child(6){display:none}
+@keyframes grip-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){
+ .chat-row.working .chat-grip,.chat-row.working .chat-grip i{animation:none}
+}
 
 #conversation{overflow-anchor:none}
 
@@ -307,3 +326,10 @@ body #chats .chat-row.working,body #agent-tree .agent-tree-item.working{backgrou
 #conversation .message{width:fit-content;max-width:min(850px,100%);margin-left:max(0px,calc((100% - 850px)/2));margin-right:auto;align-items:stretch}
 #conversation .message.user{margin-left:auto;margin-right:max(0px,calc((100% - 850px)/2));align-items:stretch}
 #conversation .message .message-body,#conversation .message.user .message-body{width:auto;max-width:100%;min-width:0}
+
+#gmail-settings .settings-actions{justify-content:flex-start;flex-wrap:wrap;gap:8px;margin:10px 0}
+#gmail-settings p{font-size:12px;line-height:1.5;color:#aaa;overflow-wrap:anywhere}
+#gmail-settings summary{cursor:pointer;font-size:12px;color:#ddd;margin-top:8px}
+#gmail-settings .title-key-row input{min-width:0}
+
+#composer-joystick[data-action="read"]{border-color:#c7b1ec}

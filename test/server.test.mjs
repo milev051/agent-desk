@@ -20,6 +20,12 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     await once(server.stdout, 'data');
     async function call(url, method = 'GET', data, origin = base) { const r = await fetch(base + url, { method, headers: { Origin: origin, 'Content-Type': 'application/json' }, body: data ? JSON.stringify(data) : undefined }); return { status: r.status, data: await r.json() }; }
     async function done(id) { for(let i=0;i<100;i++){const c=(await call('/api/chats')).data.find(c=>c.id===id);if(!c.running)return c;await new Promise(r=>setTimeout(r,30));}throw Error('CLI nije završio'); }
+    assert.equal((await call('/api/integrations/gmail')).data.state,'unconfigured');
+    const environment=(await call('/api/environment')).data;assert.equal(environment.app,'Agent Desk');assert.equal(environment.integrations.calendar.implemented,false);assert.equal(environment.chat,null);
+    assert.equal((await call('/api/environment?chatId=missing')).status,404);
+    assert.equal((await call('/api/integrations/gmail/messages?q=test')).status,400);
+    assert.equal((await call('/api/integrations/gmail/send','POST',{})).status,404);
+    assert.equal((await call('/api/integrations/gmail/connect','POST',{},'https://evil.test')).status,403);
     assert.equal((await call('/api/warmup')).data.enabled,false);
     assert.equal((await call('/api/warmup','PUT',{enabled:false,time:'08:00',agents:['codex'],models:{}})).status,200);
     assert.equal((await call('/api/warmup/run','POST',{})).status,202);
@@ -108,6 +114,9 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal((await call(`/api/chats/${a.id}`, 'PATCH', { settings: { cwd: '/missing-folder-agent-desk' } })).status, 400);
     await call(`/api/chats/${a.id}/send`, 'POST', { text: 'Prva poruka' });
     let chat = await done(a.id);assert.notEqual(chat.title,'Empty');
+    const chatEnvironment=(await call('/api/environment?chatId='+a.id)).data;assert.equal(chatEnvironment.chat.cwd,temp);assert.equal(chatEnvironment.chat.id,a.id);assert.doesNotMatch(JSON.stringify(chatEnvironment),/test-only-key|access_token|refresh_token/);
+    assert.match(JSON.parse(chat.messages.at(-1).text).input,/Radiš unutar Agent Deska/);
+    assert.match(JSON.parse(chat.messages.at(-1).text).input,/api\/integrations\/gmail\/messages/);
     const summaries=(await call('/api/chats?summary=1')).data;
     assert.ok(summaries.every(c=>c.messages.length===0));assert.equal(summaries.find(c=>c.id===a.id).latestReply.id,chat.messages.at(-1).id);
     const paged=(await call(`/api/chats/${a.id}?limit=1`)).data;assert.equal(paged.messages.length,1);assert.equal(paged.historyPage.hasMore,true);

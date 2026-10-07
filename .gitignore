@@ -9,3 +9,8 @@ node_modules/
 *.sqlite*
 *.db
 Agent Desk.app/
+
+# Lokalni Google pristupni podaci nikad ne idu u Git, ni u privatni repo.
+**/client_secret_*.json
+**/oauth-client*.json
+**/tokens.json

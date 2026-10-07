@@ -22,7 +22,7 @@ test('ručno slanje: izolovan plan, zabrana preklapanja i nastavak nakon greške
  job.configure({enabled:false,time:'09:00',agents:['codex','claude']});
  const running=job.run();await assert.rejects(job.run(),/već u toku/);
  job.configure({enabled:false,time:'10:00',agents:['grok']});release();
- const result=await running;assert.deepEqual(result.results.map(r=>r.agent),['codex','claude']);assert.equal(result.results[0].status,'error');assert.equal(result.results[1].status,'done');assert.equal(job.view().running,false);
+ const result=await running;assert.deepEqual(result.results.map(r=>r.agent),['codex','claude']);assert.equal(result.results[0].status,'error');assert.equal(result.results[1].status,'done');assert.ok(result.results.every(r=>Number.isFinite(Date.parse(r.finishedAt))));assert.equal(job.view().running,false);
  assert.throws(()=>job.configure({enabled:true,time:'25:00',agents:['codex']}));
  assert.throws(()=>job.configure({enabled:true,time:'08:00',agents:[]}));
 });

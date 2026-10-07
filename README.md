@@ -322,3 +322,7 @@ Kartica podagenta ima iste dve zone kao običan čet: zadrži levu polovinu za r
 Ikonice agenata otvaraju grupe modela klikom. Karticu modela možeš prevući na folder da napraviš novi čet u njemu, ili na glavni čet da napraviš podagenta. Podagent nasleđuje radni folder glavnog četa i čeka zadatak. Dodavanje je dozvoljeno kad glavni agent ne radi. Klik na karticu modela i dalje otvara novi čet.
 
 Svaki čet čuva vreme kreiranja i evidenciju otvaranja od uključivanja ove funkcije. Čitljivi zapisi u `data/cetovi` sadrže broj pristupa, datume pristupa i broj poslatih korisničkih poruka. Poruke se kopiraju kao `[datum, vreme] autor (model): tekst`, u zoni Europe/Belgrade, sa sačuvanim putanjama priloga. Raniji pristupi nisu rekonstruisani.
+
+## Gmail
+
+Gmail povezivanje, status i prekid veze su u opštim podešavanjima. Agenti mogu da pretražuju i čitaju mejlove kroz lokalni API, uz Google dozvolu samo za čitanje. Za prvo povezivanje potreban je korisnikov Google OAuth Desktop app klijent. Postupak i ograničenja su u [docs/gmail.md](docs/gmail.md).

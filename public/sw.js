@@ -1,17 +1,31 @@
 self.addEventListener('install', () => { self.skipWaiting(); });
 self.addEventListener('activate', event => { event.waitUntil(self.clients.claim()); });
 
+async function closeReadNotifications(data) {
+  const notifications = await self.registration.getNotifications();
+  for (const notification of notifications) {
+    if (notification.data?.chatId !== data.chatId) continue;
+    if (!notification.data?.messageId || notification.data.messageId === data.messageId || (data.readBefore && notification.data.messageCreatedAt && notification.data.messageCreatedAt <= data.readBefore)) notification.close();
+  }
+}
+
+self.addEventListener('message', event => {
+  if (event.data?.type === 'read') event.waitUntil(closeReadNotifications(event.data));
+});
+
 self.addEventListener('push', event => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch { data = {title: 'Agent Desk', body: ''}; }
-  event.waitUntil(self.registration.showNotification(data.title || 'Agent Desk', {
-    body: data.body || '',
-    tag: data.tag || data.chatId || 'agent-desk',
-    renotify: true,
-    icon: '/icon-192.png',
-    badge: '/badge-96.png',
-    data: {chatId: data.chatId || ''}
-  }));
+  event.waitUntil((async () => {
+    await self.registration.showNotification(data.title || 'Agent Desk', {
+      body: data.body || '',
+      tag: data.tag || data.chatId || 'agent-desk',
+      renotify: true,
+      icon: '/icon-192.png',
+      badge: '/badge-96.png',
+      data: {chatId: data.chatId || '', messageId: data.messageId || '', messageCreatedAt: data.messageCreatedAt || 0}
+    });
+  })());
 });
 
 self.addEventListener('notificationclick', event => {
