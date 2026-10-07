@@ -295,7 +295,7 @@ async function send(chat, prompt, options={}) {
     if(reply.status==='error' || reply.status==='stopped')chat.queuePaused=true;
     chat.updatedAt = Date.now(); update();run.resolve(reply);setImmediate(()=>drainQueue(chat));
     const outcome={done:'Završeno',error:'Greška',stopped:'Zaustavljeno'}[reply.status];
-    if(outcome && !options.silent){void phonePush.notify({title:chat.title||'Agent Desk',body:outcome,chatId:chat.id,tag:chat.id,messageId:reply.id,messageCreatedAt:reply.createdAt});desktopNotify(chat.title||'Agent Desk',outcome,chat.id);}
+    if(outcome && !options.silent){void phonePush.notify({title:chat.title||'Agent Desk',body:outcome,chatId:chat.id,tag:chat.id,messageId:reply.id,messageCreatedAt:reply.createdAt,notificationCreatedAt:Date.now()});desktopNotify(chat.title||'Agent Desk',outcome,chat.id);}
   }
   child.on('error', error => finish(null, error)); child.on('close', code => finish(code));
   child.stdin.on('error', () => {}); child.stdin.end(spec.input || undefined);
@@ -533,8 +533,8 @@ const server = http.createServer(async (req, res) => {
       }
       if(req.method==='POST' && match[2]==='access'){
         const b=await body(req);if(typeof b.requestId!=='string' || !/^[a-f0-9-]{36}$/.test(b.requestId))throw Error('Neispravan pristup.');
-        chat.accessLog ||= [];if(!chat.accessLog.some(a=>a.id===b.requestId)){chat.accessLog.push({id:b.requestId,at:Date.now()});save();scheduleChatFiles();}
-        return json(200,{count:chat.accessLog.length,lastAccessAt:chat.accessLog.at(-1)?.at});
+        chat.accessLog ||= [];if(!chat.accessLog.some(a=>a.id===b.requestId)){const at=Date.now();chat.accessLog.push({id:b.requestId,at});chat.notificationReadAt=at;save();scheduleChatFiles();broadcast(true);}
+        return json(200,{count:chat.accessLog.length,lastAccessAt:chat.accessLog.at(-1)?.at,notificationReadAt:chat.notificationReadAt || 0});
       }
       if(req.method==='PUT' && match[2]==='read'){
         const b=await body(req),index=chat.messages.findIndex(m=>m.id===b.messageId && m.role==='assistant' && ['done','stopped','error','interrupted'].includes(m.status));

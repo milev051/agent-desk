@@ -130,9 +130,14 @@ const syncedReads=new Map(),readRequests=new Set();
 let folders=[],openFolder=null,folderRename=null,drag=null;try{openFolder=localStorage.getItem('agent-desk-folder');}catch{}
 function completion(chat) {const m=chat.latestReply || [...chat.messages].reverse().find(m=>m.role==='assistant');return m && ['done','stopped','error','interrupted'].includes(m.status) ? {token:`${m.id}:${m.status}`,messageId:m.id,status:m.status} : null;}
 function clearReadNotifications(chat) {
- if(!chat.readMessageId)return;
+ if(!chat.readMessageId && !chat.notificationReadAt)return;
  const message=chat.messages?.find(m=>m.id===chat.readMessageId) || (chat.latestReply?.id===chat.readMessageId ? chat.latestReply : null);
- navigator.serviceWorker?.controller?.postMessage({type:'read',chatId:chat.id,messageId:chat.readMessageId,readBefore:message?.createdAt});
+ navigator.serviceWorker?.controller?.postMessage({type:'read',chatId:chat.id,messageId:chat.readMessageId,readBefore:message?.createdAt,notificationsBefore:chat.notificationReadAt});
+}
+function recordChatAccess(chat){
+ if(!chat)return;
+ navigator.serviceWorker?.controller?.postMessage({type:'read',chatId:chat.id,all:true});
+ api(`/api/chats/${chat.id}/access`,'POST',{requestId:crypto.randomUUID()}).then(data=>{const currentChat=chats.find(c=>c.id===chat.id);if(currentChat){currentChat.notificationReadAt=Math.max(currentChat.notificationReadAt || 0,data.notificationReadAt || 0);clearReadNotifications(currentChat);}}).catch(()=>{});
 }
 navigator.serviceWorker?.addEventListener('controllerchange',()=>{for(const chat of chats)clearReadNotifications(chat);});
 function markRead(chat,sync=true) {const c=chat && completion(chat);if(!c)return;if(seen[chat.id]!==c.token){seen[chat.id]=c.token;localStorage.setItem('agent-desk-seen',JSON.stringify(seen));}if(!sync || chat.readMessageId===c.messageId || syncedReads.get(chat.id)===c.messageId || readRequests.has(chat.id))return;readRequests.add(chat.id);api(`/api/chats/${chat.id}/read`,'PUT',{messageId:c.messageId}).then(data=>{syncedReads.set(chat.id,data.messageId);chat.readMessageId=data.messageId;clearReadNotifications(chat);}).catch(()=>{}).finally(()=>readRequests.delete(chat.id));}
@@ -167,7 +172,7 @@ function choose(id,{replaceHistory=false}={}) {
   closePanels();
   if(speechClip && speechClip.chatId!==id)speechAudio.pause();
   if(id)localStorage.setItem('agent-desk-active',id);else localStorage.removeItem('agent-desk-active');
-  if(current()){selectedAgent=current().settings.agent;markRead(current());api(`/api/chats/${id}/access`,'POST',{requestId:crypto.randomUUID()}).catch(()=>{});}
+  if(current()){selectedAgent=current().settings.agent;markRead(current());recordChatAccess(current());}
   chatSearch.close();menuChat=null;rename=null;lastMessages='';forceBottom=!!id;render();renderSpeechBar();renderLinkedFiles();if(id)$('#prompt').focus({preventScroll:true});if(id)guard(()=>loadChatHistory(id));if(appReady)connectEvents();
 }
 function mergeChatList(list){return list.map(chat=>{const old=chats.find(c=>c.id===chat.id);return chat.summary?{...old,...chat,messages:old?.messages || []}:chat;});}
@@ -679,9 +684,9 @@ try {
   $('#prompt').value=drafts.get(active)||'';
   document.body.classList.toggle('chat-view',!!linked && !!current());for(const c of chats)if(c.readMessageId===completion(c)?.messageId)markRead(c,false);
   if(mobileNavigation()){const entry=new URL(location.href);if(!(linked && current()))entry.hash='';history.replaceState({agentDesk:true,agentDeskGuard:true},'',entry);}
-  render();resizePrompt();refreshLimits();import('/battery.mjs').then(({startBatteryStatus})=>startBatteryStatus()).catch(()=>{});document.body.classList.add('ready');if(document.body.classList.contains('chat-view') && current())api(`/api/chats/${active}/access`,'POST',{requestId:crypto.randomUUID()}).catch(()=>{});api('/api/models').then(value=>{models=value;lastMessages='';render();if(newMenuAgent)showNewModels(newMenuAgent);}).catch(()=>{});enablePush(false);connectEvents();
+  render();resizePrompt();refreshLimits();import('/battery.mjs').then(({startBatteryStatus})=>startBatteryStatus()).catch(()=>{});document.body.classList.add('ready');if(document.body.classList.contains('chat-view') && current())recordChatAccess(current());api('/api/models').then(value=>{models=value;lastMessages='';render();if(newMenuAgent)showNewModels(newMenuAgent);}).catch(()=>{});enablePush(false);connectEvents();
   // Telefon u pozadini često prekine vezu bez greške; povratak u aplikaciju otvara novu i dobija punu listu.
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)connectEvents();});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){connectEvents();if(document.body.classList.contains('chat-view'))recordChatAccess(current());}});
 } catch(e){const boot=$('#boot-stage');if(boot)boot.textContent=`Aplikacija nije dostupna: ${e.message}`;}
 let pullRefreshLock=false;
 async function refreshChatList(){

@@ -34,9 +34,9 @@ test('prijave ostaju na disku, neispravna se odbija, a ugašena pretplata se bri
     assert.equal(fs.statSync(subscriptionsFile).mode & 0o777, 0o600);
     const restarted = createPush({keysFile, subscriptionsFile, sender});
     assert.equal(restarted.publicKey(), first.publicKey());
-    await restarted.notify({title: 'Naslov', body: 'Završeno', chatId: 'chat-1', tag: 'chat-1'});
+    await restarted.notify({title: 'Naslov', body: 'Završeno', chatId: 'chat-1', tag: 'chat-1',notificationCreatedAt:123});
     assert.equal(sent.length, 3);
-    assert.deepEqual(JSON.parse(sent.find(item => item.endpoint === endpoint).body), {title: 'Naslov', body: 'Završeno', chatId: 'chat-1', tag: 'chat-1'});
+    assert.deepEqual(JSON.parse(sent.find(item => item.endpoint === endpoint).body), {title: 'Naslov', body: 'Završeno', chatId: 'chat-1', tag: 'chat-1',notificationCreatedAt:123});
     await restarted.notify({chatId:'chat-1',messageId:'reply-1',messageCreatedAt:123});
     const readPayload=JSON.parse(sent.filter(item=>item.endpoint===endpoint).at(-1).body);
     assert.equal(readPayload.messageId,'reply-1');

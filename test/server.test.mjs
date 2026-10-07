@@ -141,7 +141,7 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal((await call('/api/notifications/settings','PUT',{sound:'../../invalid'})).status,400);
     const firstReadId=chat.messages.at(-1).id;
     const accessId='11111111-1111-4111-8111-111111111111';
-    assert.equal((await call(`/api/chats/${a.id}/access`,'POST',{requestId:accessId})).data.count,1);
+    const opened=(await call(`/api/chats/${a.id}/access`,'POST',{requestId:accessId})).data;assert.equal(opened.count,1);assert.ok(opened.notificationReadAt>0);assert.equal((await call(`/api/chats/${a.id}`)).data.notificationReadAt,opened.notificationReadAt);
     assert.equal((await call(`/api/chats/${a.id}/access`,'POST',{requestId:accessId})).data.count,1);
     const accessLog=JSON.parse(readFileSync(path.join(temp,'data','chats.json'),'utf8')).find(c=>c.id===a.id).accessLog;
     assert.equal(accessLog.length,1);assert.ok(accessLog[0].at>0);

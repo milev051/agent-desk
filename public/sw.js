@@ -5,7 +5,10 @@ async function closeReadNotifications(data) {
   const notifications = await self.registration.getNotifications();
   for (const notification of notifications) {
     if (notification.data?.chatId !== data.chatId) continue;
-    if (!notification.data?.messageId || notification.data.messageId === data.messageId || (data.readBefore && notification.data.messageCreatedAt && notification.data.messageCreatedAt <= data.readBefore)) notification.close();
+    const createdAt=notification.data?.notificationCreatedAt || notification.data?.messageCreatedAt;
+    if(data.all || data.notificationsBefore && (!createdAt || createdAt<=data.notificationsBefore)){notification.close();continue;}
+    if(!data.messageId)continue;
+    if ((!data.notificationsBefore && !notification.data?.messageId) || notification.data.messageId === data.messageId || (data.readBefore && notification.data.messageCreatedAt && notification.data.messageCreatedAt <= data.readBefore)) notification.close();
   }
 }
 
@@ -23,7 +26,7 @@ self.addEventListener('push', event => {
       renotify: true,
       icon: '/icon-192.png',
       badge: '/badge-96.png',
-      data: {chatId: data.chatId || '', messageId: data.messageId || '', messageCreatedAt: data.messageCreatedAt || 0}
+      data: {chatId: data.chatId || '', messageId: data.messageId || '', messageCreatedAt: data.messageCreatedAt || 0, notificationCreatedAt: data.notificationCreatedAt || Date.now()}
     });
   })());
 });
@@ -33,6 +36,7 @@ self.addEventListener('notificationclick', event => {
   const chatId = event.notification.data?.chatId || '';
   const target = chatId ? '/#chat=' + encodeURIComponent(chatId) : '/';
   event.waitUntil((async () => {
+    if(chatId)await closeReadNotifications({chatId,all:true});
     const open = await self.clients.matchAll({type: 'window', includeUncontrolled: true});
     for (const client of open) {
       let destination=client;
