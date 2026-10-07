@@ -330,3 +330,11 @@ Svaki čet čuva vreme kreiranja i evidenciju otvaranja od uključivanja ove fun
 Gmail povezivanje, status i prekid veze su u opštim podešavanjima. Agenti mogu da čitaju i šalju mejlove, rade sa nacrtima, oznakama i prilozima kroz lokalni API uz odobrene Google dozvole. Drive, Tasks i Calendar podržavaju čitanje i upis. Za prvo povezivanje potreban je korisnikov Google OAuth Desktop app klijent. Postupak i ograničenja su u [docs/gmail.md](docs/gmail.md).
 
 Google Drive, Tasks i Calendar: [podešavanje i API za agente](docs/google.md).
+
+## Današnji prioriteti
+
+Dugme „Danas“ u listi četova i zaglavlju razgovora otvara zajedničku listu za sve agente. Dodaj stavke, opciono vreme, označi završene i pomeri najvažnije nagore. Kvačica „Šalji današnje prioritete“ određuje da li svaka naredna poruka dobija današnju listu. Agent dobija trenutno vreme i datum u Europe/Belgrade i može predložiti sledeći korak, bez samostalnog pokretanja drugih poslova. Lista nije Google Calendar sinhronizacija ni automatski podsetnik.
+
+Na početku novog dana koristi se nova prazna lista. Prethodne liste ostaju sačuvane; izaberi datum i „Prenesi nezavršene u danas“ ako želiš da nastaviš. Završene stavke se ne šalju agentima. Isključivanje i promena dana javljaju se i postojećim sesijama, da ne koriste raniji plan kao aktuelni.
+
+GET `/api/priorities?date=YYYY-MM-DD` čita listu; bez datuma bira današnju. PUT prima `date`, `enabled`, `revision` i `items` (najviše 20 sa `id`, `title` do 200 znakova, `time` HH:MM ili prazan string, `done` boolean). Istovremene izmene na telefonu i računaru vraćaju 409 umesto prepisivanja. Podaci su lokalno u `data/daily-priorities.json`, izvan Gita.

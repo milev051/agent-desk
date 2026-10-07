@@ -20,6 +20,10 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     await once(server.stdout, 'data');
     async function call(url, method = 'GET', data, origin = base) { const r = await fetch(base + url, { method, headers: { Origin: origin, 'Content-Type': 'application/json' }, body: data ? JSON.stringify(data) : undefined }); return { status: r.status, data: await r.json() }; }
     async function done(id) { for(let i=0;i<100;i++){const c=(await call('/api/chats')).data.find(c=>c.id===id);if(!c.running)return c;await new Promise(r=>setTimeout(r,30));}throw Error('CLI nije završio'); }
+    const priorities=(await call('/api/priorities')).data;assert.equal(priorities.enabled,true);assert.equal(priorities.timeZone,'Europe/Belgrade');
+    const priorityData={date:priorities.today,enabled:true,revision:0,items:[{id:'test-priority',title:'VAŽAN PRIORITET DANAS',time:'14:00',done:false}]};
+    assert.equal((await call('/api/priorities','PUT',priorityData,'https://evil.test')).status,403);assert.equal((await call('/api/priorities','PUT',priorityData)).status,200);assert.equal((await call('/api/priorities','PUT',priorityData)).status,409);
+    assert.equal((await call('/api/priorities?date=2026-02-30')).status,400);
     assert.equal((await call('/api/integrations/gmail')).data.state,'unconfigured');
     const environment=(await call('/api/environment')).data;assert.equal(environment.app,'Agent Desk');assert.equal(environment.integrations.calendar.implemented,true);assert.equal(environment.chat,null);
     assert.equal((await call('/api/environment?chatId=missing')).status,404);
@@ -139,6 +143,7 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     const browserEvent=JSON.parse(browserRaw.split('\n\n')[0].slice(6));assert.equal(browserEvent.lite,true);assert.equal(browserEvent.detail.id,a.id);assert.ok(browserEvent.summaries.every(c=>!c.messages.length));await browserStream.cancel();
     assert.equal((await call('/api/notifications/settings','PUT',{sound:'Glass'})).data.sound,'Glass');assert.equal((await call('/api/notifications/settings')).data.sound,'Glass');
     assert.equal((await call('/api/notifications/settings','PUT',{sound:'../../invalid'})).status,400);
+    assert.match(JSON.parse(chat.messages.at(-1).text).input,/VAŽAN PRIORITET DANAS/);
     const firstReadId=chat.messages.at(-1).id;
     const accessId='11111111-1111-4111-8111-111111111111';
     const opened=(await call(`/api/chats/${a.id}/access`,'POST',{requestId:accessId})).data;assert.equal(opened.count,1);assert.ok(opened.notificationReadAt>0);assert.equal((await call(`/api/chats/${a.id}`)).data.notificationReadAt,opened.notificationReadAt);

@@ -15,6 +15,7 @@
     <div class="sidebar-actions"><div id="new-agents" role="group" aria-label="Novi čet"><button id="defaults-open" type="button" aria-label="Podešavanja" title="Podešavanja"><span id="device-battery" role="status" title="Stanje baterije drugog uređaja"></span></button></div></div>
     <div id="model-library" aria-label="Modeli za novi čet"><div id="new-models" aria-label="Model novog četa" hidden></div></div>
     <div id="pull-refresh" aria-live="polite"></div>
+    <button id="today-open" type="button">Danas <span id="today-count"></span></button>
     <nav id="chats" aria-label="Četovi"></nav>
     <div id="chat-drop-targets">
   <div id="new-folder-drop" data-folder-new>Spusti čet ovde za novi folder</div>
@@ -22,7 +23,7 @@
 </div>
   </aside>
   <main>
-    <div id="chat-navigation"><button id="chat-back" aria-label="Lista četova">←</button><button id="chat-parent" aria-label="Roditeljski čet" hidden>↑</button><span id="chat-title"></span><button id="chat-options" aria-label="Opcije otvorenog četa" hidden></button></div>
+    <div id="chat-navigation"><button id="chat-back" aria-label="Lista četova">←</button><button id="chat-parent" aria-label="Roditeljski čet" hidden>↑</button><span id="chat-title"></span><button id="today-chat-open" type="button" title="Današnji prioriteti">Danas</button><button id="chat-options" aria-label="Opcije otvorenog četa" hidden></button></div>
     <section id="defaults" aria-label="Podešavanja" hidden>
       <form id="defaults-form">
         <div class="defaults-heading"><span></span><span>Model</span><span>Razmišljanje</span></div>
@@ -90,5 +91,15 @@
   <div id="chat-popover" role="dialog" aria-label="Opcije četa" hidden></div>
   <div id="toast" role="alert" hidden></div><div id="completion-notices" aria-live="polite"></div>
 
+  <dialog id="today-panel" aria-labelledby="today-heading">
+    <div class="today-heading"><h2 id="today-heading">Prioriteti za danas</h2><button id="today-close" type="button" aria-label="Zatvori prioritete">×</button></div>
+    <div class="today-date-row"><label>Datum <input id="today-date" type="date"></label><small id="today-clock"></small></div>
+    <label class="today-sharing"><input id="today-enabled" type="checkbox"> Šalji današnje prioritete uz naredne poruke svim agentima</label>
+    <div id="today-items"></div>
+    <form id="today-add"><input id="today-title" type="text" maxlength="200" placeholder="Šta je danas važno?" aria-label="Novi prioritet" required><input id="today-time" type="time" aria-label="Vreme obaveze (opciono)"><button type="submit">Dodaj</button></form>
+    <div class="settings-actions"><button id="today-refresh" type="button">Učitaj ponovo</button><button id="today-copy" type="button">Prenesi nezavršene u danas</button></div>
+    <small>Redosled je prioritet. Vreme je opciono. Agenti dobijaju listu kada im pošalješ poruku; nema automatskih podsetnika. Prethodni dani ostaju sačuvani.</small>
+    <p id="today-status" role="status" aria-live="polite"></p>
+  </dialog>
 </body>
 </html>

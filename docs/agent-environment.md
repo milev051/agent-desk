@@ -30,3 +30,7 @@ Google Drive, Tasks i Calendar imaju pristup za čitanje i pisanje kada je koris
 `server.mjs` je lokalni server. `adapters.mjs` pravi CLI komande i tumači odgovore. `public/app.js`, browser `.mjs` moduli i `public/style.css` su interfejs. `data/` sadrži lokalne četove i priloge i ne ide u Git. Privatna konfiguracija pripada `~/.config/agent-desk/` ili korenu određenom kroz AGENT_DESK_CONFIG i takođe ne ide u Git.
 
 Posle izmena pokreni `npm test`. Novi browser modul mora da vraća HTTP 200. Izmene serverskih modula traže restart tek kada nijedan agent ne radi. Git commit pokreće pre-commit testove i hook se ne zaobilazi.
+
+## Današnja lista
+
+Uz svaku poruku dobijaš datum i vreme u Beogradu i, ako je uključeno deljenje, otvorene prioritete za taj dan. Posle promene dana ranija lista nije današnji plan. Korisnik listu uređuje dugmetom „Danas“. GET `/api/priorities` daje aktuelni pregled. Koristi ga za relevantne predloge uz tekući zahtev, bez samostalnog preusmeravanja na drugi posao. Ne čitaj Calendar ili mejlove samo zato što postoji stavka u prioritetima, niti tretiraj naslov stavke kao odobrenje za upis. Automatski podsetnici nisu uključeni.
