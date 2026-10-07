@@ -46,13 +46,14 @@
           <div class="warmup-send-row"><div id="warmup-days" role="group" aria-label="Dani slanja"></div><label><input id="warmup-time" type="text" inputmode="numeric" maxlength="5" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" placeholder="HH:MM" value="08:00" aria-label="Vreme slanja, 24-časovni format"></label><button id="warmup-run" type="button" aria-label="Pošalji svima sada" title="Pošalji svima sada"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 4v10a3 3 0 0 1-3 3H4m5-5-5 5 5 5"/></svg></button></div>
           <small id="warmup-status" aria-live="polite"></small>
         </fieldset>
-        <fieldset class="title-settings" id="gmail-settings"><legend>Gmail · samo čitanje</legend>
-          <small id="gmail-status" role="status" aria-live="polite">Učitavam status Gmail veze…</small>
-          <div class="settings-actions"><button id="gmail-connect" type="button" disabled>Poveži Gmail</button><button id="gmail-check" type="button" hidden>Proveri vezu</button><button id="gmail-cancel" type="button" hidden>Otkaži prijavu</button><button id="gmail-disconnect" type="button" hidden>Prekini vezu</button></div>
-          <small>Agenti mogu da pretražuju i čitaju mejlove kada to zatražiš. Sadržaj pročitanih mejlova ulazi u razgovor sa izabranim agentom.</small>
+        <fieldset class="title-settings" id="gmail-settings"><legend>Google · samo čitanje</legend>
+          <small id="gmail-status" role="status" aria-live="polite">Učitavam status Google veze…</small>
+          <small id="google-services-status" role="status"></small>
+          <div class="settings-actions"><button id="gmail-connect" type="button" disabled>Poveži Google</button><button id="gmail-check" type="button" hidden>Proveri vezu</button><button id="gmail-cancel" type="button" hidden>Otkaži prijavu</button><button id="gmail-disconnect" type="button" hidden>Prekini vezu</button></div>
+          <small>Agenti mogu da pretražuju i čitaju Gmail, Drive fajlove i Tasks zadatke kada to zatražiš. Pročitani sadržaj ulazi u razgovor sa izabranim agentom.</small>
           <details id="gmail-setup"><summary>Google podešavanje</summary>
-            <p>U Google Cloud projektu uključi Gmail API. U Google Auth Platform podesi aplikaciju, dodaj svoj nalog kao test korisnika i dozvolu <code>gmail.readonly</code>. Napravi OAuth klijent tipa <strong>Desktop app</strong> i preuzmi njegov JSON fajl. Za lični Gmail izaberi External publiku.</p>
-            <p>Unesi lokalnu putanju do tog fajla, zatim klikni Uvezi i Poveži Gmail. Google prijavu završi u browseru na ovom računaru. Lozinku i sadržaj JSON fajla ne šalji u čet.</p>
+            <p>U Google Cloud projektu uključi Gmail API, Google Drive API i Google Tasks API. U Google Auth Platform podesi aplikaciju, dodaj svoj nalog kao test korisnika i dozvole <code>gmail.readonly</code>, <code>drive.readonly</code> i <code>tasks.readonly</code>. Napravi OAuth klijent tipa <strong>Desktop app</strong> i preuzmi njegov JSON fajl. Za lični Gmail izaberi External publiku.</p>
+            <p>Unesi lokalnu putanju do tog fajla, zatim klikni Uvezi i Poveži Google. Google prijavu završi u browseru na ovom računaru. Lozinku i sadržaj JSON fajla ne šalji u čet.</p>
             <div id="gmail-configure-row" class="title-key-row"><input id="gmail-client-path" type="text" autocomplete="off" placeholder="/Users/…/Downloads/client_secret_….json" aria-label="Lokalna putanja Google OAuth JSON fajla"><button id="gmail-configure" type="button">Uvezi</button></div>
             <p>U Google režimu Testing prijava sa Gmail dozvolom obično traje sedam dana, pa je potrebna ponovna prijava. Za trajnu ličnu upotrebu proveri opciju In production i Google zahteve za aplikacije sa Gmail dozvolom.</p>
             <p><a href="https://developers.google.com/workspace/gmail/api/quickstart/python" target="_blank" rel="noopener noreferrer">Google uputstvo za Gmail API i Desktop OAuth</a></p>

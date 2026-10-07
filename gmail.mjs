@@ -3,6 +3,8 @@ import path from 'node:path';
 import http from 'node:http';
 import {randomBytes,createHash} from 'node:crypto';
 
+export const driveScope='https://www.googleapis.com/auth/drive.readonly';
+export const tasksScope='https://www.googleapis.com/auth/tasks.readonly';
 export const gmailScope='https://www.googleapis.com/auth/gmail.readonly';
 const tokenUrl='https://oauth2.googleapis.com/token';
 const apiRoot='https://gmail.googleapis.com/gmail/v1/users/me';
@@ -32,17 +34,18 @@ export function gmailMessage(message){
   return {id:message.id,threadId:message.threadId,from:header('from'),to:header('to'),subject:header('subject'),date:header('date'),snippet:message.snippet || '',labels:message.labelIds || [],text:text.slice(0,100000),truncated:text.length>100000,attachments};
 }
 
-export function createGmail({configDir,fetchImpl=fetch,now=Date.now,openBrowser=async()=>{},loginTimeoutMs=600000}={}){
+export function createGmail({configDir,fetchImpl=fetch,now=Date.now,openBrowser=async()=>{},loginTimeoutMs=600000,scopes=[gmailScope]}={}){
+  if(!scopes.length || scopes.some(scope=>![gmailScope,driveScope,tasksScope].includes(scope)))throw Error('Nepodržana Google dozvola.');
   const clientFile=path.join(configDir,'gmail','oauth-client.json'),tokenFile=path.join(configDir,'gmail','tokens.json');
   let client=null,tokens=readPrivate(tokenFile),pending=null,starting=false,refreshing=null,epoch=0,error='',needsReconnect=false;
   try{const saved=readPrivate(clientFile);if(saved)client=clientFrom(saved).installed;}catch{error='OAuth podešavanje nije ispravno. Ponovo uvezi Desktop app JSON fajl.';}
   if(tokens && (!tokens.refresh_token || !tokens.email || !tokens.scope?.split(' ').includes(gmailScope))){tokens=null;needsReconnect=true;}
-  function status(){return {configured:!!client,connected:!!tokens && !needsReconnect,email:tokens?.email || '',state:starting || pending?'connecting':needsReconnect?'reconnect_required':tokens?'connected':client?'disconnected':'unconfigured',error,readOnly:true};}
+  function status(){return {configured:!!client,connected:!!tokens && !needsReconnect,email:tokens?.email || '',state:starting || pending?'connecting':needsReconnect?'reconnect_required':tokens?'connected':client?'disconnected':'unconfigured',error,readOnly:true,services:Object.fromEntries([['gmail',gmailScope],['drive',driveScope],['tasks',tasksScope]].map(([name,scope])=>[name,{connected:!!tokens && !needsReconnect && tokens.scope.split(' ').includes(scope),readOnly:true}])),upgradeRequired:!!tokens && scopes.some(scope=>!tokens.scope.split(' ').includes(scope))};}
   function cancel(){epoch++;starting=false;if(pending){clearTimeout(pending.timer);pending.server.close();pending.server.closeAllConnections();pending=null;}}
-  async function google(url,options={}){
+  async function google(url,options={},content=false){
     let response;
     try{response=await fetchImpl(url,{...options,signal:AbortSignal.timeout(20000)});}catch{throw Error('Google nije dostupan. Proveri internet vezu i pokušaj ponovo.');}
-    let data={};try{data=await response.json();}catch{}
+    let data={};if(content && response.ok){const chunks=[];let size=0;for await(const chunk of response.body){size+=chunk.length;if(size>10*1024*1024){await response.body.cancel().catch(()=>{});throw Error('Fajl je veći od ograničenja od 10 MB.');}chunks.push(chunk);}data=Buffer.concat(chunks);}else {try{data=await response.json();}catch{}}
     return {response,data};
   }
   function tokenError(data){if(data.error==='invalid_grant'){needsReconnect=true;error='Google prijava je istekla ili opozvana. Ponovo poveži Gmail.';}else error='Google prijava nije uspela. Proveri OAuth klijent i pristup test korisnika.';return Error(error);}
@@ -60,13 +63,14 @@ export function createGmail({configDir,fetchImpl=fetch,now=Date.now,openBrowser=
     })();refreshing=work;
     try{return await work;}finally{if(refreshing===work)refreshing=null;}
   }
-  async function request(resource,params={},retry=true){
+  async function request(resource,params={},retry=true,root=apiRoot,scope=gmailScope,content=false){
     const generation=epoch,access=await refresh();
-    const url=new URL(apiRoot+resource);for(const [key,value] of Object.entries(params))if(value!==undefined && value!==''){for(const item of Array.isArray(value)?value:[value])url.searchParams.append(key,String(item));}
-    const {response,data}=await google(url,{headers:{Authorization:'Bearer '+access}});
+    if(!tokens.scope.split(' ').includes(scope))throw Error('Google dozvola za ovaj servis nije odobrena. Ponovo poveži Google nalog.');
+    const url=new URL(root+resource);for(const [key,value] of Object.entries(params))if(value!==undefined && value!==''){for(const item of Array.isArray(value)?value:[value])url.searchParams.append(key,String(item));}
+    const {response,data}=await google(url,{headers:{Authorization:'Bearer '+access}},content);
     if(generation!==epoch)throw Error('Gmail veza je promenjena. Pokušaj ponovo.');
-    if(response.status===401 && retry){await refresh(true);return request(resource,params,false);}
-    if(!response.ok){if(response.status===401){needsReconnect=true;error='Google je opozvao pristup. Ponovo poveži Gmail.';}else if(response.status===403)error='Gmail pristup je odbijen. Proveri da je Gmail API uključen i dozvola za čitanje odobrena.';else if(response.status===404)throw Error('Mejl nije pronađen.');else error='Gmail zahtev nije uspeo. Pokušaj ponovo.';throw Error(error);}
+    if(response.status===401 && retry){await refresh(true);return request(resource,params,false,root,scope,content);}
+    if(!response.ok){if(response.status===401){needsReconnect=true;error='Google je opozvao pristup. Ponovo poveži Gmail.';}else if(response.status===403)error='Google pristup je odbijen. Proveri da je API tog servisa uključen i dozvola za čitanje odobrena.';else if(response.status===404)throw Error('Traženi sadržaj nije pronađen.');else error='Gmail zahtev nije uspeo. Pokušaj ponovo.';throw Error(error);}
     error='';return data;
   }
   async function connect(){
@@ -90,7 +94,7 @@ export function createGmail({configDir,fetchImpl=fetch,now=Date.now,openBrowser=
         const profile=await google(apiRoot+'/profile',{headers:{Authorization:'Bearer '+data.access_token}});
         if(generation!==epoch)throw Error('Povezivanje je otkazano.');
         if(!profile.response.ok || !profile.data.emailAddress)throw Error('Nalog nije potvrđen. Proveri da je Gmail API uključen u Google projektu.');
-        tokens={access_token:data.access_token,refresh_token:data.refresh_token,scope,email:profile.data.emailAddress,expiresAt:now()+Number(data.expires_in || 3600)*1000};privateWrite(tokenFile,tokens);needsReconnect=false;error='';respond(200,'Gmail je povezan. Agent Desk ima pristup samo za čitanje mejlova.');
+        tokens={access_token:data.access_token,refresh_token:data.refresh_token,scope,email:profile.data.emailAddress,expiresAt:now()+Number(data.expires_in || 3600)*1000};privateWrite(tokenFile,tokens);needsReconnect=false;error='';respond(200,'Google nalog je povezan. Agent Desk ima samo odobrene dozvole za čitanje.');
       }catch(e){if(generation===epoch)error=e.message;respond(400,'Povezivanje nije završeno. Detalji su u podešavanjima Agent Deska.');}
       finally{if(pending?.server===server){clearTimeout(pending.timer);pending=null;}server.close();}
     });
@@ -98,7 +102,7 @@ export function createGmail({configDir,fetchImpl=fetch,now=Date.now,openBrowser=
       await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});
       if(generation!==epoch){server.close();throw Error('Povezivanje je otkazano.');}
       const redirect=`http://127.0.0.1:${server.address().port}/oauth/gmail/callback`;
-      const url=new URL('https://accounts.google.com/o/oauth2/v2/auth');url.search=new URLSearchParams({client_id:c.client_id,redirect_uri:redirect,response_type:'code',scope:gmailScope,state,code_challenge:createHash('sha256').update(verifier).digest('base64url'),code_challenge_method:'S256',access_type:'offline',prompt:'consent select_account'}).toString();
+      const url=new URL('https://accounts.google.com/o/oauth2/v2/auth');url.search=new URLSearchParams({client_id:c.client_id,redirect_uri:redirect,response_type:'code',scope:scopes.join(' '),state,code_challenge:createHash('sha256').update(verifier).digest('base64url'),code_challenge_method:'S256',access_type:'offline',prompt:'consent select_account'}).toString();
       const timer=setTimeout(()=>{if(pending?.server===server){cancel();error='Google prijava je istekla. Ponovo klikni Poveži Gmail.';}},loginTimeoutMs);timer.unref();
       pending={server,timer,redirect,busy:false};starting=false;await openBrowser(url.href);return status();
     }catch(e){if(generation===epoch){cancel();error=e.message;}server.close();throw e;}
@@ -106,6 +110,11 @@ export function createGmail({configDir,fetchImpl=fetch,now=Date.now,openBrowser=
   }
   return {
     status,connect,close:cancel,
+    async serviceRequest(service,resource,params={},content=false){
+      const config={drive:['https://www.googleapis.com/drive/v3',driveScope],tasks:['https://tasks.googleapis.com/tasks/v1',tasksScope]}[service];
+      if(!config || typeof resource!=='string' || !/^\/[a-zA-Z0-9_@/.-]+$/.test(resource) || resource.includes('..'))throw Error('Neispravan Google servis ili putanja.');
+      return request(resource,params,true,config[0],config[1],content);
+    },
     async verify(){await request('/profile');return status();},
     configure(source){
       if(typeof source!=='string' || !path.isAbsolute(source) || !fs.existsSync(source) || !fs.statSync(source).isFile() || fs.statSync(source).size>20000)throw Error('Unesi punu putanju do preuzetog Google OAuth JSON fajla na ovom računaru.');

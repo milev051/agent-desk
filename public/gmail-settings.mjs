@@ -4,9 +4,12 @@ export function createGmailSettings({root,api,phoneRemote}){
   const actions=['gmail-connect','gmail-check','gmail-cancel','gmail-disconnect','gmail-configure'];
   function render(data){
     view=data;
-    const labels={unconfigured:'Google OAuth klijent nije podešen.',disconnected:'Gmail nije povezan.',connecting:'Završi Google prijavu u browseru na računaru.',connected:'Povezan nalog: '+data.email+' · samo čitanje',reconnect_required:'Potrebna je ponovna Google prijava.'};
+    const serviceNames={gmail:'Gmail',drive:'Drive',tasks:'Tasks'};
+    get('google-services-status').textContent=Object.entries(serviceNames).map(([key,name])=>name+': '+(data.services?.[key]?.connected?'povezan':'nije povezan')).join(' · ');
+    get('gmail-connect').textContent=data.upgradeRequired?'Dodaj Drive i Tasks dozvole':'Poveži Google';
+    const labels={unconfigured:'Google OAuth klijent nije podešen.',disconnected:'Google nije povezan.',connecting:'Završi Google prijavu u browseru na računaru.',connected:'Povezan nalog: '+data.email+' · samo čitanje',reconnect_required:'Potrebna je ponovna Google prijava.'};
     status.textContent=(labels[data.state] || 'Gmail nije dostupan.')+(data.error?' '+data.error:'');
-    get('gmail-connect').hidden=phoneRemote || data.state==='connecting' || data.connected;
+    get('gmail-connect').hidden=phoneRemote || data.state==='connecting' || (data.connected && !data.upgradeRequired);
     get('gmail-connect').disabled=busy || !data.configured;
     get('gmail-check').hidden=phoneRemote || !data.connected;
     get('gmail-cancel').hidden=phoneRemote || data.state!=='connecting';
@@ -17,7 +20,7 @@ export function createGmailSettings({root,api,phoneRemote}){
   }
   async function refresh(){
     paused=false;clearTimeout(timer);
-    try{render(await api('/api/integrations/gmail'));}catch{status.textContent='Gmail integracija nije dostupna. Posle ažuriranja potreban je restart servera.';}
+    try{render(await api('/api/integrations/gmail'));}catch{status.textContent='Google integracija nije dostupna. Posle ažuriranja potreban je restart servera.';}
     if(!paused && !root.closest('[hidden]'))timer=setTimeout(refresh,view?.state==='connecting'?2000:15000);
   }
   async function run(method,route,data){

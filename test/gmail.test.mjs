@@ -88,3 +88,21 @@ test('Web application JSON se odbija uz jasno uputstvo, bez otkrivanja ključa',
   assert.throws(()=>f.gmail.configure(f.source),/Web application.*Desktop app/);
   assert.equal(f.gmail.status().configured,false);
 });
+
+test('zajednička Google prijava traži readonly servise i poštuje pojedinačno odobrene dozvole',async t=>{
+  const {driveScope,tasksScope}=await import('../gmail.mjs');
+  const f=fixture(t,{scopes:[gmailScope,driveScope,tasksScope]});await f.login();
+  assert.deepEqual(f.auth.searchParams.get('scope').split(' '),[gmailScope,driveScope,tasksScope]);
+  assert.equal(f.gmail.status().services.gmail.connected,true);assert.equal(f.gmail.status().services.drive.connected,false);assert.equal(f.gmail.status().upgradeRequired,true);
+  await assert.rejects(f.gmail.serviceRequest('drive','/files'),/dozvola/);
+  await assert.rejects(f.gmail.serviceRequest('unknown','/files'),/servis/);
+});
+
+test('Google servis koristi GET i fiksnu API adresu, a veliko preuzimanje je ograničeno',async t=>{
+  const {driveScope,tasksScope}=await import('../gmail.mjs');
+  const f=fixture(t,{scopes:[gmailScope,driveScope,tasksScope]});f.gmail.configure(f.source);
+  f.handler=url=>url.endsWith('/token')?result({access_token:'fake-access',refresh_token:'fake-refresh',scope:[gmailScope,driveScope,tasksScope].join(' '),expires_in:3600}):result({emailAddress:'test@example.test'});
+  await f.gmail.connect();const callback=new URL(f.auth.searchParams.get('redirect_uri'));callback.search=new URLSearchParams({state:f.auth.searchParams.get('state'),code:'fake-code'});assert.equal((await fetch(callback)).status,200);
+  f.handler=()=>new Response('čćšđž');const content=await f.gmail.serviceRequest('drive','/files/doc/export',{mimeType:'text/plain'},true);assert.equal(content.toString(),'čćšđž');assert.equal(new URL(f.calls.at(-1).url).origin,'https://www.googleapis.com');assert.equal(f.calls.at(-1).opts.method,undefined);
+  await assert.rejects(f.gmail.serviceRequest('drive','/../token'),/putanja/);f.handler=()=>new Response(Buffer.alloc(10*1024*1024+1));await assert.rejects(f.gmail.serviceRequest('drive','/files/doc',{alt:'media'},true),/10 MB/);
+});

@@ -326,3 +326,5 @@ Svaki čet čuva vreme kreiranja i evidenciju otvaranja od uključivanja ove fun
 ## Gmail
 
 Gmail povezivanje, status i prekid veze su u opštim podešavanjima. Agenti mogu da pretražuju i čitaju mejlove kroz lokalni API, uz Google dozvolu samo za čitanje. Za prvo povezivanje potreban je korisnikov Google OAuth Desktop app klijent. Postupak i ograničenja su u [docs/gmail.md](docs/gmail.md).
+
+Google Drive i Google Tasks: [podešavanje i API za agente](docs/google.md).

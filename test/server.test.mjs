@@ -23,6 +23,9 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal((await call('/api/integrations/gmail')).data.state,'unconfigured');
     const environment=(await call('/api/environment')).data;assert.equal(environment.app,'Agent Desk');assert.equal(environment.integrations.calendar.implemented,false);assert.equal(environment.chat,null);
     assert.equal((await call('/api/environment?chatId=missing')).status,404);
+    for(const service of ['drive','tasks']){assert.equal(environment.integrations[service].connected,false);assert.equal((await call('/api/integrations/'+service)).data.state,'unconfigured');assert.equal((await call('/api/integrations/'+service,'POST',{})).status,405);}
+    assert.equal((await call('/api/integrations/drive/files?q=test')).status,400);
+    assert.equal((await call('/api/integrations/tasks/lists')).status,400);
     assert.equal((await call('/api/integrations/gmail/messages?q=test')).status,400);
     assert.equal((await call('/api/integrations/gmail/send','POST',{})).status,404);
     assert.equal((await call('/api/integrations/gmail/connect','POST',{},'https://evil.test')).status,403);
