@@ -8,9 +8,10 @@ export function createDailyPrioritiesPanel({api,root=document,openChat}){
   list.replaceChildren();
   if(!view.items.length)list.append(element('p',{className:'today-empty',textContent:'Nema otvorenih zadataka. Reci agentu šta da doda ili zatraži predlog prioriteta.'}));
   for(const item of view.items){
-   const card=element('article',{className:'today-task'+(item.done?' done':'')});
+   const card=element(item.sourceChatId?'button':'article',{className:'today-task'+(item.done?' done':'')});
+   if(item.sourceChatId){card.type='button';card.setAttribute('aria-label','Otvori zaduženog agenta: '+item.title);card.onclick=()=>{if(openChat)openChat(item.sourceChatId);else location.hash='chat='+encodeURIComponent(item.sourceChatId);};}
    card.append(element('span',{className:'today-task-title',textContent:item.title}),element('small',{textContent:(item.done?'✓ Završeno':'Otvoreno')+(item.time?' · '+item.time:'')}));
-   if(item.sourceChatId){const link=element('a',{textContent:'Otvori izvorni čet',href:'#chat='+encodeURIComponent(item.sourceChatId)});link.onclick=event=>{if(openChat){event.preventDefault();openChat(item.sourceChatId);}};card.append(link);}
+   if(item.sourceChatId)card.append(element('small',{textContent:'Otvori zaduženog agenta →'}));
    list.append(card);
   }
  }
