@@ -15,8 +15,8 @@ export function createDailyPrioritiesPanel({api,root=document,getAgent,openAgent
    card.append(element('span',{className:'today-task-title',textContent:item.title}),element('small',{textContent:(item.done?'✓ Završeno':'Otvoreno')+(item.time?' · '+item.time:'')}));
    if(item.sourceChatId){
     const agent=getAgent?.(item.sourceChatId);
-    const link=element('button',{type:'button',className:'today-task-agent',disabled:!agent,title:agent?'Otvori folder: '+agent.folderName:'Čet nije dostupan'});
-    link.setAttribute('aria-label',agent?agent.name+' · '+agent.title+' · Otvori folder '+agent.folderName:'Čet nije dostupan');
+    const link=element('button',{type:'button',className:'today-task-agent',disabled:!agent,title:agent?'Otvori čet i folder: '+agent.folderName:'Čet nije dostupan'});
+    link.setAttribute('aria-label',agent?agent.name+' · '+agent.title+' · Otvori čet i folder '+agent.folderName:'Čet nije dostupan');
     if(agent?.logo)link.append(element('img',{src:agent.logo,alt:'',width:18,height:18}));
     link.append(element('span',{textContent:agent?agent.name+' · '+agent.title:'Čet nije dostupan'}));
     link.onclick=()=>openAgentFolder?.(item.sourceChatId);

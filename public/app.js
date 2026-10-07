@@ -137,7 +137,7 @@ const prioritiesPanel=createDailyPrioritiesPanel({api,getAgent:id=>{
 },openAgentFolder:id=>{
  const chat=chats.find(c=>c.id===id);if(!chat){toast('Čet nije dostupan.');return;}
  const parent=chats.find(c=>c.id===chat.parentChatId),folderId=parent?.folderId || chat.folderId || null;
- showChatList();setOpenFolder(folderId);
+ setOpenFolder(folderId);choose(id);
  const target=folderId?[...document.querySelectorAll('[data-folder]')].find(el=>el.dataset.folder===folderId):document.querySelector('[data-unassigned]');
  target?.scrollIntoView({block:'nearest'});
 }});
