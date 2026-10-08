@@ -27,3 +27,27 @@ test('nezavršeni taskovi ostaju kroz više dana, bez dupliranja i starog termin
  f.clock('2026-10-09T10:00:00Z');v=p.view();assert.deepEqual(v.items,[{id:'pending',title:'FON',time:'',done:false}]);const revision=v.revision;assert.equal(p.view().revision,revision);assert.equal(f.create().view().items.length,1);
  p.update({date:v.date,enabled:true,revision:v.revision,items:v.items.map(item=>({...item,done:true}))});f.clock('2026-10-10T10:00:00Z');assert.deepEqual(p.view().items,[]);assert.match(p.context(),/Nema otvorenih taskova/);
 });
+
+test('uputstvo za održavanje dobija samo zaduženi čet, bez automatskog završavanja taska',t=>{
+ const f=fixture(t),p=f.create();const value={date:'2026-10-07',enabled:true,revision:0,items:[{id:'mine',title:'Provera dostave',time:'',done:false,sourceChatId:'agent-a',notes:'Čeka se adresa.'},{id:'other',title:'Drugi posao',time:'',done:false,sourceChatId:'agent-b'}]};
+ p.update(value);const own=p.context('agent-a');
+ assert.match(own,/Održavanje povezanih taskova je odobreno/);
+ assert.match(own,/ne samo zato što si završio odgovor/);
+ assert.match(own,/"id":"mine"/);assert.match(own,/"sourceChatId":"agent-a"/);
+ assert.match(own,/Čeka se adresa/);
+ assert.doesNotMatch(p.context('unrelated'),/Održavanje povezanih taskova je odobreno/);
+ assert.doesNotMatch(p.context(),/Održavanje povezanih taskova je odobreno/);
+ assert.equal(p.view().items[0].done,false);
+ p.update({...value,enabled:false,revision:p.view().revision});assert.doesNotMatch(p.context('agent-a'),/Održavanje povezanih taskova je odobreno/);
+});
+
+test('kratka napomena se menja, čuva posle ponovnog učitavanja i prenosi sa otvorenim taskom',t=>{
+ const f=fixture(t),p=f.create(),item={id:'task',title:'Dostava',time:'',done:false,sourceChatId:'agent',notes:'Čeka se odgovor.'};
+ const save=notes=>p.update({date:p.view().date,enabled:true,revision:p.view().revision,items:[{...item,notes}]});
+ save(item.notes);save('Adresa dodata; čeka se provera.');assert.equal(f.create().view().items[0].notes,'Adresa dodata; čeka se provera.');
+ for(const notes of [null,17,'x'.repeat(281),'Dva\nreda'])assert.throws(()=>save(notes),/Napomena/);
+ f.clock('2026-10-08T10:00:00Z');assert.equal(p.view().items[0].notes,'Adresa dodata; čeka se provera.');
+ const v=p.view();p.update({date:v.date,enabled:true,revision:v.revision,items:v.items.map(i=>({...i,done:true,notes:'Provereno završeno.'}))});
+ assert.doesNotMatch(p.context('agent'),/Održavanje povezanih taskova je odobreno/);
+ assert.equal(f.create().view().items[0].done,true);
+});

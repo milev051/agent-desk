@@ -13,6 +13,7 @@ export function createDailyPrioritiesPanel({api,root=document,getAgent,openAgent
   for(const item of view.items){
    const card=element('article',{className:'today-task'+(item.done?' done':'')});
    card.append(element('span',{className:'today-task-title',textContent:item.title}),element('small',{textContent:(item.done?'✓ Završeno':'Otvoreno')+(item.time?' · '+item.time:'')}));
+   if(item.notes)card.append(element('small',{className:'today-task-note',textContent:item.notes}));
    if(item.sourceChatId){
     const agent=getAgent?.(item.sourceChatId);
     const link=element('button',{type:'button',className:'today-task-agent',disabled:!agent,title:agent?'Otvori čet i folder: '+agent.folderName:'Čet nije dostupan'});
