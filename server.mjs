@@ -300,7 +300,9 @@ async function send(chat, prompt, options={}) {
     if(reply.status==='done'){chat.transferPending=false;if(!options.minimalContext){chat.sharedFolderReads ||= {};chat.sharedFolderReads[agent]={...sharedContext.state,sessionId:chat.sessions[agent] || null};}chat.childReadOffsets ||= {};chat.childReadOffsets[agent]={...chat.childReadOffsets[agent],...linkedUpdates.consumed};}
     if(chat.sessions[agent]){chat.sessionOffsets ||= {};chat.sessionOffsets[agent]=chat.messages.length;}
     if(reply.status==='error' || reply.status==='stopped')chat.queuePaused=true;
-    chat.updatedAt = Date.now(); update();run.resolve(reply);setImmediate(()=>drainQueue(chat));
+    chat.updatedAt = Date.now(); update();
+    if(reply.status==='done' && !options.minimalContext && chats.includes(chat))titleManager.afterReply(chat,chats.find(c=>c.id===chat.parentChatId)?.title || '');
+    run.resolve(reply);setImmediate(()=>drainQueue(chat));
     const outcome={done:'Završeno',error:'Greška',stopped:'Zaustavljeno'}[reply.status];
     if(outcome && !options.silent){void phonePush.notify({title:chat.title||'Agent Desk',body:outcome,chatId:chat.id,tag:chat.id,messageId:reply.id,messageCreatedAt:reply.createdAt,notificationCreatedAt:Date.now()});desktopNotify(chat.title||'Agent Desk',outcome,chat.id);}
   }

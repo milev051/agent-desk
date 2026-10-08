@@ -52,3 +52,23 @@ test('izričit zahtev generiše naslov i za ručno imenovan čet',async t=>{
  assert.equal(await f.manager.nameChat(recentTitleSeed([{role:'user',text:'Popravi prikaz'}])),'Popravka prikaza');
  assert.equal(f.chat.title,'Prva poruka');
 });
+
+
+test('prvi završen odgovor automatski imenuje karticu jednom, ručni naslov ostaje',async t=>{
+ let calls=0;
+ const f=fixture(t,async(url,opts)=>{calls++;const payload=JSON.parse(JSON.parse(opts.body).contents[0].parts[0].text);assert.match(payload.zadatak,/Agent: Prvi odgovor/);return {ok:true,json:async()=>({candidates:[{content:{parts:[{text:'{"title":"Naslov posle odgovora"}'}]}}]})};});
+ f.manager.configure({key:'test-only-key'});
+ f.chat.messages=[{role:'user',text:'Prvi zahtev'},{role:'assistant',text:'Prvi odgovor',status:'running'}];
+ f.manager.afterReply(f.chat);assert.equal(calls,0);
+ f.chat.messages[1].status='done';f.manager.afterReply(f.chat);
+ await waitFor(()=>f.chat.titleGeneration?.status==='done');assert.equal(f.chat.title,'Naslov posle odgovora');
+ f.manager.afterReply(f.chat);assert.equal(calls,1);
+ delete f.chat.titleGeneration;f.chat.titleManual=true;f.chat.title='Moj naziv';f.manager.afterReply(f.chat);assert.equal(calls,1);assert.equal(f.chat.title,'Moj naziv');
+});
+
+test('neuspešno automatsko imenovanje može da se ponovi posle narednog odgovora',async t=>{
+ let calls=0;const f=fixture(t,async()=>++calls===1?{ok:false,status:429}:{ok:true,json:async()=>({candidates:[{content:{parts:[{text:'{"title":"Uspešan naslov"}'}]}}]})});
+ f.manager.configure({key:'test-only-key'});f.chat.messages=[{role:'assistant',status:'done',text:'Odgovor'}];
+ f.manager.afterReply(f.chat);await waitFor(()=>f.chat.titleGeneration?.status==='error');
+ f.manager.afterReply(f.chat);await waitFor(()=>f.chat.titleGeneration?.status==='done');assert.equal(calls,2);assert.equal(f.chat.title,'Uspešan naslov');
+});
