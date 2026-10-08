@@ -1,3 +1,4 @@
+import {createDraftHistory} from './draft-history.mjs';
 import {createCliUpdatesPanel} from './cli-updates.mjs';
 import {createDailyPrioritiesPanel} from './daily-priorities.mjs';
 import {createGmailSettings} from './gmail-settings.mjs';
@@ -193,7 +194,7 @@ function choose(id,{replaceHistory=false}={}) {
   const changed=active!==id;
   if(active!==id){selectedMessages.clear();messageSelectionMode=false;selectionAnchor=null;renderMessageSelection();}
   showDefaults(false);document.body.classList.toggle('chat-view',!!id);
-  speechSelection=null;clearTimeout(clickTimer);drafts.set(active,$('#prompt').value);active=id;$('#prompt').value=drafts.get(id)||'';resizePrompt();
+  speechSelection=null;clearTimeout(clickTimer);drafts.set(active,$('#prompt').value);active=id;$('#prompt').value=drafts.get(id)||'';resizePrompt();draftHistory.refresh();
   const url=new URL(location.href);if(id)url.hash='chat='+encodeURIComponent(id);else url.hash='';if(mobileNavigation() && changed && id && !replaceHistory)history.pushState({agentDesk:true,agentDeskGuard:true,chatId:id},'',url);else history.replaceState(history.state,'',url);
   closePanels();
   if(speechClip && speechClip.chatId!==id)speechAudio.pause();
@@ -703,6 +704,7 @@ joystick.onkeydown=e=>{const action={ArrowUp:'send',ArrowDown:'stop',ArrowLeft:'
 
 $('#prompt').onkeydown=e=>{if(e.key!=='Enter' || e.isComposing || e.shiftKey || matchMedia('(max-width:650px)').matches)return;e.preventDefault();if(current()?.running || e.metaKey || e.ctrlKey)guard(enqueueMessage);else $('#composer').requestSubmit();};
 $('#prompt').oninput=()=>{resizePrompt();recordDraft(active,$('#prompt').value);};
+const draftHistory=createDraftHistory($('#prompt'),{chatId:()=>active,changed:()=>{resizePrompt();recordDraft(active,$('#prompt').value);},undoButton:$('#draft-undo'),redoButton:$('#draft-redo')});
 $('#prompt').addEventListener('blur',flushDrafts);
 $('#prompt').addEventListener('focus',()=>{if(!matchMedia('(max-width:650px)').matches)return;setTimeout(fitViewport,50);setTimeout(()=>revealAboveComposer(0),80);setTimeout(fitViewport,320);});
 window.addEventListener('resize',()=>{resizePrompt();positionPopover();});
