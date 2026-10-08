@@ -180,7 +180,14 @@ function resizePrompt() {
   else view.scrollTop=before<8?view.scrollHeight:saved;
 }
 
+// Keep the actual route taken, including opening a child directly from the list.
+const chatNavigation=[];
+function rememberChatView(){
+  chatNavigation.push({chatId:document.body.classList.contains('chat-view')?active:null,folders:[...openFolders],scroll:$('#chats').scrollTop});
+  if(chatNavigation.length>50)chatNavigation.shift();
+}
 function choose(id,{replaceHistory=false}={}) {
+  if(!replaceHistory && (active!==id || (!!id!==document.body.classList.contains('chat-view'))))rememberChatView();
   if(active && draftDirty.has(active))void saveDraft(active);
   receiveDrafts();
   const changed=active!==id;
@@ -256,7 +263,7 @@ function renderSidebar() {
   const unassigned=placedChats(chats,ids);
   const shortcutOrder=visibleSidebarChats().map(c=>c.id);
   const folderItems=folderRename?.draft?[...folders,{id:folderRename.id,name:''}]:folders;
-  const chatRows=list=>list.map(group=>`<div class="chat-group ${group.children.length?'has-children':''} ${group.children.some(c=>c.id===active)?'has-active-child':''}">${row(group.chat,shortcutOrder.indexOf(group.chat.id),!!group.children.length)}${group.children.length?`<button type="button" class="chat-children-toggle ${group.children.some(c=>notification(c)==='completed')?'completed':group.children.some(c=>notification(c))?'unread':''}" data-children-toggle="${group.chat.id}" aria-label="${showChildren(group.chat.id)?'Sakrij':'Prikaži'} podagente: ${escape(group.chat.title)}" aria-expanded="${showChildren(group.chat.id)}" title="Podagenti: ${group.children.length}"><span>${group.children.length}</span><span aria-hidden="true">${showChildren(group.chat.id)?'▾':'▸'}</span></button>`:''}${group.children.length && showChildren(group.chat.id)?`<div class="subagent-chats">${group.children.map(child=>row(child,shortcutOrder.indexOf(child.id))).join('')}</div>`:''}</div>`).join('');
+  const chatRows=list=>list.map(group=>`<div class="chat-group ${group.children.length?'has-children':''} ${group.children.some(c=>c.id===active)?'has-active-child':''}"><div class="chat-root">${row(group.chat,shortcutOrder.indexOf(group.chat.id),!!group.children.length)}${group.children.length?`<button type="button" class="chat-children-toggle ${group.children.some(c=>notification(c)==='completed')?'completed':group.children.some(c=>notification(c))?'unread':''}" data-children-toggle="${group.chat.id}" aria-label="${showChildren(group.chat.id)?'Sakrij':'Prikaži'} podagente: ${escape(group.chat.title)}" aria-expanded="${showChildren(group.chat.id)}" title="Podagenti: ${group.children.length}"><span>${group.children.length}</span><span aria-hidden="true">${showChildren(group.chat.id)?'▾':'▸'}</span></button>`:''}</div>${group.children.length && showChildren(group.chat.id)?`<div class="subagent-chats">${group.children.map(child=>row(child,shortcutOrder.indexOf(child.id))).join('')}</div>`:''}</div>`).join('');
   const content=folderItems.map(folder=>{const visible=placedChats(chats,ids,folder.id);return `<section class="sidebar-folder">${folderRow(folder)}${openFolders.has(folder.id)?`<div class="folder-chats" data-folder-target="${folder.id}">${chatRows(visible)}${!visible.length?'<p class="folder-empty">Prazan folder</p>':''}</div>`:''}</section>`;}).join('')+`<section class="sidebar-folder"><div class="folder-row open" data-unassigned data-folder-out><span class="folder-mark" aria-hidden="true"></span><span class="folder-name">Neraspoređeni</span><small>${unassigned.length}</small></div><div class="folder-chats" id="chat-list-items" data-folder-out>${chatRows(unassigned)}${!unassigned.length?'<p class="folder-empty">Nema neraspoređenih četova</p>':''}</div></section>`;
 
   if(content!==lastSidebar){const input=$('[data-folder-name]'), editing=input && document.activeElement===input, start=input?.selectionStart,end=input?.selectionEnd;paintingSidebar=true;$('#chats').innerHTML=content;lastSidebar=content;if(editing && folderRename){const replacement=$('[data-folder-name]');replacement.focus();replacement.setSelectionRange(start,end);}paintingSidebar=false;}
@@ -277,8 +284,20 @@ function renderChatNavigation() {
   if(chat)$('#chat-options').dataset.options=chat.id;
   if(chat)$('#chat-options').innerHTML=`<img src="${agentLogos[chat.settings.agent]}" alt="" width="20" height="20">`;
 }
-function showChatList(){if(messageSelectionMode){clearMessageSelection();return;}const folderId=document.body.classList.contains('chat-view')?current()?.folderId:null;document.body.classList.remove('chat-view');setOpenFolder(folderId);showDefaults(false);closePanels();menuChat=null;renderPopover();const url=new URL(location.href);url.hash='';history.replaceState(history.state,'',url);if(appReady)connectEvents();}
-function backFromChat(){if(!$('#defaults').hidden){showDefaults(false);return;}if(messageSelectionMode){clearMessageSelection();return;}const parent=current()?.parentChatId;if(document.body.classList.contains('chat-view') && chats.some(c=>c.id===parent))choose(parent,{replaceHistory:true});else showChatList();}
+function showChatList({replaceHistory=false}={}){if(messageSelectionMode){clearMessageSelection();return;}const inChat=document.body.classList.contains('chat-view');if(inChat && !replaceHistory)rememberChatView();const folderId=inChat?current()?.folderId:null;document.body.classList.remove('chat-view');setOpenFolder(folderId);showDefaults(false);closePanels();menuChat=null;renderPopover();const url=new URL(location.href);url.hash='';history.replaceState(history.state,'',url);if(appReady)connectEvents();}
+function backFromChat(){
+ if(!$('#defaults').hidden){showDefaults(false);return;}
+ if(messageSelectionMode){clearMessageSelection();return;}
+ let previous;
+ while(chatNavigation.length){previous=chatNavigation.pop();if(!previous.chatId || chats.some(c=>c.id===previous.chatId))break;previous=null;}
+ if(previous){
+  openFolders=new Set(previous.folders);pruneOpenFolders();
+  if(previous.chatId)choose(previous.chatId,{replaceHistory:true});
+  else showChatList({replaceHistory:true});
+  // showChatList may reveal the current folder; restore the originating list exactly.
+  openFolders=new Set(previous.folders);pruneOpenFolders();renderSidebar();$('#chats').scrollTop=previous.scroll;
+ }else showChatList({replaceHistory:true});
+}
 $('#chat-back').onclick=backFromChat;
 // A horizontal trackpad gesture goes back; horizontal document scrolling stays usable.
 let backSwipeDistance=0,backSwipeAt=0,backSwipeDoneAt=0;
@@ -290,7 +309,7 @@ document.addEventListener('wheel',e=>{
  if(e.deltaX>=0){backSwipeDistance=0;return;}
  e.preventDefault();backSwipeDistance-=e.deltaX;
  if(backSwipeDistance<100)return;backSwipeDistance=0;backSwipeDoneAt=now;
- if(!$('#defaults').hidden || document.body.classList.contains('chat-view')){backFromChat();if(!mobileNavigation() && !document.body.classList.contains('chat-view'))choose(null,{replaceHistory:true});}
+ if(!$('#defaults').hidden || document.body.classList.contains('chat-view')){backFromChat();}
  else if(openFolders.size)closeLastFolder();
 },{passive:false});
 const mobileNavigation=()=>matchMedia('(max-width:650px)').matches;
@@ -300,7 +319,7 @@ function activateMobileHistory(e){if(!e.isTrusted || !mobileNavigation() || mobi
 document.addEventListener('click',activateMobileHistory,{capture:true});document.addEventListener('keydown',activateMobileHistory,{capture:true});
 
 function keepMobileHistory(){if(mobileNavigation())history.pushState({agentDesk:true,agentDeskGuard:true},'',location.href);}
-window.addEventListener('popstate',()=>{if(!$('#defaults').hidden){showDefaults(false);const url=new URL(location.href);url.hash=document.body.classList.contains('chat-view') && active?'chat='+encodeURIComponent(active):'';history.replaceState(history.state,'',url);keepMobileHistory();return;}if($('#attachment-view').open){$('#attachment-view').close();attachmentHistory=false;keepMobileHistory();return;}if($('#files-dialog').open){guard(async()=>{if(!filePickerClosing && fileListing.path!==fileListing.home && fileListing.parent){history.pushState({agentDesk:true,filePicker:true},'',location.href);await browseFolder(fileListing.parent);}else{filePickerClosing=false;$('#files-dialog').close();keepMobileHistory();}});return;}if(mobileNavigation()){if(document.body.classList.contains('chat-view')){if($('#files-dialog').open)$('#files-dialog').close();if($('#delete-dialog').open)$('#delete-dialog').close();backFromChat();}else if(openFolders.size)closeLastFolder();else showChatList();keepMobileHistory();}});
+window.addEventListener('popstate',()=>{if(!$('#defaults').hidden){showDefaults(false);const url=new URL(location.href);url.hash=document.body.classList.contains('chat-view') && active?'chat='+encodeURIComponent(active):'';history.replaceState(history.state,'',url);keepMobileHistory();return;}if($('#attachment-view').open){$('#attachment-view').close();attachmentHistory=false;keepMobileHistory();return;}if($('#files-dialog').open){guard(async()=>{if(!filePickerClosing && fileListing.path!==fileListing.home && fileListing.parent){history.pushState({agentDesk:true,filePicker:true},'',location.href);await browseFolder(fileListing.parent);}else{filePickerClosing=false;$('#files-dialog').close();keepMobileHistory();}});return;}if(mobileNavigation()){if(document.body.classList.contains('chat-view')){if($('#files-dialog').open)$('#files-dialog').close();if($('#delete-dialog').open)$('#delete-dialog').close();backFromChat();}else if(chatNavigation.length)backFromChat();else if(openFolders.size)closeLastFolder();else showChatList({replaceHistory:true});keepMobileHistory();}});
 
 $('#chat-parent').onclick=()=>{if(current()?.parentChatId)choose(current().parentChatId);};
 $('#chat-options').onclick=()=>{if(current()){menuChat=menuChat===active?null:active;renderPopover();}};
