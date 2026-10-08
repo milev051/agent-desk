@@ -17,7 +17,7 @@ test('posle tri poruke naslov se proverava iz razgovora i ostaje ako tema nije p
  const seed=recentTitleSeed([{role:'user',text:'Prva'},{role:'assistant',text:'Odgovor'},{role:'user',text:'  Druga   tema  '},{role:'tool',text:'ne'},{role:'user',text:'x'.repeat(500)}]);
  assert.match(seed,/Korisnik: Prva/);assert.match(seed,/Agent: Odgovor/);assert.match(seed,/Korisnik: Druga tema/);assert.ok(!seed.includes('ne'));assert.ok(seed.endsWith('x'.repeat(400)));
  const refresh=titleRequest(seed,'','Stari naslov');const data=JSON.parse(refresh.contents[0].parts[0].text);
- assert.equal(data.trenutniNaslov,'Stari naslov');assert.match(refresh.systemInstruction.parts[0].text,/neizmenjenog/);
+ assert.equal(data.trenutniNaslov,'Stari naslov');assert.match(refresh.systemInstruction.parts[0].text,/glavnu poentu razgovora/);assert.match(refresh.systemInstruction.parts[0].text,/subjekat i predikat/);assert.match(refresh.systemInstruction.parts[0].text,/najviše 3 reči/i);assert.doesNotMatch(refresh.systemInstruction.parts[0].text,/vrati ga neizmenjenog/);
  let calls=0;const f=fixture(t,async()=>{calls++;return {ok:true,json:async()=>({candidates:[{content:{parts:[{text:'{"title":"Stari naslov"}'}]}}],usageMetadata:{promptTokenCount:12}})};});
  f.manager.configure({key:'test-only-key'});f.chat.title='Stari naslov';f.chat.titleGeneration={status:'done',atUsers:1};
  f.manager.request(f.chat,seed,'',{refresh:true,atUsers:3});f.manager.request(f.chat,seed,'',{refresh:true,atUsers:3});
