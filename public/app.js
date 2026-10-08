@@ -37,7 +37,13 @@ let titleSettings={};
 let mobileAutofocus=localStorage.getItem('agent-desk-mobile-autofocus')==='1';
 const linkedFiles=new Map();
 const pendingMessages=new Map(),historyCounts=new Map();
-function focusPrompt(){if(!matchMedia('(max-width:650px)').matches || mobileAutofocus)$('#prompt').focus();}
+function focusPrompt({force=false}={}){
+ const input=$('#prompt');
+ if(!appReady || !current() || document.hidden || !$('#defaults').hidden || input.closest('[inert]') || document.querySelector('dialog[open]') || chatSearch.isOpen() || menuChat || menuFolder || folderRename || messageSelectionMode)return;
+ if(mobileNavigation() && (!document.body.classList.contains('chat-view') || (!force && !mobileAutofocus)))return;
+ if(!force && ((document.activeElement?.matches('input,textarea,select,[contenteditable="true"]') && document.activeElement.getClientRects().length) || !window.getSelection()?.isCollapsed))return;
+ input.focus({preventScroll:true});
+}
 let rename = null, creating = false, submitting = false, uploading = false, clickTimer, holdTimer, holdStart, held = false, suppressClickUntil=0;
 let colorMode=localStorage.getItem('agent-desk-color-mode') || 'label';
 document.body.classList.toggle('colored-responses',colorMode==='full');
@@ -200,7 +206,7 @@ function choose(id,{replaceHistory=false}={}) {
   if(speechClip && speechClip.chatId!==id)speechAudio.pause();
   if(id)localStorage.setItem('agent-desk-active',id);else localStorage.removeItem('agent-desk-active');
   if(current()){selectedAgent=current().settings.agent;markRead(current());recordChatAccess(current());}
-  chatSearch.close();menuChat=null;rename=null;lastMessages='';forceBottom=!!id;render();renderSpeechBar();renderLinkedFiles();if(id)$('#prompt').focus({preventScroll:true});if(id)guard(()=>loadChatHistory(id));if(appReady)connectEvents();
+  chatSearch.close();menuChat=null;rename=null;lastMessages='';forceBottom=!!id;render();renderSpeechBar();renderLinkedFiles();if(id)focusPrompt({force:true});if(id)guard(()=>loadChatHistory(id));if(appReady)connectEvents();
 }
 function mergeChatList(list){return list.map(chat=>{const old=chats.find(c=>c.id===chat.id);return chat.summary?{...old,...chat,messages:old?.messages || []}:chat;});}
 function putChat(chat){
@@ -708,7 +714,11 @@ const draftHistory=createDraftHistory($('#prompt'),{chatId:()=>active,changed:()
 $('#prompt').addEventListener('blur',flushDrafts);
 $('#prompt').addEventListener('focus',()=>{if(!matchMedia('(max-width:650px)').matches)return;setTimeout(fitViewport,50);setTimeout(()=>revealAboveComposer(0),80);setTimeout(fitViewport,320);});
 window.addEventListener('resize',()=>{resizePrompt();positionPopover();});
-window.addEventListener('focus',()=>{if(meta)render();});document.addEventListener('visibilitychange',()=>{if(meta)render();});
+window.addEventListener('focus',()=>{if(meta)render();focusPrompt();});document.addEventListener('visibilitychange',()=>{if(meta)render();if(!document.hidden)focusPrompt();});
+// Čet je spreman za kucanje i kada je fokus ostao na kartici ili praznom delu razgovora.
+document.addEventListener('click',e=>{if(e.target.closest('button,a,input,textarea,select,[contenteditable="true"]'))return;focusPrompt();});
+document.addEventListener('focusout',()=>{requestAnimationFrame(()=>{if(document.activeElement===document.body)focusPrompt();});});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')requestAnimationFrame(()=>focusPrompt());if(e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || e.key.length!==1 || !window.getSelection()?.isCollapsed || (e.key===' ' && e.target.closest('button,a')) || e.target.closest('input,textarea,select,[contenteditable="true"]'))return;focusPrompt({force:!mobileNavigation()});},{capture:true});
 document.addEventListener('copy',e=>{if(!messageSelectionMode || e.target.closest('input,textarea,select,[contenteditable="true"]') || !$('#defaults').hidden || document.querySelector('dialog[open]'))return;const text=selectedMessagesMarkdown();if(!text)return;e.preventDefault();e.clipboardData.setData('text/plain',text);toast('Markdown je kopiran.');});
 document.onkeydown=e=>{if((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase()==='f' && current() && $('#defaults').hidden && !document.querySelector('dialog[open]')){e.preventDefault();cancelStick();guard(openChatSearch);return;}if(e.key==='Escape' && chatSearch.isOpen()){e.preventDefault();chatSearch.close();return;}if(e.metaKey && !e.shiftKey && !e.altKey && e.key===','){e.preventDefault();if(!e.repeat && !document.querySelector('dialog[open]'))$('#defaults-open').click();return;}const editable=e.target.closest('input,textarea,select,[contenteditable="true"]');if(messageSelectionMode && !editable && $('#defaults').hidden && !document.querySelector('dialog[open]')){if((e.metaKey || e.ctrlKey) && e.key.toLowerCase()==='a'){e.preventDefault();selectAllMessages();return;}if((e.metaKey || e.ctrlKey) && e.key.toLowerCase()==='c'){e.preventDefault();guard(copySelectedMessages);return;}if(e.key==='Escape'){e.preventDefault();clearMessageSelection();return;}}const digit=(e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && /^Digit([1-9])$/.exec(e.code);if(digit && $('#defaults').hidden && !document.querySelector('dialog[open]') && !e.target.closest('[data-folder-name]')){const chat=visibleSidebarChats()[Number(digit[1])-1];if(chat){e.preventDefault();if(!e.repeat && chat.id!==active)choose(chat.id);return;}}if($('#defaults').hidden && (e.metaKey || e.ctrlKey) && e.key.toLowerCase()==='k'){e.preventDefault();guard(()=>create());}if(e.key==='Escape'){closePanels();menuChat=null;menuFolder=null;if(!$('#defaults').hidden)showDefaults(false);renderPopover();}};
 const isImage=name=>/\.(png|jpe?g|gif|webp)$/i.test(name);
@@ -731,7 +741,7 @@ try {
   $('#prompt').value=drafts.get(active)||'';
   document.body.classList.toggle('chat-view',!!linked && !!current());for(const c of chats)if(c.readMessageId===completion(c)?.messageId)markRead(c,false);
   if(mobileNavigation()){const entry=new URL(location.href);if(!(linked && current()))entry.hash='';history.replaceState({agentDesk:true,agentDeskGuard:true},'',entry);}
-  render();resizePrompt();refreshLimits();import('/battery.mjs').then(({startBatteryStatus})=>startBatteryStatus()).catch(()=>{});document.body.classList.add('ready');if(document.body.classList.contains('chat-view') && current())recordChatAccess(current());api('/api/models').then(value=>{models=value;lastMessages='';render();if(newMenuAgent)showNewModels(newMenuAgent);}).catch(()=>{});enablePush(false);connectEvents();
+  render();resizePrompt();refreshLimits();import('/battery.mjs').then(({startBatteryStatus})=>startBatteryStatus()).catch(()=>{});document.body.classList.add('ready');focusPrompt();if(document.body.classList.contains('chat-view') && current())recordChatAccess(current());api('/api/models').then(value=>{models=value;lastMessages='';render();if(newMenuAgent)showNewModels(newMenuAgent);}).catch(()=>{});enablePush(false);connectEvents();
   // Telefon u pozadini često prekine vezu bez greške; povratak u aplikaciju otvara novu i dobija punu listu.
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){connectEvents();if(document.body.classList.contains('chat-view'))recordChatAccess(current());}});
 } catch(e){const boot=$('#boot-stage');if(boot)boot.textContent=`Aplikacija nije dostupna: ${e.message}`;}
