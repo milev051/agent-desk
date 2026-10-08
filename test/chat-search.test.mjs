@@ -11,5 +11,5 @@ test('pretraga ne razlikuje velika slova, nalazi ponavljanja i tretira znakove d
 test('dijagonala gore-levo otvara pretragu i ne šalje ili zaustavlja poruku',()=>{
  const line=readFileSync(new URL('../public/app.js',import.meta.url),'utf8').split('\n').find(l=>l.startsWith('function joystickDirection('));
  const direction=new Function(line+';return joystickDirection;')();
- assert.equal(direction(-35,-35),'search');assert.equal(direction(0,-35),'send');assert.equal(direction(0,35),'stop');assert.equal(direction(-35,0),'attach');assert.equal(direction(35,0),'computer');assert.equal(direction(-10,-10),null);
+ assert.equal(direction(-35,-35),'menu');assert.equal(direction(0,-35),'send');assert.equal(direction(0,35),'stop');assert.equal(direction(-35,0),'menu');assert.equal(direction(35,0),null);assert.equal(direction(35,-35),null);assert.equal(direction(-10,-10),null);
 });
