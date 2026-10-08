@@ -1,3 +1,4 @@
+import {createAndroidPrompt} from './prompt-editor.mjs';
 import {createDraftHistory} from './draft-history.mjs';
 import {startNotificationPresence} from './notification-presence.mjs';
 import {createCliUpdatesPanel} from './cli-updates.mjs';
@@ -29,6 +30,7 @@ const fitViewport=()=>{const vv=window.visualViewport;if(!vv)return;const covere
 window.visualViewport?.addEventListener('resize',fitViewport);window.visualViewport?.addEventListener('scroll',fitViewport);fitViewport();
 let events, defaults = {}, models = {}, meta, chats = [], active = localStorage.getItem('agent-desk-active'), selectedAgent = 'codex', menuChat = null, menuFolder = null, lastMessages = '', connected = true, appReady = false, sawEvents = false;
 const phoneRemote=!['127.0.0.1','localhost'].includes(location.hostname);
+createAndroidPrompt($('#prompt'));
 startNotificationPresence({phoneRemote});
 let speechClip=null,speechAbort=null,speechSeeking=false,speechSelection=null;
 const speechAudio=new Audio();
@@ -712,9 +714,6 @@ joystick.onkeydown=e=>{const action={ArrowUp:'send',ArrowDown:'stop',ArrowLeft:'
 
 $('#prompt').onkeydown=e=>{if(e.key!=='Enter' || e.isComposing || e.shiftKey || matchMedia('(max-width:650px)').matches)return;e.preventDefault();if(current()?.running || e.metaKey || e.ctrlKey)guard(enqueueMessage);else $('#composer').requestSubmit();};
 $('#prompt').oninput=()=>{resizePrompt();recordDraft(active,$('#prompt').value);};
-// Chromium na Androidu nudi slike iz tastature samo polju koje prihvata bogati unos.
-// Paste handler preuzima fajl i sprečava ubacivanje slike u sam tekst nacrta.
-if(/Android/i.test(navigator.userAgent))$('#prompt').style.setProperty('-webkit-user-modify','read-write');
 const draftHistory=createDraftHistory($('#prompt'),{chatId:()=>active,changed:()=>{resizePrompt();recordDraft(active,$('#prompt').value);}});
 $('#prompt').addEventListener('blur',flushDrafts);
 $('#prompt').addEventListener('focus',()=>{if(!matchMedia('(max-width:650px)').matches)return;setTimeout(fitViewport,50);setTimeout(()=>revealAboveComposer(0),80);setTimeout(fitViewport,320);});
