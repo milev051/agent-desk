@@ -72,3 +72,24 @@ test('neuspešno automatsko imenovanje može da se ponovi posle narednog odgovor
  f.manager.afterReply(f.chat);await waitFor(()=>f.chat.titleGeneration?.status==='error');
  f.manager.afterReply(f.chat);await waitFor(()=>f.chat.titleGeneration?.status==='done');assert.equal(calls,2);assert.equal(f.chat.title,'Uspešan naslov');
 });
+
+test('predug naslov se preformuliše umesto odsecanja pitanja, usage obuhvata oba poziva',async t=>{
+ let calls=0;
+ const f=fixture(t,async(url,opts)=>{
+  calls++;
+  if(calls===2)assert.match(JSON.parse(opts.body).contents.at(-1).parts[0].text,/Ne odsecaj/);
+  return {ok:true,json:async()=>({candidates:[{content:{parts:[{text:JSON.stringify({title:calls===1?'Kikiriki puter šteti sudovima?':'Puter šteti sudovima?'})}]}}],usageMetadata:{promptTokenCount:10,candidatesTokenCount:5}})};
+ });
+ f.manager.configure({key:'test-only-key'});f.manager.request(f.chat,'Da li puter šteti sudovima?');
+ await waitFor(()=>f.chat.titleGeneration.status==='done');
+ assert.equal(f.chat.title,'Puter šteti sudovima?');assert.equal(calls,2);
+ assert.equal(f.chat.titleGeneration.usage.promptTokenCount,20);
+ assert.equal(f.chat.titleGeneration.usage.candidatesTokenCount,10);
+});
+
+test('dva preduga rezultata čuvaju prethodni naslov i izričito prijavljuju grešku',async t=>{
+ let calls=0;const f=fixture(t,async()=>{calls++;return {ok:true,json:async()=>({candidates:[{content:{parts:[{text:'{"title":"Ovaj naslov ima previše reči"}'}]}}]})};});
+ f.manager.configure({key:'test-only-key'});
+ await assert.rejects(f.manager.nameChat('Tema'),/predug naslov/);assert.equal(calls,2);
+ assert.equal(f.chat.title,'Prva poruka');
+});
