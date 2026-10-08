@@ -46,3 +46,11 @@ test('klik na obaveštenje zatvara i ostala obaveštenja njegovog četa',async()
   const notifications=[notification('a','first',10),notification('a','second',20),notification('b','other',10)];const sw=worker({notifications});
   await sw.click(notifications[0]);assert.deepEqual(notifications.map(n=>n.closed),[true,true,false]);
 });
+
+test('prisustvo računara uklanja obaveštenja svih četova do granice, a novija čuva',async()=>{
+ const old=notification('a','old',10),other=notification('b','other',20),newer=notification('a','new',10);
+ old.data.notificationCreatedAt=15;other.data.notificationCreatedAt=25;newer.data.notificationCreatedAt=35;
+ const sw=worker({notifications:[old,other,newer]});
+ await sw.send('message',{type:'desktop-read',notificationsBefore:30});
+ assert.deepEqual([old.closed,other.closed,newer.closed],[true,true,false]);assert.equal(sw.shown.length,0);
+});

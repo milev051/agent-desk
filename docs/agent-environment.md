@@ -31,6 +31,12 @@ Google Drive, Tasks i Calendar imaju pristup za čitanje i pisanje kada je koris
 
 Posle izmena pokreni `npm test`. Novi browser modul mora da vraća HTTP 200. Izmene serverskih modula traže restart tek kada nijedan agent ne radi. Git commit pokreće pre-commit testove i hook se ne zaobilazi.
 
+## Obaveštenja
+
+Aktivan, vidljiv prozor aplikacije na računaru šalje prisustvo svakih 15 sekundi. Dok je prisustvo sveže, završetak agenta ne šalje push na telefon. Zatvoren ili izgubljen prozor prestaje da utišava telefon najkasnije nakon 45 sekundi. Više prozora se prati odvojeno. Obaveštenje prikazuje naziv foldera (i za podagenta), naziv četa i kratak izvod završnog odgovora; izvod nije poseban AI sažetak.
+
+Otvorena aplikacija na telefonu preko GET `/api/notifications/presence` proverava granicu `clearBefore` i zatvara starija obaveštenja svih četova. Ne šaljemo nevidljivi push radi brisanja, jer veb push pretplata zahteva vidljivo obaveštenje. Već prikazana obaveštenja na zaključanom telefonu mogu ostati do sledećeg otvaranja aplikacije.
+
 ## Taskovi i planer
 
 Taskovi je folder sa karticama zadataka. Korisnik ne popunjava formular: agent po njegovom zahtevu upisuje ili završava zadatke. Svaka poruka sadrži aktuelni datum/vreme i otvorene stavke. Nezavršeni zadaci se prenose u novi dan dok se ne završe ili uklone; prethodne liste ostaju sačuvane. Pri prenosu se time prazni jer je vreme važilo za prethodni dan. Nema automatskih podsetnika.

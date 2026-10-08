@@ -5,6 +5,7 @@ import {createGoogleWrite} from './google-write.mjs';
 import {createGoogleServices} from './google-services.mjs';
 import {createGmail,driveScope,tasksScope,gmailScope,calendarScope,calendarWriteScope,gmailWriteScope,gmailComposeScope,driveWriteScope,tasksWriteScope} from './gmail.mjs';
 import {createNotificationSettings,desktopNotificationArgs} from './desktop-notifications.mjs';
+import {createDesktopPresence,replyNotification} from './notification-presence.mjs';
 import {chatSummary,chatPage,createBrowserDelivery} from './chat-delivery.mjs';
 import {recordTextTiming} from './response-timing.mjs';
 import {sharedFolderContext} from './shared-folders.mjs';
@@ -49,6 +50,7 @@ function broadcastFolders(){const payload=`event: folders\ndata: ${JSON.stringif
 const dataFile = path.join(dataDir, 'chats.json');
 const defaultsFile = path.join(dataDir, 'defaults.json');
 const notificationSettings=createNotificationSettings(path.join(dataDir,'notification-settings.json'));
+const desktopPresence=createDesktopPresence();
 let defaults = Object.fromEntries(Object.keys(names).map(agent => [agent, {model:'',effort:''}]));
 if (fs.existsSync(defaultsFile)) defaults = {...defaults, ...JSON.parse(fs.readFileSync(defaultsFile,'utf8'))};
 let chats = fs.existsSync(dataFile) ? JSON.parse(fs.readFileSync(dataFile, 'utf8')) : [];
@@ -304,7 +306,7 @@ async function send(chat, prompt, options={}) {
     if(reply.status==='done' && !options.minimalContext && chats.includes(chat))titleManager.afterReply(chat,chats.find(c=>c.id===chat.parentChatId)?.title || '');
     run.resolve(reply);setImmediate(()=>drainQueue(chat));
     const outcome={done:'Završeno',error:'Greška',stopped:'Zaustavljeno'}[reply.status];
-    if(outcome && !options.silent){void phonePush.notify({title:chat.title||'Agent Desk',body:outcome,chatId:chat.id,tag:chat.id,messageId:reply.id,messageCreatedAt:reply.createdAt,notificationCreatedAt:Date.now()});desktopNotify(chat.title||'Agent Desk',outcome,chat.id);}
+    if(outcome && !options.silent){const notification=replyNotification(chat,reply,chats,folders.list());if(!desktopPresence.view().desktopActive)void phonePush.notify({...notification,chatId:chat.id,tag:chat.id,messageId:reply.id,messageCreatedAt:reply.createdAt,notificationCreatedAt:Date.now()});desktopNotify(notification.title,notification.body,chat.id);}
   }
   child.on('error', error => finish(null, error)); child.on('close', code => finish(code));
   child.stdin.on('error', () => {}); child.stdin.end(spec.input || undefined);
@@ -331,6 +333,11 @@ const server = http.createServer(async (req, res) => {
     if (![`127.0.0.1:${port}`, `localhost:${port}`].includes(req.headers.host)) return json(403, { error: 'Dozvoljen je samo lokalni pristup.' });
     const url = new URL(req.url, `http://127.0.0.1:${port}`);
     if (!['GET', 'HEAD'].includes(req.method) && ![`http://127.0.0.1:${port}`, `http://localhost:${port}`].includes(req.headers.origin)) return json(403, { error: 'Neispravno poreklo zahteva.' });
+    if(url.pathname==='/api/notifications/presence'){
+      if(req.method==='GET')return json(200,desktopPresence.view());
+      if(req.method==='POST')return json(200,desktopPresence.update(await body(req)));
+      return json(405,{error:'Podržani su GET i POST.'});
+    }
     if(req.method==='GET' && url.pathname==='/api/planner/activity')return json(200,{chats:plannerActivity(chats.map(c=>({...c,running:running.has(c.id)})),{folderId:url.searchParams.get('folderId'),since:url.searchParams.get('since') || 0})});
     const changesMatch=/^\/api\/chats\/([^/]+)\/changes$/.exec(url.pathname);
     if(req.method==='GET' && changesMatch){const chat=chats.find(c=>c.id===changesMatch[1]);if(!chat)return json(404,{error:'Čet nije pronađen.'});try{return json(200,chatChanges({...chat,running:running.has(chat.id)},{after:url.searchParams.get('after') || '',limit:url.searchParams.get('limit') || 10}));}catch(error){return json(error.status || 400,{error:error.message});}}

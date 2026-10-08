@@ -1,4 +1,5 @@
 import {createDraftHistory} from './draft-history.mjs';
+import {startNotificationPresence} from './notification-presence.mjs';
 import {createCliUpdatesPanel} from './cli-updates.mjs';
 import {createDailyPrioritiesPanel} from './daily-priorities.mjs';
 import {createGmailSettings} from './gmail-settings.mjs';
@@ -28,6 +29,7 @@ const fitViewport=()=>{const vv=window.visualViewport;if(!vv)return;const covere
 window.visualViewport?.addEventListener('resize',fitViewport);window.visualViewport?.addEventListener('scroll',fitViewport);fitViewport();
 let events, defaults = {}, models = {}, meta, chats = [], active = localStorage.getItem('agent-desk-active'), selectedAgent = 'codex', menuChat = null, menuFolder = null, lastMessages = '', connected = true, appReady = false, sawEvents = false;
 const phoneRemote=!['127.0.0.1','localhost'].includes(location.hostname);
+startNotificationPresence({phoneRemote});
 let speechClip=null,speechAbort=null,speechSeeking=false,speechSelection=null;
 const speechAudio=new Audio();
 speechAudio.id='speech-audio';

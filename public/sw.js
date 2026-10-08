@@ -14,6 +14,12 @@ async function closeReadNotifications(data) {
 
 self.addEventListener('message', event => {
   if (event.data?.type === 'read') event.waitUntil(closeReadNotifications(event.data));
+  if (event.data?.type === 'desktop-read' && Number.isFinite(event.data.notificationsBefore)) event.waitUntil((async()=>{
+    for(const notification of await self.registration.getNotifications()){
+      const at=notification.data?.notificationCreatedAt || notification.data?.messageCreatedAt;
+      if(!at || at<=event.data.notificationsBefore)notification.close();
+    }
+  })());
 });
 
 self.addEventListener('push', event => {
