@@ -1,5 +1,7 @@
 # Agent Desk: lokalni prototip
 
+> **English:** Agent Desk is a local web app for macOS that runs and coordinates several AI coding agents (Claude Code, Codex, Grok, Antigravity) from one interface, on desktop or phone. It uses the CLIs' own logins, keeps chats, token usage and subscription limits, and lets one agent delegate subtasks to others. Built with Node.js and plain browser modules; the rest of this README is in Serbian.
+
 Osnovni interfejs za četove sa Codex CLI, Claude Code, Grok Build i Antigravity CLI. Pokreće lokalne CLI alate i koristi njihove postojeće prijave; ne traži API ključ. Model i dostupnost zavise od naloga i CLI podešavanja.
 
 ## Pokretanje
@@ -200,7 +202,7 @@ Dugme Nazad u mobilnom pregledaču vraća na početnu listu. Aplikacija održava
 
 Ispod ikonica za novi čet prikazan je **preostali procenat**, prvo za 5 sati pa za 7 dana. Grok ima samo nedeljni broj. Redosled je Codex, Claude, Antigravity, Grok. Tooltip navodi prozore i vreme očitavanja. Nedostupan podatak je `?`, bez izmišljene procene. Ovi brojevi su odvojeni od broja tokena i API procene troška.
 
-`limits-reader.swift` koristi logiku očitavanja iz projekta Limiti i postojeće CLI prijave na macOS-u. Poziva odgovarajuće servise pretplate, ne šalje razgovore. Ključevi se ne vraćaju kroz `/api/limits` i ne upisuju u četove. Swift proces očitava sva četiri izvora paralelno na približno dva minuta; odgovor 429 odlaže naredni poziv tom izvoru prema Retry-After ili najmanje deset minuta kada rok nije naveden; `limits.mjs` čuva samo poslednji rezultat u memoriji. Na drugim sistemima podaci nisu dostupni. `AGENT_DESK_DISABLE_LIMITS=1` isključuje očitavanje; integracioni testovi koriste tu opciju.
+`limits-reader.swift` koristi logiku očitavanja iz projekta Limiti i postojeće CLI prijave na macOS-u. Poziva odgovarajuće servise pretplate, ne šalje razgovore. Ključevi se ne vraćaju kroz `/api/limits` i ne upisuju u četove. Swift proces očitava sva četiri izvora paralelno na približno dva minuta; odgovor 429 odlaže naredni poziv tom izvoru prema Retry-After ili najmanje deset minuta kada rok nije naveden; `limits.mjs` čuva samo poslednji rezultat u memoriji. Na drugim sistemima podaci nisu dostupni. Antigravity limit se čita samo iz pristupnog tokena koji `agy` već drži u Keychain-u; Agent Desk taj token ne obnavlja, jer bi za to morao da izvuče Google-ov ključ klijenta iz `agy` programa. Zato je Antigravity limit dostupan dok je `agy` radio u poslednjih sat vremena, a posle toga kartica prikazuje poslednje sačuvano očitavanje i poruku da treba pokrenuti `agy`. `AGENT_DESK_DISABLE_LIMITS=1` isključuje očitavanje; integracioni testovi koriste tu opciju.
 
 
 ## Izbor fajlova i brisanje
