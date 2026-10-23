@@ -392,11 +392,11 @@ export function messageChangeHtml(message, escape, {cwd = '', openPath = '', sta
     const shown = displayPath(file.path, cwd), url = fileAssetUrl(file.path, cwd);
     const isImage = type === 'image';
     const missing = kind === 'delete' || unavailableMedia.has(url);
-    const open = !missing && (isImage || openPath && sameFile(file.path, openPath, cwd));
+    const open = !missing && !isImage && openPath && sameFile(file.path, openPath, cwd);
     const icon = type === 'video' ? '▶' : type === 'audio' ? '♫' : type === 'image' ? '▧' : '▤';
     const thumb = missing ? '' : isImage ? `<img class="media-thumbnail" src="${escape(url)}" alt="" loading="lazy">` : type === 'video' ? `<video class="media-thumbnail" src="${escape(url)}#t=0.1" muted playsinline preload="metadata" aria-hidden="true"></video>` : '';
-    const tag = isImage ? 'figure' : 'button';
-    const action = isImage ? '' : `type="button" data-chat-file="${escape(file.path)}" aria-expanded="${open ? 'true' : 'false'}"`;
+    const tag = 'button';
+    const action = isImage ? `type="button"${missing ? ' disabled' : ' data-preview-image'} ` : `type="button" data-chat-file="${escape(file.path)}" aria-expanded="${open ? 'true' : 'false'}"`;
     return `<div class="chat-file-block media-block${open ? isImage ? ' image-expanded' : ' media-open' : ''}"><${tag} class="chat-file media-tile ${type}${open ? ' selected' : ''}${missing ? ' thumbnail-missing' : ''}" ${action} data-file-path="${escape(file.path)}" ${missing ? ' aria-disabled="true"' : ''} aria-label="${escape(shown + ', ' + label)}" title="${escape(shown + (missing ? ' (pregled nije dostupan)' : ''))}"><span class="media-placeholder" aria-hidden="true">${icon}</span>${thumb}${type === 'audio' || type === 'binary' ? `<span class="media-name">${escape(fileParts(file.path).name)}</span>` : ''}<span class="media-state">${label}</span></${tag}>${isImage ? '' : `<div class="chat-diff-body"${open ? '' : ' hidden'}></div>`}</div>`;
   }).join('')}</section>` : '';
   if (!files.length) return mediaHtml;

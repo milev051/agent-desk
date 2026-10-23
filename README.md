@@ -388,6 +388,4 @@ Ispod odgovora stoji samo skupljena stavka „Izmene (N)“ sa stvarno menjanim 
 
 Otvorene i izmenjene slike/video prikazuju se kao thumbnailovi sa oznakom stanja. Audio i ostali binarni fajlovi imaju kompaktnu karticu bez brojača redova. Tekstualni fajlovi zadržavaju diff i brojače; samo pročitani tekstualni fajlovi ostaju u toku rada. Video/audio se puštaju klikom, bez automatskog reprodukovanja.
 
-Klik na sliku u listi medija uvećava isti već učitani thumbnail na istom mestu; ponovni klik ga smanjuje. Ne dodaje se druga slika niti se pri uvećanju ponovo čita putanja. Nedostupni thumbnailovi ostaju kao diskretan simbol i status, bez pokvarene ikonice i ponovnih zahteva tokom iscrtavanja.
-
-Sve slike u poslatim prilozima i prikazu rada agenta odmah su raširene na širinu poruke, sa očuvanim proporcijama i bez odsecanja. Slike koje agent prikazuje nemaju dodatnu komandu za smanjivanje.
+Slike u prilozima i radu agenta imaju kompaktan pregled. Klik otvara veliku sliku u popupu na telefonu i računaru; Zatvori, Esc ili povratak zatvaraju pregled. Nedostupne slike prikazuju simbol i status.

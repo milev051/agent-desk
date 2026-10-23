@@ -265,20 +265,21 @@ test('slike i video su thumbnailovi sa stanjem, audio i binarni fajlovi nemaju b
  assert.equal(fileAssetUrl('my pic.jpg','/project'),'/files/project/my%20pic.jpg');
 });
 
-test('uvećanje slike zadržava samo jedan thumbnail bez dodatnog tela i zahteva za diff',()=>{
+test('pregled slike zadržava jedan thumbnail bez dodatnog tela i zahteva za diff',()=>{
  const message={actions:[{kind:'file',text:'photo.jpg',change:'open'}]};
  const html=messageChangeHtml(message,escape,{cwd:'/project',imageExpanded:()=>true});
- assert.match(html,/image-expanded/);assert.match(html,/<figure class="chat-file media-tile image/);
+ assert.match(html,/data-preview-image/);assert.match(html,/<button class="chat-file media-tile image/);
  assert.equal((html.match(/<img/g)||[]).length,1);assert.doesNotMatch(html,/chat-diff-body|data-chat-file=/);
  const missing=messageChangeHtml(message,escape,{cwd:'/project',unavailableMedia:new Set(['/files/project/photo.jpg'])});
  assert.doesNotMatch(missing,/<img/);assert.match(missing,/thumbnail-missing/);
 });
 
-test('slike su odmah raširene i nemaju komandu za smanjivanje',()=>{
+test('slike otvaraju popup bez inline proširivanja',()=>{
  const message={actions:[{kind:'file',text:'photo.jpg',change:'open'}]};
  const html=messageChangeHtml(message,escape,{cwd:'/project'});
- assert.match(html,/media-block image-expanded/);assert.match(html,/<figure /);
+ assert.doesNotMatch(html,/image-expanded/);assert.match(html,/data-preview-image/);
  assert.doesNotMatch(html,/data-inline-image|data-chat-file|chat-diff-body/);
  const app=fs.readFileSync(new URL('../public/app.js',import.meta.url),'utf8');
  assert.doesNotMatch(app,/toggleInlineImage|expandedMediaImages/);
+ assert.match(app,/openAttachmentPreview\(image.currentSrc\|\|image.src/);
 });
