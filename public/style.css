@@ -517,10 +517,10 @@ body #chats .chat-row.working,body #agent-tree .agent-tree-item.working{backgrou
 
 /* Kompaktni limiti: boja okvira označava agenta, boja cifara preostali limit. */
 #new-agents .new-agent{min-width:0;min-height:38px;padding:5px 6px;gap:0;border:1px solid var(--header-agent-color,#aaa);border-radius:5px}
-#new-agents .new-agent[data-new-agent="codex"]{--header-agent-color:#c7b1ec;--header-agent-bg:#6421a0;--header-agent-hover:#7631b7}
-#new-agents .new-agent[data-new-agent="claude"]{--header-agent-color:#f2a36e;--header-agent-bg:#873305;--header-agent-hover:#933806}
-#new-agents .new-agent[data-new-agent="antigravity"]{--header-agent-color:#6eafff;--header-agent-bg:#1456a6;--header-agent-hover:#175aa9}
-#new-agents .new-agent[data-new-agent="grok"]{--header-agent-color:#c4c8d2;--header-agent-bg:#46515f;--header-agent-hover:#4b5765}
+#new-agents .new-agent[data-new-agent="codex"]{--header-agent-color:#c7b1ec;--header-agent-bg:#3d155f;--header-agent-hover:#4b1c73}
+#new-agents .new-agent[data-new-agent="claude"]{--header-agent-color:#f2a36e;--header-agent-bg:#542306;--header-agent-hover:#652b08}
+#new-agents .new-agent[data-new-agent="antigravity"]{--header-agent-color:#6eafff;--header-agent-bg:#10345e;--header-agent-hover:#153f70}
+#new-agents .new-agent[data-new-agent="grok"]{--header-agent-color:#c4c8d2;--header-agent-bg:#282f39;--header-agent-hover:#343c48}
 #new-agents .new-agent[data-new-agent="grok"] .agent-limits{align-items:center}
 #new-agents .new-agent.expanded{box-shadow:inset 0 0 0 1px var(--header-agent-color)}
 #new-agents .agent-limits{font-size:12px;gap:4px}
@@ -737,7 +737,7 @@ body:has(> #restart-status:not([hidden])){padding-top:41px}
 #new-agents .new-agent:focus-visible{outline:2px solid var(--header-agent-color);outline-offset:-2px}
 
 /* Zelena pozadina baterije telefona i Maca, sa svetlim čitljivim procentom. */
-.sidebar-actions #new-agents #defaults-open{background:#146c37}
+.sidebar-actions #new-agents #defaults-open{background:#124225}
 #device-battery small:not(.battery-unknown){color:#e5ffed}
 #new-agents .limit-good{color:#9bffb0}
 #new-agents .limit-mid{color:#fff29a}
