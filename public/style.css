@@ -809,3 +809,5 @@ body.live-preview-open #prompt{max-height:20dvh}
 @media(max-width:650px){body.live-preview-open main{padding-top:var(--live-preview-height,50dvh)!important}body.live-preview-open #live-preview{left:0!important;width:100%!important}body.live-preview-open .composer-area{max-height:45%;overflow:auto}}
 
 @media(max-width:650px){body.live-preview-open #mobile-agent-header{display:none}body.live-preview-open{grid-template-rows:0 minmax(0,1fr)!important}}
+/* Zaglavlje sa limitima i baterijom: više vertikalnog prostora, da razmak gore i dole bude bliži bočnom. */
+#new-agents .new-agent,.sidebar-actions #new-agents #defaults-open,#mobile-agent-header button{padding-top:10px;padding-bottom:10px;min-height:48px}
