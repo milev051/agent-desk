@@ -1,4 +1,5 @@
 import {test} from 'node:test';
+import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import {EventEmitter} from 'node:events';
 import fs from 'node:fs';
@@ -40,7 +41,8 @@ test('poslednji odgovor daje fajlove i kratak diff samo kad je sačuvan', () => 
   assert.match(changeColumnHtml(message, 0, escape, {agentIcon: 'data:image/svg+xml,x'}), /<img class="files-mark"/);
   const inline = messageChangeHtml(message, escape, {cwd: '/tmp'});
   assert.match(inline, /chat-file-list/);
-  assert.match(inline, /chat-change-note/);
+  assert.match(inline, /<summary>Izmene \(2\)<\/summary>/);
+  assert.doesNotMatch(inline, /chat-change-note/);
   assert.match(changeSentences(message, '/tmp'), /U public\/app\.js dodat je 1 red\. Dodato: red\./);
   assert.match(changeSentences(message, '/tmp'), /U README\.md zabeležena je izmena/);
   assert.equal(historyText([{role: 'assistant', agent: 'grok', text: 'Gotovo', actions: message.actions}]).includes('chat-change-note'), false);
@@ -227,4 +229,22 @@ test('redovi koda sa dodatnim plus/minus znacima unutar hunka ulaze u statistiku
  assert.deepEqual(diffStat('--- a/file\n+++ b/file\n@@ -1 +1 @@\n---code\n+++code'),{added:1,removed:1});
  const html=messageChangeHtml({actions:[{kind:'file',text:'x.js',change:'edit'}]},escape,{statsFor:()=>'+added\n-old'});
  assert.match(html,/2 izmene/);
+});
+
+test('rezultat skriva samo otvorene fajlove, a izmene su skupljene dok se ne otvore',()=>{
+ const open={kind:'file',text:'/tmp/screenshot.png',change:'open'};
+ assert.equal(messageChangeHtml({actions:[open]},escape),'');
+ const message={actions:[open,{kind:'file',text:'src/app.js',change:'update',diff:'-old\n+new'}]};
+ const html=messageChangeHtml(message,escape);
+ assert.doesNotMatch(html,/screenshot/);assert.match(html,/<details class="chat-changes">/);assert.match(html,/Izmene \(1\)/);
+ assert.match(messageChangeHtml(message,escape,{openPath:'src/app.js'}),/<details class="chat-changes" open>/);
+});
+
+test('nedostupna slika daje kratak tekst umesto pokvarene ikonice',async()=>{
+ const app=fs.readFileSync(new URL('../public/app.js',import.meta.url),'utf8');
+ const start=app.indexOf('async function loadChatFileDiff('),end=app.indexOf('function restoreOpenChatFile(',start);
+ const body={closest:()=>null,querySelector:()=>null,isConnected:true,hidden:false,innerHTML:''};
+ const context={current:()=>({id:'chat'}),chatDiffCache:new Map(),touchAbsolute:()=>'/tmp/missing.png',fetch:async()=>({ok:false})};
+ vm.runInNewContext(app.slice(start,end),context);await context.loadChatFileDiff(body,'/tmp/missing.png');
+ assert.match(body.innerHTML,/više nije dostupna/);assert.doesNotMatch(body.innerHTML,/<img/);
 });

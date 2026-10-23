@@ -756,3 +756,9 @@ body:has(> #restart-status:not([hidden])){padding-top:41px}
 .github-diff .diff-row-hunk{background:#142b42;color:#a5d6ff}.github-diff .diff-row-meta{color:#8b949e;background:#161b22}
 .chat-file-image{display:block;max-width:100%;max-height:65dvh;object-fit:contain;background:#111}
 @media(max-width:650px){.chat-file .touched-pill,.chat-file-stats .file-change-total{display:none}.github-diff .diff-row{grid-template-columns:32px 32px 18px minmax(0,1fr)}}
+
+/* Rezultat prikazuje samo stvarne izmene, skupljene u jednu nenametljivu stavku. */
+.chat-changes{margin-top:12px;color:#a8a8a8;font-size:12px}
+.chat-changes>summary{cursor:pointer;padding:6px 0;user-select:none}
+.chat-changes>summary:hover{color:#eee}
+.chat-changes>.chat-file-list{margin-top:4px}

@@ -363,20 +363,19 @@ export function changeSentences(message, cwd = '') {
 }
 
 export function messageChangeHtml(message, escape, {cwd = '', openPath = '', statsFor = () => undefined} = {}) {
-  const files = touchedFiles(message);
+  const files = touchedFiles(message).filter(file => touchKind(file) !== 'open');
   for (const file of files) {
     const patches = [...new Set((message?.actions || []).filter(action => action.kind === 'file' && sameFile(action.text, file.path, cwd) && typeof action.diff === 'string' && action.diff.trim()).map(action => action.diff))];
     if (patches.length) file.diff = patches.join('\n');
   }
   if (!files.length) return '';
-  const note = changeSentences(message, cwd);
-  const lead = note ? `<p class="chat-change-note">${escape(note)}</p>` : '';
-  return `<section class="chat-diff chat-file-list">${lead}${files.map((file, index) => {
+  const expanded = openPath && files.some(file => sameFile(file.path, openPath, cwd));
+  return `<details class="chat-changes"${expanded ? ' open' : ''}><summary>Izmene (${files.length})</summary><section class="chat-diff chat-file-list">${files.map((file, index) => {
     const kind = touchKind(file);
     const label = kind === 'delete' ? 'Brisanje' : kind === 'open' ? 'Otvoreno' : 'Izmenjeno';
     const shown = displayPath(file.path, cwd);
     const open = openPath && sameFile(file.path, openPath, cwd);
     const body = file.diff ? githubDiffHtml(file.diff, escape) : '';
     return `<div class="chat-file-block"><div class="chat-file-row"><button type="button" class="chat-file ${kind}${open ? ' selected' : ''}" data-chat-file="${escape(file.path)}" data-chat-file-label="${escape(shown)}" aria-expanded="${open ? 'true' : 'false'}" aria-label="${escape(shown)}" data-file-path="${escape(file.path)}" title="${escape(shown)} (⌘ klik: folder u Finderu)"><span class="chat-file-index">${index + 1}</span><span class="touched-path">${escape(shown)}</span><span class="touched-pill">${label}</span>${fileDiffStatsHtml(file.diff || statsFor(file.path), escape, {known: kind === 'open' || statsFor(file.path) !== undefined})}</button></div><div class="chat-diff-body"${open ? '' : ' hidden'}>${body}</div></div>`;
-  }).join('')}</section>`;
+  }).join('')}</section></details>`;
 }

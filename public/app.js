@@ -962,7 +962,17 @@ async function loadChatFileDiff(body,filePath){
  const abs=touchAbsolute(filePath);
  if(abs && /\.(png|jpe?g|webp|gif|avif)$/i.test(abs)){
   const src='/files'+abs.split('/').map(encodeURIComponent).join('/');
-  body.innerHTML=`<p class="change-missing">Slika, bez tekstualnog diff prikaza.</p><img class="chat-file-image" src="${escape(src)}" alt="${escape(filePath)}" loading="lazy">`;return;
+  body.innerHTML='<p class="change-missing">Učitavam sliku…</p>';
+  try{
+   const response=await fetch(src);if(!response.ok)throw Error();
+   const blob=await response.blob();if(!body.isConnected || body.hidden)return;
+   const url=URL.createObjectURL(blob),image=document.createElement('img');
+   image.className='chat-file-image';image.alt=filePath;
+   image.onload=()=>URL.revokeObjectURL(url);
+   image.onerror=()=>{URL.revokeObjectURL(url);if(body.isConnected)body.innerHTML='<p class="change-missing">Pregled slike nije dostupan.</p>';};
+   body.replaceChildren(image);image.src=url;
+  }catch{if(body.isConnected && !body.hidden)body.innerHTML='<p class="change-missing">Slika više nije dostupna na toj putanji.</p>';}
+  return;
  }
  body.innerHTML='<p class="change-missing">Učitavam izmenu…</p>';
  try{
