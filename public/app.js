@@ -9,7 +9,7 @@ import {answerText} from './final-answer.mjs';
 import {needsCacheConfirm,changeColumnHtml,lastTouchedMessage,touchedFiles,sameFile,fileState,fileParts,fileStamp,fileSize,changesLabel,diffPreviewHtml,githubDiffHtml,fileDiffStatsHtml,fileMediaKind,changedLinesHtml,messageChangeHtml} from './desk-modes.mjs';
 import {createAndroidPrompt,observePromptChanges} from './prompt-editor.mjs';
 import {createDraftHistory} from './draft-history.mjs';
-import {previewTarget} from './page-preview.mjs';
+import {previewTarget,attachmentViewMode} from './page-preview.mjs';
 import {startNotificationPresence} from './notification-presence.mjs';
 import {noticeTone,chooseNoticeSound} from './notice-sound.mjs';
 import {createCliUpdatesPanel} from './cli-updates.mjs';
@@ -1502,11 +1502,11 @@ $('#local-file-close').onclick=()=>{$('#local-file-dialog').close();$('#local-fi
 let attachmentHistory=false,pdfViewer;
 function showAttachmentDialog(){if(!$('#attachment-view').open)$('#attachment-view').showModal();if(!attachmentHistory){attachmentHistory=true;history.pushState({agentDesk:true,attachment:true},'',location.href);}}
 function openPdfPreview(src){$('#attachment-view-image').hidden=true;$('#attachment-pdf').hidden=false;$('#attachment-pdf').textContent='Učitavanje PDF-a…';showAttachmentDialog();guard(async()=>{pdfViewer ||= await import('/pdf-view.mjs');if($('#attachment-view').open && !$('#attachment-pdf').hidden)await pdfViewer.showPdf(src);});}
-function openAttachmentPreview(src,alt){pdfViewer?.closePdf();$('#attachment-pdf').hidden=true;const view=$('#attachment-view-image');$('#attachment-view').classList.remove('page-view','actual-size');view.hidden=false;view.alt=alt||'';view.src=src;showAttachmentDialog();}
+function openAttachmentPreview(src,alt){pdfViewer?.closePdf();$('#attachment-pdf').hidden=true;const view=$('#attachment-view-image');$('#attachment-view').classList.remove('page-view','desktop-view','actual-size');view.hidden=false;view.alt=alt||'';view.src=src;showAttachmentDialog();}
 function closeAttachmentPreview(){if(attachmentHistory){attachmentHistory=false;history.back();return;}if($('#attachment-view').open)$('#attachment-view').close();}
 $('#attachment-view-close').onclick=closeAttachmentPreview;
 // Snimak cele stranice (visina veća od 1,4 širine) prikazuje se po širini ekrana uz skrolovanje; klik menja na pravu veličinu.
-$('#attachment-view-image').addEventListener('load',e=>{const img=e.target;$('#attachment-view').classList.toggle('page-view',img.naturalHeight>img.naturalWidth*1.4);});
+$('#attachment-view-image').addEventListener('load',e=>{const img=e.target,mode=attachmentViewMode(img.getAttribute('src'),img.naturalWidth,img.naturalHeight),dialog=$('#attachment-view');dialog.classList.toggle('page-view',mode.page);dialog.classList.toggle('desktop-view',mode.desktop);dialog.scrollTop=0;});
 $('#attachment-view-image').addEventListener('click',()=>{const view=$('#attachment-view');if(view.classList.contains('page-view'))view.classList.toggle('actual-size');});
 $('#attachment-view').addEventListener('cancel',e=>{e.preventDefault();closeAttachmentPreview();});
 $('#attachment-view').addEventListener('click',e=>{if(e.target===$('#attachment-view'))closeAttachmentPreview();});

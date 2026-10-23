@@ -811,3 +811,5 @@ body.live-preview-open #prompt{max-height:20dvh}
 @media(max-width:650px){body.live-preview-open #mobile-agent-header{display:none}body.live-preview-open{grid-template-rows:0 minmax(0,1fr)!important}}
 /* Zaglavlje sa limitima i baterijom: više vertikalnog prostora, da razmak gore i dole bude bliži bočnom. */
 #new-agents .new-agent,.sidebar-actions #new-agents #defaults-open,#mobile-agent-header button{padding-top:10px;padding-bottom:10px;min-height:48px}
+/* Snimak za računar na uspravnom telefonu: popup je okrenut za 90°, pa se čita kao na položenom telefonu i skroluje niz stranicu. */
+@media(max-width:650px) and (orientation:portrait){#attachment-view.page-view.desktop-view[open]{position:fixed;inset:auto;top:0;left:0;width:100dvh;height:100vw;max-width:none;max-height:none;transform-origin:top left;transform:rotate(90deg) translateY(-100%)}}

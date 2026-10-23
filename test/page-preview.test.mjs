@@ -37,3 +37,10 @@ test('Chrome snimi celu stranicu u širini 1920 px posle skrolovanja kroz animac
     assert.ok(fs.statSync(shot.path).size>0);
   }finally{server.close();fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('snimak za računar u popupu se skroluje i okreće, obične slike ne', async () => {
+  const {attachmentViewMode}=await import('../public/page-preview.mjs');
+  assert.deepEqual(attachmentViewMode('/api/chats/x/prilog?name=20261023-170132-pregled-racunar-127-0-0-1-4321.webp',1920,1230),{page:true,desktop:true});
+  assert.deepEqual(attachmentViewMode('/a/pregled-telefon-milev-rs.webp',390,3000),{page:true,desktop:false});
+  assert.deepEqual(attachmentViewMode('/a/slika.webp',4000,3000),{page:false,desktop:false});
+});
