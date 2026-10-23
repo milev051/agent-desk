@@ -4,6 +4,13 @@ export function livePreviewLink(event){
  const link=event.target.closest('a[href]');if(!link||!link.closest('.message-body')||link.closest('.attachment-thumbs')||link.matches('[data-local-file],[data-file-path],[download]'))return null;
  const href=link.getAttribute('href');return /^https?:\/\//i.test(href||'')?href:null;
 }
+// Links to Agent Desk itself (its own origin or loopback ports 4317-4321) open the app, not the proxy that rejects them.
+export function ownAppLink(href,here=location){
+ let url;try{url=new URL(href,here.href);}catch{return null;}
+ const port=Number(url.port||(url.protocol==='https:'?443:80));
+ if(url.origin!==here.origin&&!(['127.0.0.1','localhost','[::1]'].includes(url.hostname)&&port>=4317&&port<=4321))return null;
+ return here.origin+url.pathname+url.search+url.hash;
+}
 export function createLivePreview({root,conversation,api,phoneRemote=false,report=()=>{}}){
  const frame=root.querySelector('iframe'),viewport=root.querySelector('[data-preview-viewport]'),address=root.querySelector('[data-preview-address]'),width=root.querySelector('select'),status=root.querySelector('[role="status"]'),handle=root.querySelector('[data-preview-resize]');
  let current='',remote='',generation=0,controller=null,historyOpen=false,historyGuard=0;
@@ -25,7 +32,7 @@ export function createLivePreview({root,conversation,api,phoneRemote=false,repor
  }
  function open(url){current=url;address.textContent=url;address.title=url;root.querySelector('[data-preview-external]').href=url;root.hidden=false;document.body.classList.add('live-preview-open');if(!historyOpen){history.pushState({...history.state,livePreview:true},'',location.href);historyOpen=true;}resize();void load();}
  function close({fromHistory=false}={}){if(root.hidden)return false;++generation;controller?.abort();root.hidden=true;navigate('about:blank');document.body.classList.remove('live-preview-open');document.body.style.removeProperty('--live-preview-height');if(historyOpen&&!fromHistory&&history.state?.livePreview){const state={...history.state};delete state.livePreview;delete state.livePreviewGuard;history.replaceState(state,'',location.href);}historyOpen=false;void api('/api/preview','DELETE').catch(report);return true;}
- conversation.addEventListener('click',event=>{const url=livePreviewLink(event);if(!url)return;event.preventDefault();event.stopImmediatePropagation();open(url);},{capture:true});
+ conversation.addEventListener('click',event=>{const url=livePreviewLink(event);if(!url)return;event.preventDefault();event.stopImmediatePropagation();const app=ownAppLink(url);if(app)location.assign(app);else open(url);},{capture:true});
  root.querySelector('[data-preview-close]').onclick=()=>close();root.querySelector('[data-preview-refresh]').onclick=()=>void load();width.onchange=resize;
  handle.onpointerdown=event=>{event.preventDefault();handle.setPointerCapture(event.pointerId);root.classList.add('resizing');};
  handle.onpointermove=event=>{if(!handle.hasPointerCapture(event.pointerId))return;ratio=Math.min(.7,Math.max(.2,event.clientY/(window.visualViewport?.height||window.innerHeight)));resize();};

@@ -5,7 +5,7 @@ import net from 'node:net';
 import {once} from 'node:events';
 import {createLivePreview,validatePreviewTarget,addressKind,previewResponseHeaders,previewRequestHeaders} from '../live-preview.mjs';
 import {createPhoneAuth} from '../phone-access.mjs';
-import {previewScale,livePreviewLink} from '../public/live-preview.mjs';
+import {previewScale,livePreviewLink,ownAppLink} from '../public/live-preview.mjs';
 
 const listen=server=>new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const request=(server,path='/',headers={})=>new Promise((resolve,reject)=>{http.get({hostname:'127.0.0.1',port:server.address().port,path,headers:{host:'127.0.0.1:0',...headers}},res=>{let body='';res.on('data',b=>body+=b);res.on('end',()=>resolve({status:res.statusCode,headers:res.headers,body}));}).on('error',reject);});
@@ -49,6 +49,9 @@ test('frontend: klik prihvata samo pune http(s) poruke, prečice i prilozi ostaj
  const event=(href,props={})=>({button:0,target:{closest:()=>({getAttribute:()=>href,closest:selector=>selector==='.message-body'?{}:null,matches:()=>false})},...props});
  assert.equal(livePreviewLink(event('https://milev.rs/')),'https://milev.rs/');assert.equal(livePreviewLink(event('http://localhost:3000/')),'http://localhost:3000/');for(const href of ['/Users/name/a.txt','/api/chats/x/prilog','mailto:test@example.com'])assert.equal(livePreviewLink(event(href)),null);
  for(const props of [{ctrlKey:true},{metaKey:true},{button:1},{defaultPrevented:true}])assert.equal(livePreviewLink(event('https://milev.rs',props)),null);
+ const phone={href:'https://mac.tail.ts.net/#chat=1',origin:'https://mac.tail.ts.net'};
+ assert.equal(ownAppLink('http://127.0.0.1:4317/',phone),'https://mac.tail.ts.net/');assert.equal(ownAppLink('http://localhost:4321/x?a=1',phone),'https://mac.tail.ts.net/x?a=1');assert.equal(ownAppLink('https://mac.tail.ts.net/#chat=2',phone),'https://mac.tail.ts.net/#chat=2');
+ for(const href of ['http://127.0.0.1:3000/','https://milev.rs/','http://127.0.0.1:4322/'])assert.equal(ownAppLink(href,phone),null,href);
  assert.deepEqual(previewScale(390,300),{scale:390/1920,width:1920,height:300/(390/1920)});assert.equal(previewScale(390,300,390).scale,1);
 });
 
