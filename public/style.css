@@ -729,7 +729,8 @@ body:has(> #restart-status:not([hidden])){padding-top:41px}
   box-shadow:inset 2px 0 #f4c75b,inset -2px 0 #f4c75b,inset 0 2px #f4c75b;
 }
 
-#action-status{position:static;color:#ffb4b4;font-size:12px;margin:0 0 8px;overflow-wrap:anywhere}
+#action-status{position:static;color:#ffb4b4;font-size:12px;margin:0;padding:8px 10px;line-height:20px;overflow-wrap:anywhere;box-sizing:border-box}
+#connection{line-height:20px}
 
 /* Jasno vidljive boje platformi i pri smanjenoj osvetljenosti ekrana. */
 #new-agents .new-agent{background:#000;box-shadow:none}
