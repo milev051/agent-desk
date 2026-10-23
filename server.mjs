@@ -861,7 +861,7 @@ const server = http.createServer(async (req, res) => {
       // Samo novi, nekorišćeni obični četovi. Proverava se sveže stanje servera.
       if(chat.discardOnLeave!==true || chat.keepEmpty || chat.parentChatId || chat.titleManual || chat.messages.length || chat.queue?.length || chat.draft?.text?.trim() || Object.keys(chat.sessions || {}).length || running.has(chat.id) || chats.some(c=>c.parentChatId===chat.id) || fs.existsSync(path.join(dataDir,'prilozi',chat.id)))return json(409,{error:'Čet ima sadržaj ili je trajno sačuvan.'});
       chats=chats.filter(c=>c.id!==chat.id);update();return json(200,{ok:true,deleted:true});}
-    const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(access|read|draft|context-view|restart-resume|risk-note|unlink|link|send|stop|generate-title|project|reset-session|speak|speech|fork|handoff|delegate|reveal|record|count-tokens|files|upload|prilog)(?:\/([a-f0-9]{16}))?)?$/);
+    const match = url.pathname.match(/^\/api\/chats\/([\w-]+)(?:\/(access|read|draft|context-view|restart-resume|risk-note|unlink|link|send|stop|generate-title|project|reset-session|speak|speech|fork|handoff|delegate|reveal|record|count-tokens|files|upload|prilog|snapshot)(?:\/([a-f0-9]{16}))?)?$/);
     if (match) {
       const chat = chats.find(c => c.id === match[1]); if (!chat) return json(404, { error: 'Čet nije pronađen.' });
       if(req.method==='POST' && match[2]==='generate-title'){

@@ -118,6 +118,9 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     const uploaded=await fetch(`${base}/api/chats/${made.id}/upload`,{method:'POST',headers:{Origin:base,'X-File-Name':encodeURIComponent('../slika ž.png')},body:Buffer.from('png')});const saved=(await uploaded.json()).path;
     assert.equal(uploaded.status,201);assert.match(saved,/prilozi\/[\w-]+\/\d{8}-\d{6}-slika ž\.png$/);assert.equal(readFileSync(saved,'utf8'),'png');
     assert.equal((await fetch(`${base}/api/chats/${made.id}/upload`,{method:'POST',headers:{Origin:'https://example.com'},body:'x'})).status,403);
+    // Ruta za pregled stranice postoji i odbija adrese koje nisu http ili https.
+    const shot=await fetch(`${base}/api/chats/${made.id}/snapshot`,{method:'POST',headers:{Origin:base,'Content-Type':'application/json'},body:JSON.stringify({url:'file:///etc/hosts'})});
+    assert.notEqual(shot.status,404);assert.match((await shot.json()).error,/Chrome|http i https/);
     const shown=await fetch(`${base}/api/chats/${made.id}/prilog?name=${encodeURIComponent(path.basename(saved))}`);assert.equal(shown.status,200);assert.equal(shown.headers.get('content-type'),'image/png');assert.equal(await shown.text(),'png');
     assert.equal((await fetch(`${base}/api/chats/${made.id}/prilog?name=${encodeURIComponent('../../chats.json')}`)).status,404);
     const doc=path.join(path.dirname(saved),'izveštaj.pdf');writeFileSync(doc,'pdf');const downloaded=await fetch(`${base}/api/chats/${made.id}/prilog?name=${encodeURIComponent('izveštaj.pdf')}`);assert.equal(downloaded.headers.get('content-type'),'application/octet-stream');assert.match(downloaded.headers.get('content-disposition'),/^attachment/);
