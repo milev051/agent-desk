@@ -362,20 +362,45 @@ export function changeSentences(message, cwd = '') {
   return shown.join(' ');
 }
 
+export function fileMediaKind(filePath) {
+  const name = String(filePath || '').split(/[\\/]/).pop().toLowerCase();
+  const ext = name.includes('.') ? name.split('.').pop() : '';
+  if (/^(png|jpe?g|gif|webp|avif|svg|bmp|ico|tiff?|heic)$/.test(ext)) return 'image';
+  if (/^(mp4|webm|mov|m4v|ogv|avi|mkv)$/.test(ext)) return 'video';
+  if (/^(mp3|wav|m4a|aac|ogg|oga|flac|opus|aiff?)$/.test(ext)) return 'audio';
+  if (/^(txt|md|mdx|rst|log|csv|tsv|json|jsonl|ya?ml|toml|ini|cfg|conf|xml|html?|css|scss|sass|less|js|mjs|cjs|jsx|ts|tsx|vue|svelte|py|rb|go|rs|c|cc|cpp|h|hpp|swift|kt|kts|java|php|sql|sh|bash|zsh|fish|r|lua|pl|ps1|bat|cmd|tex|graphql|gql|proto|lock|diff|patch)$/.test(ext) || /^(readme|license|licence|makefile|dockerfile|procfile|gemfile)$/i.test(name)) return 'text';
+  return 'binary';
+}
+
+export function fileAssetUrl(filePath, cwd = '') {
+  const value = String(filePath || '').replace(/\\/g, '/');
+  const absolute = value.startsWith('/') ? value : `${cwd.replace(/\/$/, '')}/${value.replace(/^\.\//, '')}`;
+  return '/files' + absolute.split('/').map(encodeURIComponent).join('/');
+}
+
 export function messageChangeHtml(message, escape, {cwd = '', openPath = '', statsFor = () => undefined} = {}) {
-  const files = touchedFiles(message).filter(file => touchKind(file) !== 'open');
+  const all = touchedFiles(message);
+  const files = all.filter(file => fileMediaKind(file.path) === 'text' && touchKind(file) !== 'open');
+  const media = all.filter(file => fileMediaKind(file.path) !== 'text');
   for (const file of files) {
     const patches = [...new Set((message?.actions || []).filter(action => action.kind === 'file' && sameFile(action.text, file.path, cwd) && typeof action.diff === 'string' && action.diff.trim()).map(action => action.diff))];
     if (patches.length) file.diff = patches.join('\n');
   }
-  if (!files.length) return '';
-  const expanded = openPath && files.some(file => sameFile(file.path, openPath, cwd));
-  return `<details class="chat-changes"${expanded ? ' open' : ''}><summary>Izmene (${files.length})</summary><section class="chat-diff chat-file-list">${files.map((file, index) => {
-    const kind = touchKind(file);
-    const label = kind === 'delete' ? 'Brisanje' : kind === 'open' ? 'Otvoreno' : 'Izmenjeno';
-    const shown = displayPath(file.path, cwd);
+  const mediaHtml = media.length ? `<section class="chat-media-list" aria-label="Slike, video, audio i drugi fajlovi">${media.map(file => {
+    const type = fileMediaKind(file.path), kind = touchKind(file);
+    const label = kind === 'delete' ? 'Obrisano' : kind === 'open' ? 'Otvoreno' : 'Izmenjeno';
+    const shown = displayPath(file.path, cwd), url = fileAssetUrl(file.path, cwd);
     const open = openPath && sameFile(file.path, openPath, cwd);
+    const icon = type === 'video' ? '▶' : type === 'audio' ? '♫' : type === 'image' ? '▧' : '▤';
+    const thumb = kind === 'delete' ? '' : type === 'image' ? `<img class="media-thumbnail" src="${escape(url)}" alt="" loading="lazy">` : type === 'video' ? `<video class="media-thumbnail" src="${escape(url)}#t=0.1" muted playsinline preload="metadata" aria-hidden="true"></video>` : '';
+    return `<div class="chat-file-block media-block${open ? ' media-open' : ''}"><button type="button" class="chat-file media-tile ${type}${open ? ' selected' : ''}" data-chat-file="${escape(file.path)}" data-file-path="${escape(file.path)}" aria-expanded="${open ? 'true' : 'false'}" aria-label="${escape(shown + ', ' + label)}" title="${escape(shown)}"><span class="media-placeholder" aria-hidden="true">${icon}</span>${thumb}${type === 'audio' || type === 'binary' ? `<span class="media-name">${escape(fileParts(file.path).name)}</span>` : ''}<span class="media-state">${label}</span></button><div class="chat-diff-body"${open ? '' : ' hidden'}></div></div>`;
+  }).join('')}</section>` : '';
+  if (!files.length) return mediaHtml;
+  const expanded = openPath && files.some(file => sameFile(file.path, openPath, cwd));
+  return `${mediaHtml}<details class="chat-changes"${expanded ? ' open' : ''}><summary>Izmene (${files.length})</summary><section class="chat-diff chat-file-list">${files.map((file, index) => {
+    const kind = touchKind(file), label = kind === 'delete' ? 'Brisanje' : 'Izmenjeno';
+    const shown = displayPath(file.path, cwd), open = openPath && sameFile(file.path, openPath, cwd);
     const body = file.diff ? githubDiffHtml(file.diff, escape) : '';
-    return `<div class="chat-file-block"><div class="chat-file-row"><button type="button" class="chat-file ${kind}${open ? ' selected' : ''}" data-chat-file="${escape(file.path)}" data-chat-file-label="${escape(shown)}" aria-expanded="${open ? 'true' : 'false'}" aria-label="${escape(shown)}" data-file-path="${escape(file.path)}" title="${escape(shown)} (⌘ klik: folder u Finderu)"><span class="chat-file-index">${index + 1}</span><span class="touched-path">${escape(shown)}</span><span class="touched-pill">${label}</span>${fileDiffStatsHtml(file.diff || statsFor(file.path), escape, {known: kind === 'open' || statsFor(file.path) !== undefined})}</button></div><div class="chat-diff-body"${open ? '' : ' hidden'}>${body}</div></div>`;
+    return `<div class="chat-file-block"><div class="chat-file-row"><button type="button" class="chat-file ${kind}${open ? ' selected' : ''}" data-chat-file="${escape(file.path)}" data-chat-file-label="${escape(shown)}" aria-expanded="${open ? 'true' : 'false'}" aria-label="${escape(shown)}" data-file-path="${escape(file.path)}" title="${escape(shown)} (⌘ klik: folder u Finderu)"><span class="chat-file-index">${index + 1}</span><span class="touched-path">${escape(shown)}</span><span class="touched-pill">${label}</span>${fileDiffStatsHtml(file.diff || statsFor(file.path), escape, {known: statsFor(file.path) !== undefined})}</button></div><div class="chat-diff-body"${open ? '' : ' hidden'}>${body}</div></div>`;
   }).join('')}</section></details>`;
 }

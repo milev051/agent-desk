@@ -5,7 +5,7 @@ import {EventEmitter} from 'node:events';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {touchedFiles, blastWarnings, needsCacheConfirm, changeColumnHtml, shortDiff, fileState, diffStat, displayPath, diffPreviewHtml, githubDiffHtml, fileDiffStatsHtml, changedLinesHtml, messageChangeHtml, changeSentences} from '../public/desk-modes.mjs';
+import {touchedFiles, blastWarnings, needsCacheConfirm, changeColumnHtml, shortDiff, fileState, diffStat, displayPath, diffPreviewHtml, githubDiffHtml, fileDiffStatsHtml, fileMediaKind, fileAssetUrl, changedLinesHtml, messageChangeHtml, changeSentences} from '../public/desk-modes.mjs';
 import {parseEvent} from '../adapters.mjs';
 import {historyText} from '../context.mjs';
 import {buildAccounting} from '../accounting.mjs';
@@ -231,12 +231,12 @@ test('redovi koda sa dodatnim plus/minus znacima unutar hunka ulaze u statistiku
  assert.match(html,/2 izmene/);
 });
 
-test('rezultat skriva samo otvorene fajlove, a izmene su skupljene dok se ne otvore',()=>{
- const open={kind:'file',text:'/tmp/screenshot.png',change:'open'};
+test('rezultat skriva samo otvorene tekstualne fajlove, a izmene su skupljene dok se ne otvore',()=>{
+ const open={kind:'file',text:'/tmp/readme.md',change:'open'};
  assert.equal(messageChangeHtml({actions:[open]},escape),'');
  const message={actions:[open,{kind:'file',text:'src/app.js',change:'update',diff:'-old\n+new'}]};
  const html=messageChangeHtml(message,escape);
- assert.doesNotMatch(html,/screenshot/);assert.match(html,/<details class="chat-changes">/);assert.match(html,/Izmene \(1\)/);
+ assert.doesNotMatch(html,/readme.md/);assert.match(html,/<details class="chat-changes">/);assert.match(html,/Izmene \(1\)/);
  assert.match(messageChangeHtml(message,escape,{openPath:'src/app.js'}),/<details class="chat-changes" open>/);
 });
 
@@ -244,7 +244,23 @@ test('nedostupna slika daje kratak tekst umesto pokvarene ikonice',async()=>{
  const app=fs.readFileSync(new URL('../public/app.js',import.meta.url),'utf8');
  const start=app.indexOf('async function loadChatFileDiff('),end=app.indexOf('function restoreOpenChatFile(',start);
  const body={closest:()=>null,querySelector:()=>null,isConnected:true,hidden:false,innerHTML:''};
- const context={current:()=>({id:'chat'}),chatDiffCache:new Map(),touchAbsolute:()=>'/tmp/missing.png',fetch:async()=>({ok:false})};
+ const context={current:()=>({id:'chat'}),chatDiffCache:new Map(),fileMediaKind,touchAbsolute:()=>'/tmp/missing.png',fetch:async()=>({ok:false})};
  vm.runInNewContext(app.slice(start,end),context);await context.loadChatFileDiff(body,'/tmp/missing.png');
  assert.match(body.innerHTML,/više nije dostupna/);assert.doesNotMatch(body.innerHTML,/<img/);
+});
+
+test('slike i video su thumbnailovi sa stanjem, audio i binarni fajlovi nemaju brojače redova',()=>{
+ const message={actions:[
+  {kind:'file',text:'/tmp/photo.jpg',change:'open'},
+  {kind:'file',text:'clip.mp4',change:'update',diff:'+not text'},
+  {kind:'file',text:'voice.mp3',change:'open'},
+  {kind:'file',text:'report.pdf',change:'update'}
+ ]};
+ const html=messageChangeHtml(message,escape,{cwd:'/project'});
+ assert.match(html,/<img class="media-thumbnail"/);assert.match(html,/<video class="media-thumbnail"/);
+ assert.match(html,/media-state">Otvoreno/);assert.match(html,/media-state">Izmenjeno/);
+ assert.doesNotMatch(html,/chat-file-stats|github-diff|Izmene \(/);
+ assert.match(html,/src="\/files\/project\/clip.mp4#t=0.1"/);
+ for(const [file,kind] of [['a.WEBP','image'],['x.mov','video'],['x.wav','audio'],['a.ts','text'],['README','text'],['x.zip','binary']])assert.equal(fileMediaKind(file),kind);
+ assert.equal(fileAssetUrl('my pic.jpg','/project'),'/files/project/my%20pic.jpg');
 });

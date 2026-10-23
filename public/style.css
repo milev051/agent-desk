@@ -762,3 +762,17 @@ body:has(> #restart-status:not([hidden])){padding-top:41px}
 .chat-changes>summary{cursor:pointer;padding:6px 0;user-select:none}
 .chat-changes>summary:hover{color:#eee}
 .chat-changes>.chat-file-list{margin-top:4px}
+
+.chat-media-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chat-media-list .media-block{width:112px;flex:0 0 112px}
+.chat-media-list .media-block.media-open{width:100%;flex-basis:100%}
+.chat-file.media-tile{position:relative;display:flex;width:112px;height:84px;flex:none;align-items:center;justify-content:center;overflow:hidden;padding:0;background:#161616;border:1px solid #303030;color:#bfc4cc}
+.media-thumbnail{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
+.media-placeholder{font-size:28px;line-height:1;color:#818994}
+.media-state{position:absolute;bottom:0;left:0;right:0;padding:4px 5px;background:#000c;color:#eee;font-size:10px;text-align:center}
+.media-tile .media-name{position:absolute;left:5px;right:5px;bottom:23px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;text-align:center}
+.media-tile.audio .media-placeholder,.media-tile.binary .media-placeholder{margin-bottom:24px}
+.media-thumbnail[hidden]{display:none}
+.chat-media-player{display:block;max-width:100%;width:min(100%,680px);max-height:65dvh;margin:8px 0}
+.chat-media-list .chat-diff-body{margin-top:8px}
+.media-download{display:inline-block;margin:8px 0;color:#bba1e8}

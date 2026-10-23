@@ -5,7 +5,7 @@ import {createAdaptivePanel} from './adaptive-panel.mjs';
 import {installVolumeZoom} from './volume-zoom.mjs';
 import {createThoughtsPanel} from './thoughts-panel.mjs';
 import {answerText} from './final-answer.mjs';
-import {needsCacheConfirm,changeColumnHtml,lastTouchedMessage,touchedFiles,sameFile,fileState,fileParts,fileStamp,fileSize,changesLabel,diffPreviewHtml,githubDiffHtml,fileDiffStatsHtml,changedLinesHtml,messageChangeHtml} from './desk-modes.mjs';
+import {needsCacheConfirm,changeColumnHtml,lastTouchedMessage,touchedFiles,sameFile,fileState,fileParts,fileStamp,fileSize,changesLabel,diffPreviewHtml,githubDiffHtml,fileDiffStatsHtml,fileMediaKind,changedLinesHtml,messageChangeHtml} from './desk-modes.mjs';
 import {createAndroidPrompt,observePromptChanges} from './prompt-editor.mjs';
 import {createDraftHistory} from './draft-history.mjs';
 import {startNotificationPresence} from './notification-presence.mjs';
@@ -960,7 +960,7 @@ async function loadChatFileDiff(body,filePath){
  if(cached){body.innerHTML=cached.html;updateStats(cached.diff);applyPreviewLines();return;}
  if(body.querySelector('.change-diff')){applyPreviewLines();return;}
  const abs=touchAbsolute(filePath);
- if(abs && /\.(png|jpe?g|webp|gif|avif)$/i.test(abs)){
+ if(abs && fileMediaKind(filePath)==='image'){
   const src='/files'+abs.split('/').map(encodeURIComponent).join('/');
   body.innerHTML='<p class="change-missing">Učitavam sliku…</p>';
   try{
@@ -972,6 +972,17 @@ async function loadChatFileDiff(body,filePath){
    image.onerror=()=>{URL.revokeObjectURL(url);if(body.isConnected)body.innerHTML='<p class="change-missing">Pregled slike nije dostupan.</p>';};
    body.replaceChildren(image);image.src=url;
   }catch{if(body.isConnected && !body.hidden)body.innerHTML='<p class="change-missing">Slika više nije dostupna na toj putanji.</p>';}
+  return;
+ }
+ const mediaKind=fileMediaKind(filePath);
+ if(abs && mediaKind!=='text'){
+  const src='/files'+abs.split('/').map(encodeURIComponent).join('/');
+  if(mediaKind==='video' || mediaKind==='audio'){
+   const player=document.createElement(mediaKind);player.controls=true;player.preload='metadata';
+   if(mediaKind==='video')player.setAttribute('playsinline','');
+   player.className='chat-media-player';player.onerror=()=>{if(body.isConnected)body.innerHTML='<p class="change-missing">Ovaj snimak nije dostupan ili format nije podržan.</p>';};
+   body.replaceChildren(player);player.src=src;
+  }else body.innerHTML=`<a class="media-download" href="${escape(src)}" download>Preuzmi fajl</a>`;
   return;
  }
  body.innerHTML='<p class="change-missing">Učitavam izmenu…</p>';
@@ -987,6 +998,8 @@ async function loadChatFileDiff(body,filePath){
  }catch(error){if(body.isConnected && !body.hidden)body.innerHTML=`<p class="change-missing">${escape(error?.message||'Izmena još nije učitana.')}</p>`;}
 }
 function restoreOpenChatFile(){document.body.classList.toggle('file-preview-open',fileWide);const open=openChatFile?.chatId===active;if(!open){if(!fileWide && (previewPath||!$('#files-preview')?.hidden)){previewPath='';previewToken++;const box=$('#files-preview');if(box){box.hidden=true;box.innerHTML='';}}return;}const article=document.querySelector(`[data-message="${CSS.escape(openChatFile.messageId)}"]`);const body=article?.querySelector('.chat-file.selected')?.closest('.chat-file-block')?.querySelector('.chat-diff-body');if(body && !body.hidden){applyPreviewLines();void loadChatFileDiff(body,openChatFile.path);}}
+// Greška thumbnaila ostavlja diskretan simbol i oznaku, bez pokvarene ikonice.
+$('#conversation').addEventListener('error',event=>{const node=event.target;if(node?.classList?.contains('media-thumbnail')){node.hidden=true;node.closest('.media-tile')?.classList.add('thumbnail-missing');}},true);
 $('#conversation').onclick=e=>{const pathLink=e.target.closest('[data-file-path]');if(pathLink && (e.metaKey || e.ctrlKey) && !phoneRemote){e.preventDefault();e.stopPropagation();promptFocusHold=Date.now()+600;guard(()=>api('/api/open-file','POST',{path:pathLink.dataset.filePath,reveal:true}));return;}const inlineDiff=e.target.closest('.chat-diff-body .change-diff:not(.github-diff)');if(inlineDiff && !window.getSelection()?.toString()){e.preventDefault();promptFocusHold=Date.now()+600;previewFullLines=!previewFullLines;applyPreviewLines();return;}const revealButton=e.target.closest('[data-reveal-file]');if(revealButton){e.preventDefault();promptFocusHold=Date.now()+600;const filePath=revealButton.dataset.revealFile;guard(async()=>{if(phoneRemote){throw Error('Finder je dostupan samo na računaru.');}await api('/api/open-file','POST',{path:filePath,reveal:true});});return;}const fileButton=e.target.closest('[data-chat-file]');if(fileButton){e.preventDefault();promptFocusHold=Date.now()+600;const messageId=fileButton.closest('[data-message]')?.dataset.message;const path=fileButton.dataset.chatFile;const same=openChatFile?.chatId===active && openChatFile?.messageId===messageId && openChatFile?.path===path;if(same)closeOpenFile();else{openChatFile={chatId:active,messageId,path};focusOpenFile=true;fileWide=true;}lastMessages='';render();return;}const preview=e.target.closest('.attachment-thumbs a');if(preview && (phoneRemote || mobileNavigation())){e.preventDefault();const image=preview.querySelector('img');if(image){openAttachmentPreview(preview.href,image.alt);return;}if(/\.pdf$/i.test(preview.getAttribute('title')||'')){openPdfPreview(preview.href);return;}guard(async()=>{const response=await fetch(preview.href);if(!response.ok){const data=await response.json().catch(()=>({}));throw Error(data.error || 'Prilog nije otvoren.');}const url=URL.createObjectURL(await response.blob());const link=document.createElement('a');link.href=url;link.download=preview.getAttribute('title') || 'prilog';link.click();setTimeout(()=>URL.revokeObjectURL(url),60000);});return;}const selection=e.target.closest('[data-select-message]'),article=e.target.closest('[data-message]');const speakButton=e.target.closest('[data-speak]');if(speakButton){e.preventDefault();guard(()=>speakMessage(speakButton.dataset.speak));return;}if(selection || (messageSelectionMode && article && !e.target.closest('[data-copy-code],[data-copy-text],[data-copy-message],[data-copy-message-full],[data-speak],.attachment-thumbs a'))){e.preventDefault();const id=selection?.dataset.selectMessage || article.dataset.message;if(!current()?.messages.some(m=>m.id===id && m.text))return;messageSelectionMode=true;const all=current().messages.filter(m=>m.text).map(m=>m.id);if(e.shiftKey && selectionAnchor && all.includes(selectionAnchor)){const a=all.indexOf(selectionAnchor),b=all.indexOf(id);for(const selected of all.slice(Math.min(a,b),Math.max(a,b)+1))selectedMessages.add(selected);}else{if(selectedMessages.has(id))selectedMessages.delete(id);else selectedMessages.add(id);selectionAnchor=id;}refreshMessageSelection();$('#conversation').focus({preventScroll:true});return;}const link=e.target.closest('[data-local-file]');if(link){e.preventDefault();guard(async()=>{if(phoneRemote){$('#local-file-frame').src=link.href;$('#local-file-dialog').showModal();}else await api('/api/open-file','POST',{path:link.dataset.localFile});});return;}guard(async()=>{const button=e.target.closest('[data-copy-code],[data-copy-text],[data-copy-message],[data-copy-message-full]');if(!button)return;const text=button.hasAttribute('data-copy-text')?button.copyText:button.hasAttribute('data-copy-code')?button.closest('pre').querySelector('code').textContent:(()=>{const message=current()?.messages.find(m=>m.id===(button.dataset.copyMessageFull||button.dataset.copyMessage));return message?copiedMessage(message,{modelName,shares:current()?.limitShares,includeProgress:button.hasAttribute('data-copy-message-full')}):undefined;})();if(text===undefined)return;const originalHtml=button.innerHTML,originalTitle=button.title;await navigator.clipboard.writeText(text);button.textContent='✓';button.title='Kopirano';setTimeout(()=>{if(button.isConnected){button.innerHTML=originalHtml;button.title=originalTitle;}},1500);});};
 // Prekinut odgovor se nastavlja novom porukom u istoj sesiji; tekst iz unosa ima prednost.
 $('#conversation').addEventListener('click',e=>{const prev=e.target.closest('[data-previous-chat]');if(prev)return guard(()=>openPreviousChat(prev.dataset.previousChat));const next=e.target.closest('[data-next-chat]');if(next){if(!chats.some(c=>c.id===next.dataset.nextChat))return toast('Nastavak više ne postoji.','error');return choose(next.dataset.nextChat);}if(e.target.closest('[data-unlock-chat]'))return guard(async()=>{putChat(await api(`/api/chats/${active}/unlock`,'POST',{}));render();toast('Deo je otključan, možeš da pišeš i ovde.','success');});if(!e.target.closest('[data-continue-reply]'))return;const input=$('#prompt');if(!input.value.trim())input.value='Nastavi gde si stao.';$('#composer').requestSubmit();});

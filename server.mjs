@@ -695,8 +695,20 @@ const server = http.createServer(async (req, res) => {
     }
     if(req.method==='GET' && (url.pathname.startsWith('/files/')||url.pathname.startsWith('/Users/')||url.pathname.startsWith('/Volumes/'))){
       const p=resolveLocalFile(decodeURIComponent(url.pathname.startsWith('/files/')?url.pathname.slice(6):url.pathname));const stat=fs.statSync(p);if(!stat.isFile()||stat.size>20000000)throw Error('Izaberi fajl do 20 MB.');
-      const types={'.html':'text/html','.htm':'text/html','.css':'text/css','.js':'text/javascript','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.pdf':'application/pdf'};
-      res.writeHead(200,{'Content-Type':(types[path.extname(p).toLowerCase()]||'text/plain')+'; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"sandbox allow-scripts; default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'none'; frame-src 'none'; object-src 'none'"});fs.createReadStream(p).pipe(res);return;
+      const types={'.html':'text/html','.htm':'text/html','.css':'text/css','.js':'text/javascript','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.gif':'image/gif','.avif':'image/avif','.bmp':'image/bmp','.ico':'image/x-icon','.tif':'image/tiff','.tiff':'image/tiff','.heic':'image/heic','.pdf':'application/pdf','.mp4':'video/mp4','.m4v':'video/mp4','.mov':'video/quicktime','.webm':'video/webm','.ogv':'video/ogg','.avi':'video/x-msvideo','.mkv':'video/x-matroska','.mp3':'audio/mpeg','.wav':'audio/wav','.m4a':'audio/mp4','.aac':'audio/aac','.ogg':'audio/ogg','.oga':'audio/ogg','.flac':'audio/flac','.opus':'audio/ogg','.aif':'audio/aiff','.aiff':'audio/aiff'};
+      const type=types[path.extname(p).toLowerCase()]||'text/plain';
+      const headers={'Content-Type':type+(type.startsWith('text/')?'; charset=utf-8':''),'Content-Length':stat.size,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"sandbox allow-scripts; default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'none'; frame-src 'none'; object-src 'none'"};
+      if(/^(audio|video)\//.test(type)){
+        headers['Accept-Ranges']='bytes';
+        if(req.headers.range){
+          const range=/^bytes=(\d*)-(\d*)$/.exec(req.headers.range);
+          let start=range?.[1]?Number(range[1]):null,end=range?.[2]?Number(range[2]):null;
+          if(start===null && end!==null){start=Math.max(0,stat.size-end);end=stat.size-1;}else end=end===null?stat.size-1:Math.min(end,stat.size-1);
+          if(!range || start===null || !Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start<0 || start>=stat.size || end<start){res.writeHead(416,{'Content-Range':`bytes */${stat.size}`});res.end();return;}
+          res.writeHead(206,{...headers,'Content-Length':end-start+1,'Content-Range':`bytes ${start}-${end}/${stat.size}`});fs.createReadStream(p,{start,end}).pipe(res);return;
+        }
+      }
+      res.writeHead(200,headers);fs.createReadStream(p).pipe(res);return;
     }
     if(req.method==='GET' && url.pathname==='/api/limit-history')return json(200,quotaHistory.list());
     if(req.method==='GET' && url.pathname==='/api/limits')return json(200,limits.snapshot());

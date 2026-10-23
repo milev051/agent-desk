@@ -385,3 +385,5 @@ Ponuđeni odgovori su uslovni: red „Ponuđeno:“ postoji samo kao konkretan o
 Klik na fajl ispod odgovora otvara unified diff sa kontekstom i starim/novim brojevima redova. Desno od putanje su dodati i uklonjeni redovi i njihov zbir. Bez sačuvanog patcha broj je nepoznat do provere; trenutni Git diff je posebno označen. Slike se otvaraju kao slike.
 
 Ispod odgovora stoji samo skupljena stavka „Izmene (N)“ sa stvarno menjanim fajlovima; samo otvoreni fajlovi i pregledani screenshotovi ostaju u toku rada. Nedostupna slika daje kratku poruku umesto pokvarene ikonice.
+
+Otvorene i izmenjene slike/video prikazuju se kao thumbnailovi sa oznakom stanja. Audio i ostali binarni fajlovi imaju kompaktnu karticu bez brojača redova. Tekstualni fajlovi zadržavaju diff i brojače; samo pročitani tekstualni fajlovi ostaju u toku rada. Video/audio se puštaju klikom, bez automatskog reprodukovanja.

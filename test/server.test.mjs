@@ -350,6 +350,13 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal((await call(`/api/chats/${unused.id}/discard-empty`,'POST',{})).status,409);
     assert.deepEqual((await call(`/api/chats/${unused.id}`)).data.messages,[]);
     assert.ok((await call('/api/chats?summary=1')).data.some(c=>c.id===unused.id));
+    const mediaFile=path.join(temp,'clip.mp4');writeFileSync(mediaFile,'0123456789');
+    const mediaUrl=base+'/files'+mediaFile.split('/').map(encodeURIComponent).join('/');
+    const mediaResponse=await fetch(mediaUrl,{headers:{Range:'bytes=2-4'}});
+    assert.equal(mediaResponse.status,206);assert.equal(mediaResponse.headers.get('content-type'),'video/mp4');assert.equal(mediaResponse.headers.get('content-range'),'bytes 2-4/10');assert.equal(await mediaResponse.text(),'234');
+    assert.equal((await fetch(mediaUrl,{headers:{Range:'bytes=30-40'}})).status,416);
+    const audioFile=path.join(temp,'voice.mp3');writeFileSync(audioFile,'audio');
+    assert.equal((await fetch(base+'/files'+audioFile.split('/').map(encodeURIComponent).join('/'))).headers.get('content-type'),'audio/mpeg');
     const savedEmpty=JSON.parse(readFileSync(path.join(temp,'data','chats.json'),'utf8')).find(c=>c.id===unused.id);
     assert.deepEqual(savedEmpty.messages,[]);assert.deepEqual(savedEmpty.sessions,{});
     const archivedEmpty=await call(`/api/chats/${unused.id}`,'DELETE');assert.equal(archivedEmpty.status,200);
