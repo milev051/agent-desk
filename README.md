@@ -387,3 +387,5 @@ Klik na fajl ispod odgovora otvara unified diff sa kontekstom i starim/novim bro
 Ispod odgovora stoji samo skupljena stavka „Izmene (N)“ sa stvarno menjanim fajlovima; samo otvoreni fajlovi i pregledani screenshotovi ostaju u toku rada. Nedostupna slika daje kratku poruku umesto pokvarene ikonice.
 
 Otvorene i izmenjene slike/video prikazuju se kao thumbnailovi sa oznakom stanja. Audio i ostali binarni fajlovi imaju kompaktnu karticu bez brojača redova. Tekstualni fajlovi zadržavaju diff i brojače; samo pročitani tekstualni fajlovi ostaju u toku rada. Video/audio se puštaju klikom, bez automatskog reprodukovanja.
+
+Klik na sliku u listi medija uvećava isti već učitani thumbnail na istom mestu; ponovni klik ga smanjuje. Ne dodaje se druga slika niti se pri uvećanju ponovo čita putanja. Nedostupni thumbnailovi ostaju kao diskretan simbol i status, bez pokvarene ikonice i ponovnih zahteva tokom iscrtavanja.

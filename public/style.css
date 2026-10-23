@@ -776,3 +776,12 @@ body:has(> #restart-status:not([hidden])){padding-top:41px}
 .chat-media-player{display:block;max-width:100%;width:min(100%,680px);max-height:65dvh;margin:8px 0}
 .chat-media-list .chat-diff-body{margin-top:8px}
 .media-download{display:inline-block;margin:8px 0;color:#bba1e8}
+
+/* Klik menja veličinu istog učitanog thumbnaila, bez druge slike ili novog zahteva. */
+.chat-media-list .media-block.image-expanded{width:100%;flex-basis:100%}
+.media-block.image-expanded .media-tile.image{width:100%;max-width:680px;height:auto;min-height:84px;flex-direction:column}
+.media-block.image-expanded .media-placeholder{display:none}
+.media-block.image-expanded .media-thumbnail{position:relative;inset:auto;width:auto;height:auto;max-width:100%;max-height:65dvh;object-fit:contain}
+.media-tile.image:not(.thumbnail-missing){cursor:zoom-in}
+.media-block.image-expanded .media-tile.image{cursor:zoom-out}
+.media-tile.thumbnail-missing{cursor:default}
