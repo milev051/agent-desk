@@ -1,7 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import {previewTarget} from '../public/page-preview.mjs';
 import {snapshotUrl,snapshotName,findChrome} from '../page-snapshot.mjs';
+
+test('dugme Pregled je uklonjeno iz unosa', () => {
+  const html = fs.readFileSync(path.join(process.cwd(), 'public/index.html'), 'utf8');
+  assert.equal(html.includes('id="page-preview"'), false);
+  assert.equal(html.includes('data-action="preview"'), false);
+});
 
 test('pregled uzima adresu iz polja za poruku pre linkova iz četa', () => {
   const messages=[{role:'assistant',text:'Proveri: http://localhost:4321/o-nama/.'}];
