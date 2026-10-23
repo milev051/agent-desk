@@ -34,3 +34,9 @@ test('aktivnosti agenta: hvataju se iz CLI događaja i prenose samo kao nazivi',
  const chat={settings:{agent:'claude',instructions:''},sessions:{},messages:[{role:'user',text:'Uradi'},{role:'assistant',agent:'codex',text:'Gotovo',actions:[{kind:'file',text:'x.mjs',change:'add'}]}]};
  assert.match(transferPlan(chat).text,/Gotovo\n\nAktivnosti agenta u ovom odgovoru:\n- fajlovi: x\.mjs \(add\)/);
 });
+
+test('claude: veličina konteksta je iz poslednjeg poziva modela, ne iz zbira odgovora', () => {
+ const e=parseEvent('claude',{type:'assistant',message:{content:[],usage:{input_tokens:5,cache_read_input_tokens:60000,cache_creation_input_tokens:2000}}});
+ assert.equal(e.context,62005);
+ assert.equal(parseEvent('claude',{type:'assistant',message:{content:[]}}).context,undefined);
+});

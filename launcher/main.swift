@@ -23,7 +23,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNaviga
  var window:NSWindow!
  var web:WKWebView!
  var pendingChatId:String?
+ // Druga kopija iste aplikacije (npr. /Applications i folder projekta) predaje čet prvoj i gasi se, da klik na obaveštenje ne otvori dva prozora.
+ static let openChatNotice=Notification.Name("local.agent-desk.launcher.open-chat")
+ var primary:NSRunningApplication?
+ func applicationWillFinishLaunching(_ notification:Notification) {
+  let me=NSRunningApplication.current
+  primary=NSRunningApplication.runningApplications(withBundleIdentifier:Bundle.main.bundleIdentifier ?? "local.agent-desk.launcher")
+   .filter{$0.processIdentifier != me.processIdentifier && !$0.isTerminated}
+   .min{($0.launchDate ?? .distantPast) < ($1.launchDate ?? .distantPast)}
+  if primary == nil {DistributedNotificationCenter.default().addObserver(self,selector:#selector(remoteOpenChat(_:)),name:Self.openChatNotice,object:nil)}
+ }
+ func handOver(_ chatId:String?){
+  if let id=chatId {DistributedNotificationCenter.default().postNotificationName(Self.openChatNotice,object:id,userInfo:nil,deliverImmediately:true)}
+  primary?.activate()
+  NSApplication.shared.terminate(nil)
+ }
+ @objc nonisolated func remoteOpenChat(_ note:Notification){
+  let id=note.object as? String
+  Task{@MainActor in if let id {self.showChat(id)}else{self.window?.makeKeyAndOrderFront(nil);NSApplication.shared.activate(ignoringOtherApps:true)}}
+ }
  func applicationDidFinishLaunching(_ notification:Notification) {
+  // Adresa iz obaveštenja stiže posle pokretanja; kratko čekanje da se i ona preda prvoj kopiji.
+  if primary != nil {DispatchQueue.main.asyncAfter(deadline:.now()+0.5){self.handOver(nil)};return}
   let menu=NSMenu(),appMenu=NSMenu(),appItem=NSMenuItem()
   let settings=NSMenuItem(title:"Podešavanja…",action:#selector(openSettings),keyEquivalent:",");settings.target=self;appMenu.addItem(settings);appMenu.addItem(.separator())
   appMenu.addItem(withTitle:"Zatvori Agent Desk",action:#selector(NSApplication.terminate(_:)),keyEquivalent:"q")
@@ -32,13 +53,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNaviga
   for (title,action,key) in [("Poništi","undo:","z"),("Iseci","cut:","x"),("Kopiraj","copy:","c"),("Nalepi","paste:","v"),("Izaberi sve","selectAll:","a")] {edit.addItem(withTitle:title,action:NSSelectorFromString(action),keyEquivalent:key)}
   editItem.submenu=edit;menu.addItem(editItem)
   let view=NSMenu(title:"Prikaz"),viewItem=NSMenuItem(title:"Prikaz",action:nil,keyEquivalent:"")
-  let reload=NSMenuItem(title:"Osveži",action:#selector(refresh),keyEquivalent:"r");reload.target=self;view.addItem(reload);viewItem.submenu=view;menu.addItem(viewItem)
+  let reload=NSMenuItem(title:"Osveži",action:#selector(refresh),keyEquivalent:"r");reload.target=self;view.addItem(reload);view.addItem(.separator())
+  // Cmd ili Ctrl sa +/-/0 menja veličinu interfejsa; drugi redovi su skriveni, samo za prečice.
+  for (title,action,keys) in [("Uvećaj",#selector(zoomIn),["+","="]),("Umanji",#selector(zoomOut),["-"]),("Stvarna veličina",#selector(zoomReset),["0"])] {
+   for (index,key) in keys.enumerated() {
+    for mask in [NSEvent.ModifierFlags.command,.control] {
+     let item=NSMenuItem(title:title,action:action,keyEquivalent:key);item.target=self;item.keyEquivalentModifierMask=mask
+     if index>0 || mask == .control {item.isHidden=true;item.allowsKeyEquivalentWhenHidden=true}
+     view.addItem(item)
+    }
+   }
+  }
+  viewItem.submenu=view;menu.addItem(viewItem)
   NSApplication.shared.mainMenu=menu
   let config=WKWebViewConfiguration()
   config.userContentController.add(self,name:"copyText")
   config.userContentController.addUserScript(WKUserScript(source:"Object.defineProperty(navigator, 'clipboard', {value: {writeText: async text => window.webkit.messageHandlers.copyText.postMessage(String(text))}, configurable: true});",injectionTime:.atDocumentStart,forMainFrameOnly:true))
   web=WKWebView(frame:.zero,configuration:config);web.uiDelegate=self;web.navigationDelegate=self
   web.setValue(false,forKey:"drawsBackground")
+  let savedZoom=UserDefaults.standard.double(forKey:"pageZoom");if savedZoom>0 {web.pageZoom=savedZoom}
   window=NSWindow(contentRect:NSRect(x:0,y:0,width:1180,height:800),styleMask:[.titled,.closable,.miniaturizable,.resizable],backing:.buffered,defer:false)
   window.title="Agent Desk";window.minSize=NSSize(width:440,height:400);window.contentView=web
   if let screen=NSScreen.main {window.setFrame(screen.visibleFrame,display:true)}else{window.center()}
@@ -51,6 +84,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNaviga
   guard let url=urls.first,url.scheme=="agentdesk",url.host=="chat" else{return}
   let id=url.lastPathComponent
   guard !id.isEmpty,id.range(of:"^[A-Za-z0-9_-]+$",options:.regularExpression) != nil else{return}
+  if primary != nil {handOver(id);return}
+  showChat(id)
+ }
+ func showChat(_ id:String){
   pendingChatId=id
   window?.makeKeyAndOrderFront(nil);NSApplication.shared.activate(ignoringOtherApps:true)
   if web?.url?.host=="127.0.0.1" {openPendingChat()}
@@ -70,8 +107,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNaviga
  }
  @objc func openSettings(){web.evaluateJavaScript("if(!document.querySelector('dialog[open]'))document.querySelector('#defaults-open')?.click();",completionHandler:nil)}
  @objc func refresh(){web.reload()}
+ func setZoom(_ value:Double){
+  let zoom=min(2,max(0.5,(value*10).rounded()/10))
+  web.pageZoom=zoom;UserDefaults.standard.set(zoom,forKey:"pageZoom")
+ }
+ @objc func zoomIn(){setZoom(web.pageZoom+0.1)}
+ @objc func zoomOut(){setZoom(web.pageZoom-0.1)}
+ @objc func zoomReset(){setZoom(1)}
  func applicationShouldTerminateAfterLastWindowClosed(_ sender:NSApplication)->Bool {true}
- func applicationShouldHandleReopen(_ sender:NSApplication,hasVisibleWindows flag:Bool)->Bool {window.makeKeyAndOrderFront(nil);return true}
+ func applicationShouldHandleReopen(_ sender:NSApplication,hasVisibleWindows flag:Bool)->Bool {window?.makeKeyAndOrderFront(nil);return true}
  func userContentController(_ userContentController:WKUserContentController,didReceive message:WKScriptMessage) {
   guard message.frameInfo.isMainFrame,message.frameInfo.securityOrigin.host=="127.0.0.1",let text=message.body as? String else{return}
   NSPasteboard.general.clearContents();NSPasteboard.general.setString(text,forType:.string)

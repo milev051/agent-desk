@@ -9,3 +9,15 @@ test('promene limita su očitani intervali, čuvaju odgovore svih četova i pres
  try{const history=createQuotaHistory(file,{turns:()=>turns});const sample=(updatedAt,remaining,resetAt=5000)=>({agent:'claude',updatedAt,windows:[{period:'fiveHour',remaining,resetAt}]});assert.equal(history.observe(sample(1000,90)),false);assert.equal(history.observe({...sample(1800,70),stale:true}),false);assert.equal(history.observe(sample(2000,85)),true);const event=history.list()[0];assert.equal(event.windows[0].drop,5);assert.equal(event.attribution,'observed-interval');assert.deepEqual(event.turns.map(t=>t.messageId),['m1','m2']);assert.equal(history.forChat('parent').length,1);assert.equal(history.forChat('child').length,1);assert.equal(history.observe(sample(1900,80)),false);assert.equal(history.observe(sample(3000,99,9000)),false);assert.equal(history.observe(sample(4000,98,9000)),true);assert.equal(history.list()[0].turns.length,0);assert.equal(createQuotaHistory(file).list().length,2);assert.equal(fs.statSync(file).mode&0o777,0o600);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('AGY promena grupe ne stvara lažnu potrošnju',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agent-quota-group-'));
+ try {
+  const history=createQuotaHistory(path.join(dir,'history.json'));
+  const sample=(updatedAt,remaining,quotaGroup)=>({agent:'antigravity',updatedAt,windows:[{period:'fiveHour',remaining,resetAt:5000,quotaGroup}]});
+  assert.equal(history.observe(sample(1000,99,'gemini')),false);
+  assert.equal(history.observe(sample(2000,42,'claudeGpt')),false);
+  assert.equal(history.observe(sample(3000,40,'claudeGpt')),true);
+  assert.equal(history.list()[0].windows[0].drop,2);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});

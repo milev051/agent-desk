@@ -15,7 +15,7 @@ npm start
 
 Otvori http://127.0.0.1:4317. Za drugi port: `PORT=4318 npm start`.
 
-Na macOS-u dvoklikni `Agent Desk.app` u folderu aplikacije. Pokretač pokreće server u pozadini bez Terminal prozora i otvara zaseban Mac prozor sa ugrađenim WebView-om, sopstvenom ikonicom i nazivom u Docku. Pri pokretanju prozor popunjava dostupni ekran, uz prostor za Dock i gornju traku. Cmd+Q zatvara aplikaciju; server ostaje uključen za telefon i agente koji rade. Osvežavanje je Cmd+R, a kopiranje i lepljenje koriste standardne Mac prečice. Pokretač se pravi komandom `./launcher/build.sh`, bez dodatnih modula; `./launcher/build.sh --install` ga postavlja u `/Applications/Agent Desk.app`, uz vezu ka postojećem projektu i podacima; `Pokreni Agent Desk.command` otvara isti pokretač.
+Na macOS-u dvoklikni `Agent Desk.app` u folderu aplikacije. Pokretač pokreće server u pozadini bez Terminal prozora i otvara zaseban Mac prozor sa ugrađenim WebView-om, sopstvenom ikonicom i nazivom u Docku. Pri pokretanju prozor popunjava dostupni ekran, uz prostor za Dock i gornju traku. Cmd+Q zatvara aplikaciju; server ostaje uključen za telefon i agente koji rade. Osvežavanje je Cmd+R, a kopiranje i lepljenje koriste standardne Mac prečice. Pokretač se pravi komandom `./launcher/build.sh`, bez dodatnih modula; `./launcher/build.sh --install` ga postavlja u `/Applications/Agent Desk.app`, uz vezu ka postojećem projektu i podacima; `Pokreni Agent Desk.command` otvara isti pokretač. Ako već radi jedna kopija (npr. ona iz `/Applications`), druga joj predaje čet iz obaveštenja i odmah se gasi, pa se otvara samo jedan prozor.
 
 Pri prvom pokretanju server sam instalira čuvara (`watchdog.mjs`) u `~/Library/LaunchAgents/local.agent-desk.watchdog.plist`. macOS ga pokreće pri prijavi i svakog minuta. Čuvar posle prijave na Mac pokreće server, da telefon radi bez otvaranja aplikacije, restartuje server ako ne odgovara dva minuta, briše zaostale `launchctl submit` poslove `local.agent-desk.*` i gasi `/tmp/agent-desk-*restart*` skripte kad se server restartuje u krug. Kad nešto uradi, šalje Mac obaveštenje i piše u `~/.config/agent-desk/watchdog.log`. Na novom računaru dovoljno je klonirati repo, pokrenuti `npm install` i jednom otvoriti aplikaciju.
 
@@ -30,6 +30,7 @@ Pri prvom pokretanju server sam instalira čuvara (`watchdog.mjs`) u `~/Library/
 - Četovi i podešavanja ostaju u `data/chats.json`, uključujući ID-jeve CLI sesija. CLI-jevi mogu zasebno čuvati svoje sesije.
 - Klik na drugog agenta menja agent u istom četu. Zasebno dugme za grananje pravi kopiju sa oznakom ⧉ i novom CLI sesijom. Novi agent dobija svoje podrazumevane modele i reasoning.
 - Tvoje poruke su desno u blagoj plavoj boji, odgovori agenta su levo. Enter šalje poruku, Shift+Enter dodaje novi red. Klik na logo otvara opcije četa. Promena foldera ne premešta postojeće fajlove.
+- Kratki odgovori agenata (do 5 redova sa Urađeno:, Proveri:, Pitanje:), tri Web Audio zvuka obaveštenja (gotovo, pitanje, greška) i sažeta obaveštenja u jednom redu za telefon i desktop.
 - Lokalni server sluša samo na 127.0.0.1 i proverava Host i Origin za izmene.
 
 ## Ograničenja prve verzije
@@ -54,7 +55,7 @@ Codex povezivanje se zasniva na lokalnom `codex exec --help` i [zvaničnoj dokum
 
 ## Interfejs
 
-Na vrhu su četiri grupe modela. Klik na model uvek pravi novi čet pod nazivom `Empty`; prazan čet ostaje sačuvan i nakon prelaska u drugi čet. Prva poruka daje naslov prema svom tekstu. Ručno izabran naslov ostaje.
+Na vrhu su četiri grupe modela. Klik na model uvek pravi novi čet pod nazivom `Empty`; nov prazan čet se uklanja nakon izlaska iz njega. Prva poruka daje naslov prema svom tekstu. Ručno izabran naslov ostaje.
 
 Duži pritisak na karticu otvara popup centriran uz karticu, sa ostala tri agenta, kantom, modelom i podržanim reasoning nivoima. Uz ivice ekrana položaj se prilagođava dostupnom prostoru. Klik na drugog agenta menja isti čet, bez kopiranja. Dugme za grananje pored kante pravi zasebnu kopiju sa vidljivim porukama i novom CLI sesijom. Red čekanja se ne kopira. Promena podmodela unutar istog agenta čuva native sesiju i važi za sledeću poruku. Promene modela su blokirane dok agent radi.
 
@@ -167,7 +168,7 @@ Testovi proveravaju keš, cost raspon, različite modele i foldere, kopije istor
 
 ## Telefon preko Tailscale-a
 
-Podešavanja se otvaraju ikonicom klizača pored četiri ikonice za novi čet. Odeljak **Telefon · Tailscale** na računaru prikazuje lokalno generisan QR i privremeni link. Link ima 256 nasumičnih bitova, važi 60 sekundi i može se iskoristiti samo jednom. Osvežava se dok su podešavanja otvorena. Uspela prijava daje sesiju do 30 dana, uz Secure/HttpOnly/SameSite=Strict cookie. Za povratak koristi stalnu HTTPS adresu računara bez `/login#pair=...`, sačuvanu kao obeleživač. **Odjavi telefone** odmah opoziva sesije i otvorene tokove događaja. Restart zadržava važeće prijave. U `~/.config/agent-desk/phone-sessions.json` čuvaju se samo SHA-256 heševi sesija i rokovi, sa pravima 600, izvan četova i Git-a. Jednokratni QR token ostaje samo u memoriji. Otvaranje stare prijavne adrese sa važećim cookie-jem vraća u aplikaciju; istekao link ne prekida postojeću prijavu. Brisanje cookie-ja ili privatno pregledanje zahteva novu prijavu.
+Podešavanja se otvaraju ikonicom klizača pored četiri ikonice za novi čet. Odeljak **Telefon · Tailscale** na računaru prikazuje lokalno generisan QR i privremeni link. Link ima 256 nasumičnih bitova, važi 60 sekundi i može se iskoristiti samo jednom. Osvežava se dok su podešavanja otvorena. Uspela prijava daje sesiju do 30 dana, uz Secure/HttpOnly/SameSite=Strict cookie. Za povratak koristi stalnu HTTPS adresu računara bez `/login#pair=...`, sačuvanu kao obeleživač. **Odjavi telefone** odmah opoziva sesije i otvorene tokove događaja. Restart zadržava važeće prijave. U `~/.config/agent-desk/phone-sessions.json` čuvaju se samo SHA-256 heševi sesija i rokovi, sa pravima 600, izvan četova i Git-a. Jednokratni QR token ostaje samo u memoriji. Otvaranje stare prijavne adrese sa važećim cookie-jem vraća u aplikaciju; istekao link ne prekida postojeću prijavu. Brisanje cookie-ja ili privatno pregledanje zahteva novu prijavu. Kad se odgovor završi, Mac nije aktivan, a prijavljenom telefonu je Tailscale isključen, Mac prikazuje obaveštenje „Telefon nije povezan“ (najviše na 30 minuta). Podčet koji uspešno završi ne šalje obaveštenje ni na Mac ni na telefon; greška i zaustavljanje se javljaju. Greška podčeta se dodaje u red roditeljskog četa i agent nastavlja čim je slobodan.
 
 Računar i telefon moraju imati aktivan Tailscale. Agent Desk mora raditi na računaru, jer CLI agenti i fajlovi ostaju na njemu. Server 4317 ostaje samo na loopback adresi. Zaseban gateway 4319 štiti sve podatke i statičke fajlove sesijom; Tailscale Serve prenosi HTTPS zahteve do njega, unutar tailnet mreže. Nije korišćen Funnel. Host mora odgovarati Tailscale DNS nazivu računara; svaki POST/PATCH/PUT/DELETE mora imati tačan HTTPS Origin. Finder, tekstualni zapis četa, konfiguracija Google ključa i izdavanje novih QR prijava ostaju dostupni samo sa računara.
 
@@ -202,7 +203,7 @@ Dugme Nazad u mobilnom pregledaču vraća na početnu listu. Aplikacija održava
 
 Ispod ikonica za novi čet prikazan je **preostali procenat**, prvo za 5 sati pa za 7 dana. Grok ima samo nedeljni broj. Redosled je Codex, Claude, Antigravity, Grok. Tooltip navodi prozore i vreme očitavanja. Nedostupan podatak je `?`, bez izmišljene procene. Ovi brojevi su odvojeni od broja tokena i API procene troška.
 
-`limits-reader.swift` koristi logiku očitavanja iz projekta Limiti i postojeće CLI prijave na macOS-u. Poziva odgovarajuće servise pretplate, ne šalje razgovore. Ključevi se ne vraćaju kroz `/api/limits` i ne upisuju u četove. Swift proces očitava sva četiri izvora paralelno na približno dva minuta; odgovor 429 odlaže naredni poziv tom izvoru prema Retry-After ili najmanje deset minuta kada rok nije naveden; `limits.mjs` čuva samo poslednji rezultat u memoriji. Na drugim sistemima podaci nisu dostupni. Antigravity limit se čita samo iz pristupnog tokena koji `agy` već drži u Keychain-u; Agent Desk taj token ne obnavlja, jer bi za to morao da izvuče Google-ov ključ klijenta iz `agy` programa. Zato je Antigravity limit dostupan dok je `agy` radio u poslednjih sat vremena, a posle toga kartica prikazuje poslednje sačuvano očitavanje i poruku da treba pokrenuti `agy`. `AGENT_DESK_DISABLE_LIMITS=1` isključuje očitavanje; integracioni testovi koriste tu opciju.
+`limits-reader.swift` koristi logiku očitavanja iz projekta Limiti i postojeće CLI prijave na macOS-u. Poziva odgovarajuće servise pretplate, ne šalje razgovore. Ključevi se ne vraćaju kroz `/api/limits` i ne upisuju u četove. Swift proces očitava sva četiri izvora paralelno na približno dva minuta; odgovor 429 odlaže naredni poziv tom izvoru prema Retry-After ili najmanje deset minuta kada rok nije naveden; `limits.mjs` čuva samo poslednji rezultat u memoriji. Na drugim sistemima podaci nisu dostupni. Antigravity limit se čita samo iz pristupnog tokena koji `agy` već drži u Keychain-u; Agent Desk taj token ne obnavlja, jer bi za to morao da izvuče Google-ov ključ klijenta iz `agy` programa. Zato je Antigravity limit dostupan dok je `agy` radio u poslednjih sat vremena, a posle toga kartica prikazuje poslednje sačuvano očitavanje i poruku da treba pokrenuti `agy`. Antigravity prikazuje Gemini kvotu kada je dostupna; ako API vrati samo Claude/GPT grupu, prikazuje njene limite uz oznaku „Claude/GPT“. Kvota druge grupe se ne pripisuje modelu u četu; za nedostajuću kvotu stoji `?`. `AGENT_DESK_DISABLE_LIMITS=1` isključuje očitavanje; integracioni testovi koriste tu opciju.
 
 
 ## Izbor fajlova i brisanje
@@ -222,7 +223,7 @@ Sažetak potrošnje prikazuje nove i keširane tokene odvojeno i cenu u dolarima
 
 Enter odmah prazni unos i prikazuje poruku uz oznaku **Šalje se…**. Server čuva opcioni `requestId`; isti zahtev se ne izvršava dvaput. Kada stigne potvrda kroz tok događaja, privremena poruka se zameni sačuvanom bez dupliranja. Ako slanje nije prihvaćeno, tekst i povezane putanje se vraćaju u nacrt. Polje je niže, a ikonice su vertikalno centrirane. Potrošnja četa stoji neposredno iznad unosa.
 
-Novi čet ima opciono `ephemeral:true`. Pri odlasku u drugi čet ili na listu briše se ako nema poruka, sesija, reda čekanja ili podagenata. POST `/api/chats/ID/discard-empty` ponovo proverava prazninu na serveru; čet koji je u međuvremenu dobio poruku ostaje sačuvan. Prvo prihvaćeno slanje uklanja oznaku. Postojeće razgovore ne menjamo u prazne privremene četove.
+Novi običan čet bez sadržaja automatski se uklanja pri prelasku u drugi čet, povratku na listu ili zatvaranju stranice, bez arhiviranja. Poruka, nacrt, prilog, ručni naslov ili podagenti čuvaju čet. Ranije sačuvani četovi, Dispečer i Procesi se ne uklanjaju. Server proverava trenutno stanje kroz POST `/api/chats/ID/discard-empty`, pa sadržaj dodat u međuvremenu sprečava brisanje. Bez mreže čet ostaje sačuvan.
 
 Agent uz zadatak dobija ID-jeve, nazive i stanje postojećih direktnih podčetova. Završetak ili restart CLI procesa ne briše njihovu sesiju. POST `/api/chats/RODITELJ/delegate` sa `{"childId":"POSTOJEĆI_ID","task":"Nastavi..."}` šalje novu poruku istom podagentu, sa njegovom istorijom i native sesijom. Proverava se roditeljstvo i da podagent već ne radi. Za isti zadatak agent dobija instrukciju da nastavi postojeći podčet; novi podčet ostaje moguć za nov zadatak. Native CLI podagenti nisu isto što i podčetovi Agent Deska.
 
@@ -301,6 +302,14 @@ Kružić desno od unosa je džojstik: nagore šalje poruku ili je dodaje u red �
 
 `data/statistika.json` je objedinjeni izvedeni zapis tokena, procene API cene po četu/modelu/projektu i promena limita. Ažurira se uz čitljive zapise četova i očitane promene limita. Agenti dobijaju putanju, sadržaj se ne šalje automatski u kontekst. Izvori ostaju `data/chats.json` i `data/limit-history.json`. U podešavanjima dugme „Otvori folder statistike“ otvara Finder i označava ovaj fajl; na telefonu je dostupno preuzimanje istog JSON fajla. Statističke tabele se više ne učitavaju u podešavanjima.
 
+`data/prelasci.md` (i polje `handoffs` u `statistika.json`) za svaki prelazak u nov čet poredi prosečnu procenjenu cenu poslednja 3 odgovora starog četa sa prva 3 novog, uz razlog prelaska i da li je keš bio živ. Na dnu je zbir za poslednjih 7 dana po razlogu; po njemu se podešava pravilo automatskog prelaska (`handoff-report.mjs`).
+
+Sam prelazak u nov čet gleda samo kontekst i keš: dok keš važi, prelazi se tek od `warmMinContext` (podrazumevano 150k), a kad je keš istekao od `coldMinContext` (50k). Broj poruka i dužina teksta ostaju samo ponuda. Pragovi su u `data/prilagodjavanje/prelazak.json`, uz granice koje server poštuje.
+
+Oba menija u zaglavlju imaju dugme „Prilagođavanje“ za panel agenata i odobrenja. Kontekst agenta ostaje dostupan ispod polja za poruku i u podešavanjima.
+
+**Prilagođavanje** (`adaptive.mjs`, panel `public/adaptive-panel.mjs`, folder „Prilagođavanje“ u listi četova odmah ispod „Poslednjih četova“): prilagodljivi agenti po projektu. Folder prikazuje sve četove agenata i predloga, dugme „Agenti i odobrenja“ otvara panel, a „+ Predlog za projekat“ ili desni klik na čet („Predloži prilagodljive agente za ovaj projekat“) otvara čet u kome agent proceni koje merenje projektu stvarno koristi i šalje 0 do 3 predloga (`POST /api/adaptive/agents`). Automatsko odobravanje je početno uključeno za sve projekte: novi predlozi i oni koji već čekaju postaju aktivni. U panelu „Agenti i odobrenja“ može se isključiti prekidačem „Automatski odobravaj predloge za sve projekte“; tada novi predlozi čekaju dugme „Odobri“. Pauzirani i odbijeni agenti se ne uključuju automatski. Posle svakog pokretanja agent sam bira sledeći termin (`PATCH /api/adaptive/agents/ID` sa `nextRun`, od 1 h do 30 dana); propušten termin kreće čim nijedan agent ne radi, ukupno najviše 6 pokretanja nedeljno. Svaki agent ima jedan čet i beleške u `data/prilagodjavanje/ID/istorija.md`; menja samo ono što piše u njegovom polju „adapt“, a kod i objavu upisuje kao predlog. Spisak je u `data/prilagodjavanje/agenti.json`; ugrađen agent „Prelazak u nov čet“ podešava `prelazak.json`.
+
 ### Jednokratna poruka agentima
 
 U podešavanjima, „Kratka poruka agentima“ omogućava ručno slanje ili dnevni raspored po vremenu u Beogradu. Svi dani su podrazumevano uključeni. Dugmad Po, Ut, Sr, Če, Pe, Su i Ne biraju dane slanja i automatski čuvaju izmene. Isključivanjem svih dana raspored se zaustavlja, a ručno slanje ostaje dostupno. Svaki izabrani agent dobija zasebnu privremenu sesiju bez istorije radnih četova, sa zahtevom da odgovori samo OK. Sesija ne ulazi u listu četova, a završetak ne šalje obaveštenje. CLI može zadržati sopstveni zapis sesije.
@@ -325,7 +334,7 @@ Evidencija heševa poruka i članstva čuva se u `data/chats.json`, u `sharedFol
 
 Kartica podagenta ima iste dve zone kao običan čet: zadrži levu polovinu za radnje, desnu za prevlačenje. U meniju je „Izdvoji podagenta u samostalan čet“. Tokom prevlačenja pojavljuje se i polje „Izdvoji podagenta“. Izdvojen čet ostaje u folderu glavnog četa; spuštanje na drugi folder bira taj folder, a na prazan deo liste ili „Van foldera“ izdvaja ga van foldera. Može se prevući i na drugog glavnog agenta. Poruke, sesije i evidencija deljenog konteksta ostaju sačuvane. Promena veze dozvoljena je kad uključeni agenti miruju.
 
-Ikonice agenata otvaraju grupe modela klikom. Karticu modela možeš prevući na folder da napraviš novi čet u njemu, ili na glavni čet da napraviš podagenta. Podagent nasleđuje radni folder glavnog četa i čeka zadatak. Dodavanje je dozvoljeno kad glavni agent ne radi. Klik na karticu modela i dalje otvara novi čet.
+Ikonice agenata otvaraju grupe modela klikom. Klik na karticu modela odmah pravi novi čet u Neraspoređenim, bez pitanja za folder. Čet se zatim može premestiti u folder ili povezati kao podagent. Kad agent završi, Agent Desk sam ne otvara njegov čet; javlja obaveštenje, a po podešavanju otvara samo ono na čemu je radio.
 
 Svaki čet čuva vreme kreiranja i evidenciju otvaranja od uključivanja ove funkcije. Čitljivi zapisi u `data/cetovi` sadrže broj pristupa, datume pristupa i broj poslatih korisničkih poruka. Poruke se kopiraju kao `[datum, vreme] autor (model): tekst`, u zoni Europe/Belgrade, sa sačuvanim putanjama priloga. Raniji pristupi nisu rekonstruisani.
 
@@ -335,14 +344,40 @@ Gmail povezivanje, status i prekid veze su u opštim podešavanjima. Agenti mogu
 
 Google Drive, Tasks i Calendar: [podešavanje i API za agente](docs/google.md).
 
-## Taskovi
+## Pregled aktivnosti
 
-„Taskovi“ je folder sa karticama zadataka. Unos i označavanje završetka rade agenti po korisnikovom zahtevu preko GET/PUT `/api/priorities`, uz revision zaštitu od prepisivanja. Opcioni sourceChatId povezuje karticu sa izvornim četom. Otvorene stavke i vreme u Beogradu šalju se agentima kao kontekst. Nema ručnog formulara niti automatskih podsetnika. Planer može pregledati metapodatke preko `/api/planner/activity` i nove poruke preko `/api/chats/ID/changes`, sa ograničenjem veličine i granicom after. Detalji su u docs/agent-environment.md.
-
-Nezavršeni zadaci ostaju na listi i narednih dana dok ih agent ne označi kao završene ili ukloni. Prethodne liste ostaju sačuvane preko date parametra. Vreme obaveze se pri prenosu prazni jer je važilo za prethodni dan. Završene stavke se ne šalju agentima.
-
-GET `/api/priorities?date=YYYY-MM-DD` čita listu; bez datuma bira današnju. PUT prima `date`, `enabled`, `revision` i `items` (najviše 20 sa `id`, `title` do 200 znakova, `time` HH:MM ili prazan string, `done` boolean). Istovremene izmene na telefonu i računaru vraćaju 409 umesto prepisivanja. Podaci su lokalno u `data/daily-priorities.json`, izvan Gita.
+Planer može pregledati metapodatke preko `/api/planner/activity` i nove poruke preko `/api/chats/ID/changes`, sa ograničenjem veličine i granicom after. Detalji su u docs/agent-environment.md.
 
 ## Ažuriranje CLI agenata
 
 Podešavanja imaju dugme „Ažuriraj agente“ i opciju automatskog ažuriranja jednom dnevno dok svi agenti miruju. Početno je automatsko ažuriranje isključeno. Instalacije preko npm ažuriraju isti paket u istom prefiksu, a native Claude/Grok/Antigravity koriste svoju update komandu. Neprepoznata instalacija Codexa zahteva ručno ažuriranje svojim upravljačem paketima. Tokom ažuriranja blokirani su novi CLI zadaci; rezultati i verzije su prikazani u podešavanjima. GET/PUT `/api/cli-updates` daje status i podešava `{auto:true/false}`; POST `/api/cli-updates/run` pokreće ažuriranje ili vraća 409 dok ima aktivnih agenata. Ovo nije restart servera.
+
+## Za kasnije
+
+- **Codex (ChatGPT pretplata) se vraća 13.10.2026.** Tada:
+  - promeni podrazumevani Codex model u `data/defaults.json`, jer `gpt-6.1-sol` više nije u Codex katalogu (sada su `gpt-5.6-terra`, `gpt-6-luna`, `gpt-5.6-luna`);
+  - ubaci srpski glas umesto OpenAI čitanja u `speech.mjs`, jer `gpt-4o-mini-tts` nema srpski glas i gasi se 6.1.2027. Kandidati i probni snimci su u `prototip-glasovni/`.
+
+## Misli
+
+Polje „Procesi“ u listi četova služi za brze lične beleške; upis se čuva na Enter ili izlaskom iz polja i ne prikazuje se ponovo: kucaš ili diktiraš sve što ti padne na pamet, a svaki upis dobija vreme, kao poruka. Beleške su u `data/procesi/GGGG-MM-DD.md` (van Git-a), po jedan fajl za svaki dan. Ako je tog dana nešto zapisano, posle 21 h agent u četu „Misli“ postavi 2 do 3 kratka pitanja, a nedeljom napravi i nedeljni pregled obrazaca. Obaveštenje glasi samo „Imaš novu poruku.“ Ovaj čet ne ulazi u Dispečer, beleške projekta ni automatske naslove. Server vodi i `data/procesi/koriscenje.md`, dnevnik korišćenja bez teksta misli (broj i vreme upisa, odgovori, pregledi). Kad postoje zapisi iz bar dva dana, agent posle 22 h, najviše jednom u dva dana, sam pregleda kako se sistem koristi: menja `pravila.md` (svoja pravila za pitanja, najviše jedna „Proba:“), ideje za kod upisuje u `predlozi.md` i pita te za ocenu, koju čuva u `ocene.md`. Kod Agent Deska ne menja sam. API: GET/POST `/api/thoughts` (`?date=GGGG-MM-DD`, telo `{"text":"..."}`) i POST `/api/thoughts/chat`.
+
+## Dispečer projekata
+
+Iz menija logotipa ili Podešavanja otvori „Dispečer projekata“ za kratku belešku po četu, pitanja koja čekaju tebe i poslednje rezultate. „Razgovaraj sa dispečerom“ otvara jedan čet sa malim modelom: napiši, na primer, „Šta je ostalo na projektu X?“ Pregled se osvežava bez trošenja tokena; razgovor koristi limit modela. Beleške u `data/dispecer.json` čuvaju se lokalno, a model se po završetku drugih agenata pokreće samo za čet kome je dispečer, na tvoj zahtev, prosledio zadatak: tada dobija jedan izveštaj i javlja ti rezultat. Detalji i API su u [docs/agent-environment.md](docs/agent-environment.md#dispečer-projekata).
+
+### Stanje projekta i Dispečer
+
+Agent dobija STANJE.md, ODLUKE.md i kratku evidenciju prethodnog rada. Posle izmena server proverava ažuriranje stanja i, ako izostane, traži jednu dopunu beležaka (troši limit agenta). Otvorena pitanja i izričite odluke čuvaju izvor i opstaju između četova. Dispečer prikazuje upozorenja i filter stavki koje traže pažnju. Provera prati promenu sadržaja, a ne tačnost svih tvrdnji. Detalji: [okruženje agenta](docs/agent-environment.md#provera-stanja-i-odluka-projekta).
+
+### Probne kartice odgovora
+
+Dugme „Kartice“ u alatima poruke uključuje sažet prikaz završenih odgovora. „Detalji · ceo odgovor“ otkriva originalni tekst i tok rada. Poruke, izvoz i obnova konteksta ostaju nepromenjeni, a pretraga obuhvata i skriveni tekst. Prikaz ne koristi dodatne pozive modela.
+
+## Redovan pregled dispečera
+
+Dispečer jednom u 5 sati, kad nijedan agent ne radi, sam pregleda projekte i u svom četu predlaže izmene i četove (najviše 5 stavki). Samo predlaže: ne šalje poruke, ne pokreće agente i ne menja projekte. Vreme poslednjeg pregleda je u `data/dispecer-pregled.json`.
+
+Unutar aplikacije nema iskačućih potvrda radnji ni kartica obaveštenja o završenim odgovorima. Greške se prikazuju kao tekst uz polje za poruku. Zvuk i sistemska obaveštenja ostaju prema postojećim podešavanjima.
+
+Ponuđeni odgovori su uslovni: red „Ponuđeno:“ postoji samo kao konkretan odgovor na stvarno otvoreno pitanje koje traži korisnikov izbor ili podatak. Bez takvog pitanja red se izostavlja. Agenti ne izmišljaju nove zadatke radi nastavka razgovora i ne obećavaju fizičke radnje koje ne mogu da izvrše. Isto važi za čet Procesi.

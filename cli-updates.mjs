@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
-import {dailyDate} from './daily-priorities.mjs';
+const updateDateFormat=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Belgrade',year:'numeric',month:'2-digit',day:'2-digit'});
+function updateDate(now){const parts=Object.fromEntries(updateDateFormat.formatToParts(new Date(now)).map(p=>[p.type,p.value]));return `${parts.year}-${parts.month}-${parts.day}`;}
 const exec=promisify(execFile);
 const names={codex:'Codex',claude:'Claude Code',grok:'Grok Build',antigravity:'Antigravity'};
 export function updateCommand(agent,binary,npm){
@@ -22,7 +23,7 @@ export function createCliUpdates(file,{binaries,npm,isBusy,execute=async(file,ar
  async function version(id,binary){if(id==='antigravity')return '';try{return (await execute(binary,['--version'])).stdout.trim().slice(0,120);}catch{return '';}}
  async function run(){
   if(running || isBusy()){const error=Error('Sačekaj da svi agenti i provere završe, pa pokreni ažuriranje.');error.status=409;throw error;}
-  running=true;startedAt=now();saved.lastAttemptDate=dailyDate(now());saved.results=[];
+  running=true;startedAt=now();saved.lastAttemptDate=updateDate(now());saved.results=[];
   try{save();for(const [id,name] of Object.entries(names)){
    const result={id,name,status:'working',before:'',after:''};saved.results.push(result);save();
    const binary=binaries[id];if(!binary){result.status='skipped';result.message='CLI nije instaliran.';save();continue;}
@@ -32,5 +33,5 @@ export function createCliUpdates(file,{binaries,npm,isBusy,execute=async(file,ar
   }}finally{running=false;save();}
   return view();
  }
- return {view,run,configure(value){if(!value || Object.keys(value).some(k=>k!=='auto') || typeof value.auto!=='boolean')throw Error('auto mora biti boolean.');saved.auto=value.auto;save();return view();},async tick(){if(saved.auto && !running && !isBusy() && saved.lastAttemptDate!==dailyDate(now()))await run();},start(){timer=setInterval(()=>{void this.tick().catch(()=>{});},60000);timer.unref();},close(){clearInterval(timer);}};
+ return {view,run,configure(value){if(!value || Object.keys(value).some(k=>k!=='auto') || typeof value.auto!=='boolean')throw Error('auto mora biti boolean.');saved.auto=value.auto;save();return view();},async tick(){if(saved.auto && !running && !isBusy() && saved.lastAttemptDate!==updateDate(now()))await run();},start(){timer=setInterval(()=>{void this.tick().catch(()=>{});},60000);timer.unref();},close(){clearInterval(timer);}};
 }

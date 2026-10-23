@@ -23,19 +23,31 @@ Prefiks `/api/integrations/gmail`:
 | GET `/messages?q=GMAIL_UPIT&maxResults=10` | Pretraga, `pageToken` iz `nextPageToken` |
 | GET `/messages/ID` | Tekst, zaglavlja, oznake i metapodaci priloga |
 | GET `/messages/ID/attachments/ATTACHMENT_ID` | Preuzimanje primljenog priloga do 10 MB |
-| POST `/send` | `to`, `subject`, `text`, `confirmed: true`; opciono `cc`, `bcc`, `attachments`, `threadId`, `inReplyTo` |
+| GET `/send-as` | Adrese iz „Šalji poštu kao“ sa imenom i tekstom potpisa |
+| POST `/send` | `to`, `subject`, `text`, `confirmed: true`; opciono `from`, `signature`, `cc`, `bcc`, `attachments`, `threadId`, `inReplyTo` |
 | GET/POST `/drafts` | Spisak nacrta ili novi nacrt sa istim poljima kao mejl, bez slanja |
 | GET/PUT `/drafts/ID` | Čitanje ili zamena nacrta |
 | POST `/drafts/ID/send` | Slanje nacrta uz `confirmed: true` |
 | DELETE `/drafts/ID` | Brisanje nacrta uz `confirmed: true` |
 | POST `/messages/ID/modify` | `addLabelIds` i/ili `removeLabelIds`, nizovi ID-jeva oznaka |
 | POST `/messages/ID/trash` ili `/untrash` | Smeće ili vraćanje poruke |
+| POST `/messages/import` | `raw` (cela RFC 822 poruka, base64url, do 10 MB) i opciono `labelIds`; uvozi postojeći mejl u Gmail sa originalnim datumom, bez slanja |
 | GET/POST `/labels` | Čitanje ili kreiranje oznake sa `name` |
 | PATCH/DELETE `/labels/ID` | Izmena oznake ili brisanje uz `confirmed: true` |
 
-Primaoci su adrese ili nizovi adresa bez prikaznih imena. Prilog ima `filename`, `mimeType` i `contentBase64` standardni base64. Ukupno do 10 MB priloga, najviše 20. MIME čuva UTF-8 i sprečava ubacivanje zaglavlja. Za odgovor koristi `threadId`, `inReplyTo` sa originalnim `messageId` i odgovarajući naslov. From je povezani nalog. Za označavanje kao pročitano ukloni `UNREAD`; za arhivu ukloni `INBOX`. Čitanje samo po sebi ne menja oznaku pročitanosti. Trajno brisanje mejlova nije izloženo; koristi smeće.
+Primaoci su adrese ili nizovi adresa bez prikaznih imena. Prilog ima `filename`, `mimeType` i `contentBase64` standardni base64. Ukupno do 10 MB priloga, najviše 20. MIME čuva UTF-8 i sprečava ubacivanje zaglavlja. Za odgovor koristi `threadId`, `inReplyTo` sa originalnim `messageId` i odgovarajući naslov. From je povezani nalog sa imenom iz Gmail podešavanja „Šalji poštu kao“. Opciono `from` bira drugu potvrđenu adresu sa tog spiska (npr. poslovnu), sa njenim imenom. Potpis podešen u Gmailu za tu adresu dodaje se sam (tekst i HTML); `signature: false` šalje bez potpisa, npr. za kratak odgovor u prepisci. Ne dopisuj potpis ručno u `text`. Za označavanje kao pročitano ukloni `UNREAD`; za arhivu ukloni `INBOX`. Čitanje samo po sebi ne menja oznaku pročitanosti. Trajno brisanje mejlova nije izloženo; koristi smeće.
 
 Pretraga vraća do 20 rezultata po strani, a tekst poruke do 100.000 znakova sa `truncated` oznakom. ID priloga je `attachmentId` iz poruke; sadržaj preuzmi u lokalni fajl i koristi alat za taj format.
+
+### Zakazano slanje
+
+Gmail API nema zakazano slanje. Kad korisnik traži da se mejl pošalje kasnije, ne pravi launchd posao ni skriptu na računaru, nego:
+
+1. Napravi nacrt preko POST `/drafts` i pokaži korisniku primaoce i tekst. Zakazivanje je slanje, pa traži isto odobrenje.
+2. Napravi oznaku `Zakazano/GGGG-MM-DD SS:MM` po beogradskom vremenu (POST `/labels`, ili koristi postojeću sa istim imenom iz GET `/labels`).
+3. Dodaj oznaku poruci nacrta: POST `/messages/ID_PORUKE_NACRTA/modify` sa `addLabelIds`.
+
+Google Apps Script iz [`gmail-zakazano-slanje.gs`](gmail-zakazano-slanje.gs) radi na Google serverima. Na svakih 5 minuta šalje nacrte čije je vreme prošlo i briše praznu oznaku, pa slanje ne zavisi od računara. Otkazivanje: skini oznaku sa nacrta. Promena vremena: zameni oznaku. Skripta šalje sve nacrte u niti koja ima oznaku, zato zakazani odgovor ne ostavljaj u niti sa još jednim nacrtom. Skriptu korisnik postavlja jednom na script.google.com: nalepi fajl, pokrene `podesi()` i odobri pristup.
 
 ## Drive
 

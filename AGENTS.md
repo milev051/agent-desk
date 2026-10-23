@@ -4,8 +4,7 @@ Ovu aplikaciju koristiš dok je menjaš. Ako `public/app.js` ne može da se pokr
 
 1. **Posle svake izmene pokreni `npm test`** i ne završavaj odgovor dok svi testovi ne prođu. Ako test padne, popravi uzrok, ne test.
 2. **Nov browser modul** stavi u `public/` kao `ime-modula.mjs` (mala slova, cifre, crtica). Server takve fajlove isporučuje sam. Fajl drugog tipa ili iz `node_modules` mora da se upiše u spisak `files` u `server.mjs`.
-3. **Izmena u `server.mjs` ili drugom serverskom `.mjs` fajlu** važi tek posle restarta servera. Pre restarta proveri da nijedan agent ne radi, pa pokreni:
-   `launchctl kickstart -k gui/$(id -u)/local.agent-desk.server`
+3. **Izmena u `server.mjs` ili drugom serverskom `.mjs` fajlu** važi tek posle restarta servera. Za restart koristi `POST /api/restart` sa telom `{"chatId":"TVOJ_CHAT_ID"}` (opciono `{"whenIdle":true}`). Ako drugi agenti rade, server vraća 409 sa njihovim spiskom; `whenIdle:true` zakazuje restart čim ostali završe. Komanda `launchctl kickstart -k gui/$(id -u)/local.agent-desk.server` ostaje kao rezerva ako server ne odgovara.
    Restartom prekidaš i svoj sopstveni odgovor, zato ga radi poslednji i reci korisniku da je restart urađen.
    **Nikad ne pravi restart skriptu koja radi u pozadini** (`launchctl submit`, `nohup`, `/tmp/*restart*.py`). `launchctl submit` pokreće skriptu iznova posle svakog izlaska, pa server ulazi u petlju restarta, telefon gubi vezu, a Google prijava otvara nove tabove. Ako agenti rade, ne restartuj, nego reci korisniku da restartuje kad završe. Čuvar `watchdog.mjs` uklanja takve poslove.
 4. **Provera da se interfejs učitava:** `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4317/ime-modula.mjs` mora da vrati 200 za svaki modul koji uvoziš.

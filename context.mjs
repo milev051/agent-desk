@@ -27,7 +27,9 @@ export function contextEstimate(chat, agent=chat.settings.agent) {
   const plan=transferPlan(chat,agent);
   const transfer=plan.text;
   const estimate=s=>({characters:[...s].length,minTokens:Math.ceil([...s].length/6),maxTokens:Math.ceil([...s].length/2)});
-  return {withoutShortening:estimate([plan.fullText,chat.settings.instructions].filter(Boolean).join('\n\n')),history:estimate(text),transfer:estimate([transfer,chat.settings.instructions].filter(Boolean).join('\n\n')),instructions:estimate(chat.settings.instructions || ''),nativeContextUnknown:true,cacheGuaranteed:false,method:'Gruba procena: 2–6 znakova po tokenu; nije tokenizer ciljnog modela.'};
+  // Šta bi dobila nova sesija: ceo čet (skraćen), a ne samo poruke posle poslednjeg odgovora.
+  const fresh=transferPlan({...chat,sessions:{...chat.sessions,[agent]:undefined}},agent).text;
+  return {fresh:estimate([fresh,chat.settings.instructions].filter(Boolean).join('\n\n')),withoutShortening:estimate([plan.fullText,chat.settings.instructions].filter(Boolean).join('\n\n')),history:estimate(text),transfer:estimate([transfer,chat.settings.instructions].filter(Boolean).join('\n\n')),instructions:estimate(chat.settings.instructions || ''),nativeContextUnknown:true,cacheGuaranteed:false,method:'Gruba procena: 2–6 znakova po tokenu; nije tokenizer ciljnog modela.'};
 }
 
 

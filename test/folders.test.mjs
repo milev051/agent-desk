@@ -53,5 +53,14 @@ test('automatski naziv se čuva, a ručna promena i brisanje imaju prednost',()=
  assert.equal(folders.applyGeneratedName(pending.id,'Gemini naziv',pending.name),false);
  folders.update(pending.id,{name:''});assert.equal(folders.list().find(f=>f.id===pending.id).nameAuto,true);
  folders.remove(pending.id);assert.equal(folders.applyGeneratedName(pending.id,'Gemini naziv','Novi folder'),false);
+ const icon=folders.add('Fakultet');
+ assert.equal(folders.applyFace(icon.id,{emoji:'📚',color:2}).emoji,'📚');
+ assert.equal(folders.applyFace(icon.id,{emoji:'🎓',color:3}),false);
+ assert.equal(folders.update(icon.id,{emoji:'🎓',color:4}).emoji,'🎓');
+ assert.equal(folders.update(icon.id,{name:'FON'}).emoji,'🎓');
+ assert.equal(folders.update(icon.id,{emoji:''}).emoji,undefined);
+ assert.throws(()=>folders.update(icon.id,{emoji:'AB'}));
+ assert.throws(()=>folders.update(icon.id,{color:8}));
+ assert.equal(createFolders(file).list().find(f=>f.id===icon.id).iconManual,true);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });

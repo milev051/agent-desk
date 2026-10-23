@@ -1,3 +1,4 @@
+import { shortDiff } from './public/desk-modes.mjs';
 export const names = { codex: 'Codex', claude: 'Claude Code', grok: 'Grok Build', antigravity: 'Antigravity' };
 export function command(chat, prompt, executable) {
   const { agent, model, access, instructions, effort } = chat.settings;
@@ -63,7 +64,7 @@ export function parseEvent(agent, event) {
     if (event.item?.type === 'command_execution') result.activity = event.item.command;
     if (event.item?.type === 'file_change') result.activity = 'Izmena fajlova';
     if (event.type === 'item.completed' && event.item?.type === 'command_execution') result.actions = [{ kind: 'command', text: event.item.command, exit: event.item.exit_code }];
-    if (event.type === 'item.completed' && event.item?.type === 'file_change') result.actions = (event.item.changes || []).map(c => ({ kind: 'file', text: c.path, change: c.kind }));
+    if (event.type === 'item.completed' && event.item?.type === 'file_change') result.actions = (event.item.changes || []).map(c => { const action = { kind: 'file', text: c.path, change: c.kind }; const diff = shortDiff(c.diff || c.patch); if (diff) action.diff = diff; return action; });
     if (event.type === 'error' || event.type === 'turn.failed') result.error = event.message || event.error?.message || 'Agent je prijavio grešku.';
   } else {
     if (event.session_id) result.session = event.session_id;
@@ -72,6 +73,8 @@ export function parseEvent(agent, event) {
     if (inner?.type === 'content_block_start' && inner.content_block?.type === 'tool_use') result.activity = inner.content_block.name;
     if (inner?.type === 'content_block_start' && inner.content_block?.type === 'text') result.textStart = true;
     if (event.type === 'assistant') {
+      const u = event.message?.usage;
+      if (u) { const context = [u.input_tokens, u.cache_read_input_tokens, u.cache_creation_input_tokens].reduce((s, n) => s + (Number.isSafeInteger(n) ? n : 0), 0); if (context > 0) result.context = context; }
       result.text = (event.message?.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
       const tools = (event.message?.content || []).filter(b => b.type === 'tool_use');
       if (tools.length) { result.activity = tools.map(b => b.name).join(', '); result.actions = tools.map(toolAction); }
@@ -89,7 +92,8 @@ export function parseEvent(agent, event) {
 function toolAction(b) {
   const input = b.input || {}, file = input.file_path || input.notebook_path || input.path;
   if (typeof input.command === 'string') return { kind: 'command', text: input.command, key: b.id };
-  if (typeof file === 'string' && /edit|write|create|replace|patch|delete|move/i.test(b.name)) return { kind: 'file', text: file, key: b.id };
+  if (typeof file === 'string' && /edit|write|create|replace|patch|delete|move/i.test(b.name)) { const action = { kind: 'file', text: file, key: b.id }; if (/delete|remove|unlink|trash/i.test(b.name)) action.change = 'delete'; const diff = shortDiff(input.diff || input.patch); if (diff) action.diff = diff; return action; }
+  if (typeof file === 'string' && /^read$/i.test(b.name || '')) return { kind: 'tool', text: b.name || 'Read', key: b.id, path: file };
   return { kind: 'tool', text: b.name || 'Alat', key: b.id };
 }
 

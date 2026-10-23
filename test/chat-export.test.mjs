@@ -6,3 +6,11 @@ test('Markdown izbor čuva redosled, autore, modele, vreme i originalni kod uz b
  const text=exportMessages(chats,'parent',['a','u']);assert.ok(text.indexOf('] Korisnik:')<text.indexOf('] Codex'));assert.match(text,/1\. 1\. 1970\., 01:00:01/);assert.match(text,/const x = 1;/);assert.match(text,/Claude Code/);assert.match(text,/ID child/);assert.match(text,/a.js/);assert.ok(!text.includes('private-session-id'));assert.ok(!text.includes('another-secret'));assert.ok(!text.includes('NE KOPIRAJ'));assert.deepEqual(linkedPaths(chats[0]),['/home/project/a.js']);
  const without=exportMessages(chats,'parent',['a'],{includeContext:false});assert.ok(!without.includes('ID child'));assert.ok(!without.includes('/home/project'));assert.equal(exportMessages(chats,'parent',[]),'');assert.equal(chatStructure(chats,'child')[0].id,'parent');assert.equal(chatStructure(chats,'parent',{isRunning:c=>c.id==='child'})[1].status,'radi');
 });
+
+test('kopirana poruka nosi limit i potrošnju odgovora', async () => {
+ const {copiedMessage}=await import('../public/sidebar-groups.mjs');
+ const m={id:'r',role:'assistant',agent:'claude',text:'Gotovo',createdAt:0,quota:[{period:'fiveHour',remaining:87},{period:'weekly',remaining:51}]};
+ assert.match(copiedMessage(m,{shares:{r:1.5}}),/\] Claude Code · limit 87 51 · −2%: Gotovo$/);
+ assert.ok(!copiedMessage({...m,role:'user'}).includes('limit'));
+ assert.ok(!copiedMessage({...m,quota:undefined}).includes('·'));
+});

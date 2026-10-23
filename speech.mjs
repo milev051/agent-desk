@@ -1,3 +1,4 @@
+import {stripColorMarkup} from './public/color-markup.mjs';
 import fs from 'node:fs';
 import {createHash} from 'node:crypto';
 import {repairWav as repairWavBytes, joinWavs as joinWavBytes} from './public/wav.mjs';
@@ -6,7 +7,7 @@ export const speechModel='gpt-4o-mini-tts';
 export const speechChunk=900;
 
 export function spokenText(text){
-  let value=String(text||'').split('Povezane putanje na računaru (pročitaj po potrebi):')[0];
+  let value=stripColorMarkup(text).split('Povezane putanje na računaru (pročitaj po potrebi):')[0];
   value=value.replace(/```[\s\S]*?```/g,' ');
   value=value.replace(/`([^`]+)`/g,'$1');
   value=value.replace(/!\[[^\]]*]\([^)]*\)/g,' ');

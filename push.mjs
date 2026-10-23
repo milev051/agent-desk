@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import {extractNotificationLine} from './notification-presence.mjs';
 
 function writeSecret(file, value) {
   fs.mkdirSync(path.dirname(file), {recursive: true, mode: 0o700});
@@ -51,9 +52,10 @@ export function createPush({keysFile, subscriptionsFile, sender, contact = 'mail
       persist();
     },
     async notify(payload) {
+      const line = extractNotificationLine(payload.text || payload.body) || payload.body;
       const body = JSON.stringify({
         title: String(payload.title || 'Agent Desk').slice(0, 120),
-        body: String(payload.body || '').slice(0, 300),
+        body: String(line || '').slice(0, 120),
         chatId: String(payload.chatId || ''),
         tag: String(payload.tag || payload.chatId || 'agent-desk').slice(0, 120),
         ...(payload.messageId ? {messageId: String(payload.messageId)} : {}),

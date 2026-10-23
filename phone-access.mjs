@@ -6,6 +6,7 @@ import {execFile, spawn} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 
 export function parseTailscaleStatus(stdout,stderr=''){for(const output of [stdout,stderr]){const start=output.indexOf('{'),end=output.lastIndexOf('}');if(start<0||end<start)continue;try{const status=JSON.parse(output.slice(start,end+1));if(typeof status.BackendState==='string')return status;}catch{}}throw Error('Tailscale nije vratio JSON stanje.');}
+export function offlinePhonePeers(status){return Object.values(status?.Peer||{}).filter(peer=>/^(android|ios)$/i.test(peer.OS||'') && peer.Online===false).map(peer=>peer.HostName||peer.DNSName||'telefon');}
 const hash=value=>createHash('sha256').update(value).digest('hex');
 export function createPhoneAuth({now=Date.now, lifetime=60000, sessionLifetime=30*86400000,sessionFile}={}) {
  let pairing=null;const sessions=new Map();
@@ -23,6 +24,7 @@ export function createPhoneAuth({now=Date.now, lifetime=60000, sessionLifetime=3
 export function createPhoneAccess({port, gatewayPort=port+2, origin:configuredOrigin, sessionFile,sessionLifetime=30*86400000,tailscale='/Applications/Tailscale.app/Contents/MacOS/Tailscale'}={}) {
  const auth=createPhoneAuth({sessionFile,sessionLifetime});const active=new Map();let origin=configuredOrigin || '', lastDiscovery=0, qrCache=null,discoveryError='' ;
  async function discover(){if(configuredOrigin || Date.now()-lastDiscovery<15000)return origin;lastDiscovery=Date.now();try {const output=await new Promise((resolve,reject)=>execFile(tailscale,['status','--json'],{timeout:4000,maxBuffer:1000000},(e,s,err)=>e?reject(e):resolve({stdout:s,stderr:err})));const s=parseTailscaleStatus(output.stdout,output.stderr);origin=s.BackendState==='Running' && s.Self?.DNSName?'https://'+s.Self.DNSName.replace(/\.$/,''):'';discoveryError='';}catch(e){origin='';discoveryError='Tailscale provera nije uspela ('+(e.code||e.name||'greška')+').';}return origin;}
+ async function offlinePhones(){if(configuredOrigin||!auth.count)return [];try{const output=await new Promise((resolve,reject)=>execFile(tailscale,['status','--json'],{timeout:4000,maxBuffer:1000000},(e,s,err)=>e?reject(e):resolve({stdout:s,stderr:err})));return offlinePhonePeers(parseTailscaleStatus(output.stdout,output.stderr));}catch{return [];}}
  const info=async()=>{await discover();const p=auth.pairing();return {origin,discoveryError,gatewayPort,url:origin?origin+'/login#pair='+p.token:'',expiresAt:p.expiresAt,sessions:auth.count,sessionDays:sessionLifetime/86400000};};
  async function qr(){const p=await info();if(!p.url)throw Error('Tailscale nije povezan.');if(qrCache?.url===p.url)return qrCache.png;
  const png=await new Promise((resolve,reject)=>{const child=spawn('/usr/bin/swift',[fileURLToPath(new URL('./phone-qr.swift',import.meta.url))],{stdio:['pipe','pipe','pipe']});let data=[],size=0;const timer=setTimeout(()=>{child.kill();reject(Error('QR nije dostupan. Koristi link.'));},30000);child.stdout.on('data',b=>{size+=b.length;if(size<1000000)data.push(b);});child.on('error',reject);child.on('close',code=>{clearTimeout(timer);code===0?resolve(Buffer.concat(data)):reject(Error('QR nije dostupan. Koristi link.'));});child.stdin.on('error',()=>{});child.stdin.end(p.url);});qrCache={url:p.url,png};return png;}
@@ -57,5 +59,5 @@ export function createPhoneAccess({port, gatewayPort=port+2, origin:configuredOr
  });
  const expiry=setInterval(()=>{for(const [res,cookie] of active)if(!auth.valid(cookie))res.destroy();},10000);expiry.unref();
  let started=false;
- return {info,qr,revoke:()=>{auth.revoke();qrCache=null;for(const res of active.keys())res.destroy();},start(){if(started)return;started=true;server.on('error',e=>console.error('Telefon: '+e.message));server.listen(gatewayPort,'127.0.0.1');},close(){clearInterval(expiry);server.close();server.closeAllConnections();},server,auth};
+ return {info,qr,offlinePhones,revoke:()=>{auth.revoke();qrCache=null;for(const res of active.keys())res.destroy();},start(){if(started)return;started=true;server.on('error',e=>console.error('Telefon: '+e.message));server.listen(gatewayPort,'127.0.0.1');},close(){clearInterval(expiry);server.close();server.closeAllConnections();},server,auth};
 }

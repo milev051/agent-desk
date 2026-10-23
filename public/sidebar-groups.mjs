@@ -1,11 +1,28 @@
+import {answerText} from './final-answer.mjs';
+import {shareLabel} from './limit-share.mjs';
+// Prethodni deo četa vodi do najnovijeg nastavka koji još postoji.
+export function latestPart(chats, chat) {
+  const byId=new Map(chats.map(c=>[c.id,c])), seen=new Set([chat.id]);let last=chat;
+  while(last.continuedTo && byId.has(last.continuedTo) && !seen.has(last.continuedTo)){last=byId.get(last.continuedTo);seen.add(last.id);}
+  return last;
+}
+export const lockedPart=chat=>!!chat?.continuedTo && !chat.continuedUnlocked;
+// Četovi prilagodljivih agenata stoje u svom folderu „Prilagođavanje“, ne u ostalim folderima.
+export const adaptiveChat=chat=>!!(chat?.adaptiveAgent || chat?.adaptivePropose);
 // One level of Agent Desk delegation; orphaned children stay accessible.
-export function sidebarGroups(chats, matches=()=>true) {
-  const ids=new Set(chats.map(c=>c.id)), children=new Map();
+// Prethodni delovi posle nastavka stoje u parts, ispod najnovijeg dela, a ne kao podagenti.
+// adaptive:true vraća samo četove prilagođavanja, za njihov folder u listi.
+export function sidebarGroups(chats, matches=()=>true, {adaptive=false}={}) {
+  const ids=new Set(chats.map(c=>c.id)), children=new Map(), parts=new Map();
   const roots=[];
-  for(const c of chats){if(c.parentChatId && c.parentChatId!==c.id && ids.has(c.parentChatId)){const list=children.get(c.parentChatId)||[];list.push(c);children.set(c.parentChatId,list);}else roots.push(c);}
-  const sort=(a,b)=>(b.updatedAt||0)-(a.updatedAt||0);
-  return roots.map(chat=>{const all=children.get(chat.id)||[];return {chat,children:all.filter(c=>matches(chat)||matches(c)).sort(sort),updatedAt:Math.max(chat.updatedAt||0,...all.map(c=>c.updatedAt||0))};})
-    .filter(g=>matches(g.chat)||g.children.length).sort((a,b)=>b.updatedAt-a.updatedAt);
+  for(const c of chats){
+    if(c.parentChatId && c.parentChatId!==c.id && ids.has(c.parentChatId)){const list=children.get(c.parentChatId)||[];list.push(c);children.set(c.parentChatId,list);continue;}
+    const head=c.continuedTo?latestPart(chats,c):c;
+    if(head!==c && !head.parentChatId){const list=parts.get(head.id)||[];list.push(c);parts.set(head.id,list);}else if(adaptiveChat(c)===adaptive)roots.push(c);
+  }
+  const sort=(a,b)=>(b.updatedAt||0)-(a.updatedAt||0), oldest=(a,b)=>(a.createdAt||0)-(b.createdAt||0)||a.id.localeCompare(b.id);
+  return roots.map(chat=>{const all=children.get(chat.id)||[],own=parts.get(chat.id)||[];return {chat,children:all.filter(c=>matches(chat)||matches(c)).sort(sort),parts:own.filter(c=>matches(chat)||matches(c)).sort(oldest),updatedAt:Math.max(chat.updatedAt||0,...all.map(c=>c.updatedAt||0))};})
+    .filter(g=>matches(g.chat)||g.children.length||g.parts.length).sort((a,b)=>b.updatedAt-a.updatedAt);
 }
 
 // Shared context and Markdown export for the same chat tree.
@@ -23,19 +40,34 @@ export function messageStamp(time){
  const clock=new Intl.DateTimeFormat('sr-Latn-RS',{timeZone:'Europe/Belgrade',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(time);
  return date+', '+clock;
 }
-export function copiedMessage(m,{modelName=(_agent,id)=>id}={}){
- const model=modelName(m.agent,m.model),author=m.role==='user'?'Korisnik':(names[m.agent]||'Agent')+(model?' ('+model+')':'');
- const text=(m.text||'').replaceAll('Povezane putanje na računaru (pročitaj po potrebi):','Fajlovi:');
+// Limit posle odgovora (5h i nedeljni) i procenjena potrošnja 5h limita, kao u četu: „limit 24 46 · −1,5%“.
+function quotaNote(m,shares){
+ const windows=Array.isArray(m.quota)?m.quota:[],pick=p=>windows.find(w=>w.period===p)?.remaining;
+ const left=[pick('fiveHour'),pick('weekly')].filter(Number.isFinite),share=shareLabel(shares?.[m.id]);
+ return [left.length?'limit '+left.join(' '):'',share].filter(Boolean).join(' · ');
+}
+export function copiedMessage(m,{modelName=(_agent,id)=>id,shares,includeProgress=false}={}){
+ const model=modelName(m.agent,m.model),note=m.role==='user'?'':quotaNote(m,shares),author=m.role==='user'?'Korisnik':(names[m.agent]||'Agent')+(model?' ('+model+')':'')+(note?' · '+note:'');
+ const text=answerText(m,{includeProgress}).replaceAll('Povezane putanje na računaru (pročitaj po potrebi):','Fajlovi:');
  return `[${messageStamp(m.sentAt || m.createdAt)}] ${author}: ${text}`;
 }
 export function chatActivityRecord(chat){
  const sent=(chat.messages||[]).filter(m=>m.role==='user' && !m.usageInherited),accesses=chat.accessLog || [];
  return [`Kreiran: ${messageStamp(chat.createdAt)}`,`Otvaranja: ${accesses.length}`,`Poslate poruke: ${sent.length}`,...(accesses.length?['','Pristupi:',...accesses.map(a=>'- '+messageStamp(a.at))]:[])].join('\n');
 }
-export function exportMessages(chats,id,ids,{includeContext=true,modelName=(_agent,id)=>id}={}){
+export function exportMessages(chats,id,ids,{includeContext=true,modelName=(_agent,id)=>id,includeProgress=true}={}){
  const chat=chats.find(c=>c.id===id);if(!chat)return '';const selected=new Set(ids);const messages=chat.messages.filter(m=>selected.has(m.id)&&m.text);if(!messages.length)return '';
  const header=[`# ${md(chat.title)}`];if(includeContext){header.push(`Čet: ${chat.id}`,`Folder: ${chat.settings.cwd}`);const tree=chatStructure(chats,id);if(tree.length>1){header.push('Povezani četovi:');for(const c of tree)header.push(`${'  '.repeat(c.depth)}- ${md(c.title)} · ${names[c.agent]||'Agent'} · ID ${c.id}`);}}
- return header.join('\n')+'\n\n'+messages.map(m=>copiedMessage(m,{modelName})).join('\n\n');
+ return header.join('\n')+'\n\n'+messages.map(m=>copiedMessage(m,{modelName,shares:chat.limitShares,includeProgress})).join('\n\n');
+}
+
+// A folder shows a short list until the user asks for the rest, or a chat past that limit needs to be seen.
+export function visibleFolderChats(list, {limit=3, expanded=false, pinned=()=>false}={}) {
+  const items=Array.isArray(list)?list:[];
+  if(expanded || items.length<=limit) return {shown:items, hidden:0, revealed:!!expanded && items.length>limit};
+  const pin=items.findIndex(item=>pinned(item));
+  if(pin>=limit) return {shown:items, hidden:0, revealed:true};
+  return {shown:items.slice(0,limit), hidden:items.length-limit, revealed:false};
 }
 
 // Roots in the expanded folder, or roots with no known folder.

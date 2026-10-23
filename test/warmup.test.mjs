@@ -45,3 +45,20 @@ test('dani: slanje samo izabranim danima, isključivanje svih i trajno čuvanje'
  time=new Date('2026-10-09T06:00:00Z');await restored.tick();assert.equal(calls,1);
  assert.throws(()=>restored.configure({enabled:true,time:'08:00',agents:['codex'],days:[8]}));
 });
+
+test('usklađivanje limita: uz korisnikovu poruku, samo ostalim agentima, jednom po prozoru, ponovo posle greške',async t=>{
+ const {idleLimitAgents}=await import('../warmup.mjs');
+ let time=new Date('2026-10-18T10:00:00Z'),calls=[],fail=false;const at=()=>time.getTime(),h=3600000;
+ let snapshot={claude:{windows:[{period:'fiveHour',remaining:100,resetAt:null},{period:'weekly',remaining:80,resetAt:at()+50*h}]},codex:{windows:[{period:'fiveHour',remaining:60,resetAt:at()+2*h}]},grok:{windows:[{period:'fiveHour',remaining:100,resetAt:null},{period:'weekly',remaining:0,resetAt:at()+100*h}]},antigravity:{windows:[{period:'fiveHour',remaining:100,resetAt:null}]}};
+ assert.deepEqual(idleLimitAgents(['claude','codex','grok'],snapshot,{},at()),[{agent:'claude',periods:['fiveHour']}]);
+ const job=setup(t,{now:()=>time,limits:()=>snapshot,execute:async agent=>{calls.push(agent);if(fail)throw Error('mreža');return {status:'done'};}});
+ job.configure({enabled:false,time:'08:00',agents:['claude','codex','grok','antigravity']});
+ await job.tick();assert.deepEqual(calls,[]);
+ await job.userActivity('antigravity');assert.deepEqual(calls,['claude']);assert.equal(job.view().runs[0].origin,'auto');
+ await job.userActivity('claude');assert.deepEqual(calls,['claude']);
+ time=new Date(at()+5*h);snapshot.codex.windows[0].resetAt=at()-1;fail=true;await job.userActivity('grok');assert.deepEqual(calls,['claude','claude','codex','antigravity']);
+ fail=false;time=new Date(at()+10*60000);await job.userActivity('grok');assert.equal(calls.length,4);
+ time=new Date(at()+25*60000);await job.userActivity('grok');assert.deepEqual(calls.slice(4),['claude','codex','antigravity']);
+ job.configure({enabled:false,auto:false,time:'08:00',agents:['claude']});assert.equal(job.view().auto,false);
+ time=new Date(at()+6*h);await job.userActivity('codex');assert.equal(calls.length,7);
+});

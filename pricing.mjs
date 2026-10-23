@@ -29,3 +29,8 @@ export function tokenCost(usage,model,createdAt){
  if(w && price.rates.some(r=>!r.cacheWrite))return null;
  return {min:Math.min(...price.rates.map(r=>cost(r,baseMin,usage.output))),max:Math.max(...price.rates.map(r=>cost(r,baseMax,outMax))),source:price.source};
 }
+// Ušteda prvog poziva posle nove sesije: kontekst koji se nije ponovo upisao u keš (Claude Code upisuje na 1 sat, najviša stopa).
+export function sessionSaving(before,after,model){
+ const rates=modelPrice(model)?.rates,tokens=before-after;if(!rates || !(tokens>0))return null;
+ return Math.round(tokens*Math.max(...rates.map(r=>r.cacheWrite||r.input))/1e6*1e4)/1e4;
+}

@@ -10,7 +10,7 @@ export function createChatSearch({view,panel,input,count}){
  function status(){count.textContent=matches.length?`${selected+1}/${matches.length}`:input.value.trim()?'Nema rezultata':'0/0';matches.forEach((marks,i)=>marks.forEach(mark=>mark.classList.toggle('current',i===selected)));}
  function refresh(jump=false){if(panel.hidden)return;clear();matches=[];
   for(const body of view.querySelectorAll('.message-body')){
-   const walker=document.createTreeWalker(body,NodeFilter.SHOW_TEXT),nodes=[];let node,text='';
+   const walker=document.createTreeWalker(body.querySelector('.result-full-text') || body,NodeFilter.SHOW_TEXT),nodes=[];let node,text='';
    while(node=walker.nextNode()){nodes.push({node,start:text.length,end:text.length+node.length});text+=node.data;}
    const hits=textMatches(text,input.value);const local=hits.map(()=>[]);
    for(const item of nodes){const overlaps=hits.map((hit,i)=>({start:Math.max(hit.start,item.start)-item.start,end:Math.min(hit.end,item.end)-item.start,i})).filter(hit=>hit.end>hit.start);if(!overlaps.length)continue;
@@ -18,7 +18,7 @@ export function createChatSearch({view,panel,input,count}){
    }matches.push(...local.filter(m=>m.length));
   }selected=Math.min(selected,Math.max(0,matches.length-1));status();if(jump)go(0);
  }
- function go(delta){if(!matches.length)return;selected=(selected+delta+matches.length)%matches.length;status();matches[selected][0].scrollIntoView({block:'center',behavior:'auto'});}
+ function go(delta){if(!matches.length)return;selected=(selected+delta+matches.length)%matches.length;status();for(let details=matches[selected][0].closest('details');details;details=details.parentElement?.closest('details'))details.open=true;matches[selected][0].closest('.result-full-text[hidden]')?.removeAttribute('hidden');matches[selected][0].scrollIntoView({block:'center',behavior:'auto'});}
  function close(){panel.hidden=true;clear();matches=[];}
  function open(){panel.hidden=false;selected=0;refresh(true);input.focus({preventScroll:true});input.select();}
  input.addEventListener('input',()=>{selected=0;refresh(true);});

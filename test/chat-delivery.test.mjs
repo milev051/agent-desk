@@ -18,3 +18,25 @@ test('tok prenosi samo otvoreni čet, dopune, nove poruke i oporavak posle propu
  const reconnect=createBrowserDelivery({selected:'a'});cache=mergeBrowserChats(cache,reconnect([c,other]));assert.equal(cache[0].messages.at(-1).text,'Nova12');assert.equal(cache[0]._needsHistory,false);
  cache=mergeBrowserChats(cache,reconnect([c]));assert.equal(cache.length,1);
 });
+
+test('sažetak prenosi kratak pregled neotvorenog četa i sveže izmene',()=>{
+ const a=chat(),b={...chat(),id:'b'};b.messages.at(-1).text='**Poslednji** odgovor '+ 'x'.repeat(400);
+ const delivery=createBrowserDelivery({selected:'a'});let cache=mergeBrowserChats([],delivery([a,b]));
+ assert.equal(cache[1].messages.length,0);assert.match(cache[1].latestPreview.text,/^Poslednji odgovor /);assert.ok(cache[1].latestPreview.text.length<=91);
+ b.messages.push({id:'120',role:'user',text:'Novo pitanje',createdAt:120});cache=mergeBrowserChats(cache,delivery([a,b]));
+ assert.equal(cache[1].latestPreview.text,'Ti: Novo pitanje');assert.equal(cache[1].latestPreview.time,120);
+ b.messages=[];cache=mergeBrowserChats(cache,delivery([a,b]));assert.equal(cache[1].latestPreview.text,'');
+});
+test('sažetak četa nosi aktuelnu veličinu konteksta, da tajmer keša ne koristi staro vreme',()=>{
+ const s=chatSummary({id:'a',messages:[{role:'assistant',status:'done',context:5000,createdAt:1,completedAt:9}]});
+ assert.deepEqual(s.lastContext,{tokens:5000,at:9});
+});
+test('izvor obaveštenja prati odgovor Dispečera i u starim sažecima bez izmene poruka',()=>{
+ const messages=[{role:'user',origin:'dispatcher-watch',text:'Izveštaj'},{role:'assistant',id:'r',status:'done',text:'Rezultat'}];
+ assert.equal(chatSummary({id:'d',messages}).latestReply.notificationOrigin,'dispatcher-watch');
+ assert.equal(messages[1].notificationOrigin,undefined);
+ messages.push({role:'user',origin:'user',text:'Novo pitanje'});
+ assert.equal(chatSummary({id:'d',messages}).latestReply.notificationOrigin,'dispatcher-watch');
+ messages.push({role:'assistant',status:'running',notificationOrigin:'user'});
+ assert.equal(chatSummary({id:'d',messages}).latestReply.notificationOrigin,'user');
+});

@@ -5,6 +5,7 @@ struct Prozor: Identifiable {
     let naziv: String
     let procenat: Double
     let reset: Date?
+    var quotaGroup: String? = nil
 
     // Prikazuje se koliko je ostalo, a procenat ostaje potrošnja, kao u API-ju.
     var ostalo: Int { max(0, 100 - Int(procenat.rounded())) }
@@ -236,23 +237,28 @@ func ucitajAntigravity() async throws -> Ocitavanje {
     zahtev.httpBody = try JSONSerialization.data(withJSONObject: nalog.projekat.map { ["project": $0] } ?? [:])
     let odgovor = try await preuzmiJSON(zahtev, prijava: "Antigravity je odbio prijavu. Pokreni agy.")
 
-    // Isti podaci kao u Antigravity podešavanjima, Models & Usage. Grupe su
-    // Gemini i "Claude and GPT", a prati se samo Gemini.
+    return parsirajAntigravity(odgovor, plan: nalog.plan)
+}
+
+func parsirajAntigravity(_ odgovor: [String: Any], plan: String?) -> Ocitavanje {
     let grupe = odgovor["groups"] as? [[String: Any]] ?? []
-    guard let gemini = grupe.first(where: { (($0["displayName"] as? String) ?? "").contains("Gemini") }) else {
-        return Ocitavanje(plan: nalog.plan, prozori: [], napomena: "Antigravity nije vratio Gemini kvotu.")
+    let gemini = grupe.first { (($0["displayName"] as? String) ?? "").localizedCaseInsensitiveContains("Gemini") }
+    let claude = grupe.first { (($0["displayName"] as? String) ?? "").localizedCaseInsensitiveContains("Claude") }
+    guard let grupa = gemini ?? claude else {
+        return Ocitavanje(plan: plan, prozori: [], napomena: "Antigravity nije vratio prepoznatljivu kvotu modela.")
     }
-    let prozori = (gemini["buckets"] as? [[String: Any]] ?? []).compactMap { kofa -> (Int, Prozor)? in
+    let oznaka = gemini != nil ? "gemini" : "claudeGpt"
+    let prozori = (grupa["buckets"] as? [[String: Any]] ?? []).compactMap { kofa -> (Int, Prozor)? in
         let prozor = kofa["window"] as? String ?? ""
-        let (redosled, naziv) = prozor == "5h" ? (0, "5 sati") : prozor == "weekly" ? (1, "Nedelja") : (2, prozor)
+        guard prozor == "5h" || prozor == "weekly" else { return nil }
+        let (redosled, naziv) = prozor == "5h" ? (0, "5 sati") : (1, "Nedelja")
         // Kad je kvota potrošena, polje sa ostatkom izostaje iz odgovora.
         let preostalo = (kofa["remainingFraction"] as? NSNumber)?.doubleValue ?? 0
+        guard preostalo.isFinite else { return nil }
         let reset = (kofa["resetTime"] as? String).flatMap(datumIzISO)
-        return (redosled, Prozor(naziv: naziv, procenat: (1 - preostalo) * 100, reset: reset))
-    }
-    .sorted { $0.0 < $1.0 }
-    .map(\.1)
-    return Ocitavanje(plan: nalog.plan, prozori: prozori)
+        return (redosled, Prozor(naziv: naziv, procenat: (1 - max(0, min(1, preostalo))) * 100, reset: reset, quotaGroup: oznaka))
+    }.sorted { $0.0 < $1.0 }.map(\.1)
+    return Ocitavanje(plan: plan, prozori: prozori, napomena: gemini == nil ? "Claude/GPT kvota. Gemini kvota trenutno nije dostupna." : nil)
 }
 
 // Grok ima samo nedeljni SuperGrok limit, zajednički za Grok Build (CLI) i chat.
@@ -332,7 +338,9 @@ func ocitaj(_ id: String) async -> [String: Any] {
             default: period = ""
             }
             guard !period.isEmpty else { return nil }
-            return ["period":period,"remaining":w.ostalo,"resetAt":w.reset.map { $0.timeIntervalSince1970 * 1000 } as Any? ?? NSNull()]
+            var result: [String: Any] = ["period":period,"remaining":w.ostalo,"resetAt":w.reset.map { $0.timeIntervalSince1970 * 1000 } as Any? ?? NSNull()]
+            if let group = w.quotaGroup { result["quotaGroup"] = group }
+            return result
         }
         return ["agent":id,"windows":windows,"updatedAt":Date().timeIntervalSince1970 * 1000,"error":value.napomena as Any? ?? NSNull()]
     } catch let error as GreskaIzvora {

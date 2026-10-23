@@ -7,7 +7,8 @@ test('očitavanje se grupiše i kešira, star telefon je označen',async()=>{let
 import {mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
-import {batteryDuration} from '../public/battery.mjs';
+import {batteryDuration,batteryAge} from '../public/battery.mjs';
+test('starost očitavanja telefona',()=>{const t=10*86400000;assert.equal(batteryAge(t-5*60000,t),'pre 5m');assert.equal(batteryAge(t-114*60000,t),'pre 1h');assert.equal(batteryAge(t-3*86400000,t),'pre 3d');assert.equal(batteryAge(undefined,t),'-');});
 test('vreme bez punjača beleži prelaz i ostaje posle restarta',async t=>{
  const dir=mkdtempSync(path.join(tmpdir(),'battery-time-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));const file=path.join(dir,'battery.json');
  let time=1000,charging=true;const opts={file,now:()=>time,read:async()=>({level:70,charging})};

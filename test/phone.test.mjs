@@ -56,3 +56,9 @@ test('prijava preživljava ponovno pokretanje, zapis sadrži samo heš i opoziv 
  const next=restarted.redeem(restarted.pairing().token);assert.ok(createPhoneAuth(options).valid(next));restarted.revoke();assert.equal(createPhoneAuth(options).valid(next),false);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+import {offlinePhonePeers} from '../phone-access.mjs';
+test('offlinePhonePeers vraća samo isključene telefone',()=>{
+ const names=offlinePhonePeers({Peer:{a:{OS:'android',Online:false,HostName:'s23'},b:{OS:'android',Online:true,HostName:'x'},c:{OS:'macOS',Online:false,HostName:'mac'}}});
+ assert.deepEqual(names,['s23']);
+});

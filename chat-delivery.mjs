@@ -1,10 +1,16 @@
+import {lastContext} from './public/handoff-advice.mjs';
+import {previewLine} from './public/chat-preview.mjs';
 import {chatActivity} from './planner-activity.mjs';
 // Browser views receive metadata and only the open conversation. CLI callers retain the full API.
 export function chatSummary(chat) {
  const {messages=[],context,transferEstimates,transfers,usageSummary,quotaChanges,sharedFolderReads,childReadOffsets,accessLog,...meta}=chat;
+ const preview=previewLine({...chat,running:false});
+ const last=messages.findLast(m=>['user','assistant'].includes(m.role) && (m.text || '').trim());
+ const latestPreview={text:preview.text,time:last?.sentAt || last?.createdAt || null};
  const reply=messages.findLast(m=>m.role==='assistant');
  const {text,actions,textTimings,activity,...latestReply}=reply || {};
- return {...meta,...chatActivity(chat),messages:[],summary:true,messageCount:messages.length,historyChars:messages.reduce((n,m)=>n+(m.text?.length || 0),0),latestReply:reply?latestReply:null};
+ if(reply && !latestReply.notificationOrigin){const at=messages.lastIndexOf(reply);latestReply.notificationOrigin=messages.slice(0,at).findLast(m=>m.role==='user')?.origin || 'user';}
+ return {...meta,...chatActivity(chat),messages:[],summary:true,lastContext:lastContext(chat),latestPreview,messageCount:messages.length,historyChars:messages.reduce((n,m)=>n+(m.text?.length || 0),0),latestReply:reply?latestReply:null};
 }
 export function chatPage(chat,{limit=50,before}={}) {
  const messages=chat.messages || [],end=before?messages.findIndex(m=>m.id===before):messages.length;
