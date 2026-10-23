@@ -176,6 +176,20 @@ Računar i telefon moraju imati aktivan Tailscale. Agent Desk mora raditi na ra�
 /Applications/Tailscale.app/Contents/MacOS/Tailscale serve --bg --https=443 http://127.0.0.1:4319
 ```
 
+Klik na pun http(s) link u poruci otvara **pregled uživo** iznad četa. Podrazumevana širina je 1920 px, uz izbor 1440, 1280 ili telefon 390; okvir se skalira na ekran. Donjom ručicom menja se visina (pamti se na uređaju), a poruke i unos ostaju dostupni. Nazad prvo zatvara pregled. Cmd/Ctrl+klik i dugme ↗ otvaraju običan pretraživač. Dugme **Pregled** i dalje pravi snimak cele stranice.
+
+Za pregled uživo na telefonu pokreni još jednu Serve rutu na Macu, iz Terminala:
+
+```sh
+/Applications/Tailscale.app/Contents/MacOS/Tailscale serve --bg --https=8443 http://127.0.0.1:4321
+```
+
+Tailscale CLI iz pozadinskog servisa ponekad nije dostupan, zato ovu komandu pokreće korisnik. Bez rute panel prikazuje uputstvo, a dugme ↻ ponavlja proveru. Koristi se postojeća telefonska prijava, sa istog DNS imena kao aplikacija. Lokalni proxy je `PORT + 3` (4320), telefonski `PORT + 4` (4321); promene se zadaju kroz `AGENT_DESK_PREVIEW_PORT` i `AGENT_DESK_PREVIEW_PHONE_PORT` i odgovarajući Serve port. Oba servera slušaju samo na 127.0.0.1.
+
+Proxy čuva root putanje i WebSocket za razvojne servere; uklanja X-Frame-Options i samo CSP direktivu frame-ancestors. Kolačić Agent Deska ne stiže do sajta, a telefonski proxy proverava važeću prijavu pre svakog zahteva i nadgleda otvorene tokove. Dozvoljeni su javni http(s) sajtovi i loopback razvojni serveri, osim portova aplikacije. Privatni LAN, Tailscale IP opseg i nedozvoljene DNS mete su odbijeni, uključujući ponovnu proveru pri zahtevu.
+
+Ograničenja: svi četovi i uređaji dele jednu aktivnu metu u memoriji; drugi link je menja. Pregled nije odvojen profil za svaki sajt: kolačići i skladište sajtova dele proxy origin, pa ga koristi za proveru stranica, bez prijavljivanja u osetljive naloge. Service worker registracije su blokirane. Apsolutni linkovi ili resursi sa drugim originom, OAuth prijave, posebna CSP pravila i HMR sa izričito ugrađenim portom mogu zahtevati običan pretraživač ili podešavanje razvojnog servera. Restart briše aktivnu metu. Kod iz pregleda nema pristup roditeljskom četu: drugi origin i postojeće API Origin/CORS provere ostaju uključeni.
+
 Ako Tailscale zatraži uključivanje HTTPS Serve-a, završi njegov zvanični postupak. Za drugi Agent Desk port gateway podrazumevano koristi `PORT + 2`; može se zadati `AGENT_DESK_PHONE_PORT`. QR koristi macOS CoreImage kroz postojeći Swift alat, bez dodatnih npm modula. Kada taj alat nije dostupan, može se koristiti privremeni link. U pregledaču telefona prvo se prikazuje lista četova; klik otvara čet, a gest ili dugme Nazad pregledača vraća na listu. URL sa `#chat=<id>` otvara određeni čet odmah.
 
 Stalna HTTPS adresa može da se instalira kao aplikacija, bez promene adrese: Safari → Podeli → Dodaj na početni ekran, ili Chrome na Androidu → ⋮ → Instaliraj aplikaciju. `manifest.webmanifest` i ikonice gateway daje i bez sesije, jer ih telefon pri instalaciji ponekad traži bez cookie-ja; ostali fajlovi i podaci ostaju zaštićeni. Ikonice se crtaju komandom `python3 launcher/icon.py`, koja pravi i `launcher/AppIcon.icns` za `Agent Desk.app`.

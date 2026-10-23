@@ -793,3 +793,19 @@ body:has(> #restart-status:not([hidden])){padding-top:41px}
 
 /* Snimak cele stranice u popupu: širina ekrana i skrolovanje; klik daje pravu veličinu sa vodoravnim skrolovanjem. */
 #attachment-view.page-view[open]{overflow:auto;display:block;padding:0}#attachment-view.page-view img{display:block;flex:none;width:100%;height:auto;object-fit:initial;cursor:zoom-in}#attachment-view.page-view.actual-size img{width:auto;max-width:none;cursor:zoom-out}#attachment-view.page-view button{position:sticky;bottom:12px;left:50%;display:block;margin:10px auto 12px;transform:none}
+
+/* Pregled ostaje iznad nezavisnog skrola poruka, dok unos zadržava mesto. */
+#live-preview{position:fixed;top:0;z-index:18;display:flex;flex-direction:column;background:#111;min-height:90px;overflow:hidden}
+.live-preview-toolbar{display:flex;align-items:center;gap:5px;flex-shrink:0;height:36px;padding:3px 6px;background:#171717;font-size:12px}
+[data-preview-address]{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#bbb}
+.live-preview-toolbar button,.live-preview-toolbar select,.live-preview-toolbar a{padding:3px 7px;min-height:28px;flex-shrink:0}.live-preview-toolbar select{width:102px;padding-right:22px;background-position:right 5px center}.live-preview-toolbar a{color:#ddd;text-decoration:none;font-size:19px}
+[data-preview-viewport]{position:relative;flex:1;min-height:0;overflow:hidden;background:white}
+[data-preview-viewport] iframe{position:absolute;top:0;left:0;border:0;transform-origin:top left;background:white}
+[data-preview-viewport] [role=status]{position:absolute;inset:0;margin:0;padding:18px;color:#ddd;background:#171717;font-size:13px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+[data-preview-resize]{height:12px;flex-shrink:0;cursor:ns-resize;touch-action:none;background:#222;display:grid;place-items:center}[data-preview-resize]::after{content:'';width:42px;height:3px;border-radius:2px;background:#777}.resizing iframe{pointer-events:none}
+body.live-preview-open main{padding-top:var(--live-preview-height,50dvh)}
+body.live-preview-open #chat-navigation{display:none!important}
+body.live-preview-open #prompt{max-height:20dvh}
+@media(max-width:650px){body.live-preview-open main{padding-top:var(--live-preview-height,50dvh)!important}body.live-preview-open #live-preview{left:0!important;width:100%!important}body.live-preview-open .composer-area{max-height:45%;overflow:auto}}
+
+@media(max-width:650px){body.live-preview-open #mobile-agent-header{display:none}body.live-preview-open{grid-template-rows:0 minmax(0,1fr)!important}}

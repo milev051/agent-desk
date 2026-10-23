@@ -31,6 +31,10 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.ok((await call('/api/chats?summary=1')).data.some(c=>c.id==='legacy-empty'));
     await call('/api/chats/legacy-empty','DELETE');
     assert.equal((await call('/api/cli-updates')).data.auto,false);assert.equal((await call('/api/cli-updates','PUT',{auto:true})).data.auto,true);assert.equal((await call('/api/cli-updates','PUT',{auto:false})).data.auto,false);assert.equal((await call('/api/cli-updates','PUT',{auto:true},'https://evil.test')).status,403);
+    assert.equal((await call('/api/preview','POST',{url:'https://example.com'},`http://127.0.0.1:${port+3}`)).status,403);
+    assert.equal((await call('/api/preview','POST',{url:base})).status,400);
+    assert.equal((await call('/api/preview','DELETE',{})).status,200);
+    const previewRead=await fetch(base+'/api/chats',{headers:{Origin:`http://127.0.0.1:${port+3}`}});assert.equal(previewRead.headers.get('access-control-allow-origin'),null);
     assert.equal((await call('/api/priorities')).status,404);
     assert.equal((await call('/api/adaptive')).data.settings.autoApprove,true);
     assert.equal((await call('/api/adaptive/settings','PUT',{autoApprove:false},'https://evil.test')).status,403);

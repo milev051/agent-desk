@@ -38,6 +38,7 @@ import {tokenCost,sessionSaving} from './pricing.mjs';
 import {createLimits} from './limits.mjs';
 import {summarizeLimits,limitsLine,exhaustedAgentError} from './limit-summary.mjs';
 import {createPhoneAccess} from './phone-access.mjs';
+import {createLivePreview} from './live-preview.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -99,6 +100,7 @@ const limits=createLimits({onSample:sample=>{if(quotaHistory.observe(sample)){br
 const phoneOriginFile=path.join(process.env.AGENT_DESK_CONFIG || path.join(os.homedir(),'.config','agent-desk'),'phone-origin');
 const savedPhoneOrigin=fs.existsSync(phoneOriginFile)?fs.readFileSync(phoneOriginFile,'utf8').trim():'';
 const phone=createPhoneAccess({sessionFile:path.join(path.dirname(phoneOriginFile),'phone-sessions.json'),port,gatewayPort:Number(process.env.AGENT_DESK_PHONE_PORT || port+2),origin:process.env.AGENT_DESK_PHONE_ORIGIN || savedPhoneOrigin});
+const livePreview=createLivePreview({port,phone});
 const gmail=createGmail({scopes:[gmailScope,gmailWriteScope,gmailComposeScope,driveScope,driveWriteScope,tasksScope,tasksWriteScope,calendarScope,calendarWriteScope],configDir:path.dirname(phoneOriginFile),openBrowser:async url=>{
   if(process.platform!=='darwin')throw Error('Ova verzija otvara Google prijavu na macOS-u.');
   await new Promise((resolve,reject)=>{const child=spawn('/usr/bin/open',[url],{stdio:'ignore'});child.on('error',()=>reject(Error('Browser nije otvoren. Proveri podrazumevani browser.')));child.on('close',code=>code===0?resolve():reject(Error('Browser nije otvoren.')));});
@@ -558,6 +560,11 @@ const server = http.createServer(async (req, res) => {
     if (![`127.0.0.1:${port}`, `localhost:${port}`].includes(req.headers.host)) return json(403, { error: 'Dozvoljen je samo lokalni pristup.' });
     const url = new URL(req.url, `http://127.0.0.1:${port}`);
     if (!['GET', 'HEAD'].includes(req.method) && ![`http://127.0.0.1:${port}`, `http://localhost:${port}`].includes(req.headers.origin)) return json(403, { error: 'Neispravno poreklo zahteva.' });
+    if(url.pathname==='/api/preview'){
+      if(req.method==='POST'){try{return json(200,await livePreview.set((await body(req)).url));}catch(error){return json(400,{error:error.message});}}
+      if(req.method==='DELETE'){livePreview.clear();return json(200,{ok:true});}
+      return json(405,{error:'Podržani su POST i DELETE.'});
+    }
     if(url.pathname==='/api/notifications/presence'){
       if(req.method==='GET')return json(200,desktopPresence.view());
       if(req.method==='POST')return json(200,desktopPresence.update(await body(req)));
@@ -1090,21 +1097,22 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && !Object.hasOwn(files, url.pathname) && /^\/[a-z0-9-]+\.mjs$/.test(url.pathname) && fs.existsSync(path.join(root, 'public', url.pathname))) files[url.pathname] = [url.pathname.slice(1), 'text/javascript'];
     if (req.method === 'GET' && Object.hasOwn(files, url.pathname)) {
       const [file, mime] = files[url.pathname];
-      const headers = { 'Content-Type': mime.startsWith('image/') ? mime : `${mime}; charset=utf-8`, 'Content-Security-Policy': "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' blob:; worker-src 'self'; frame-ancestors 'none'", 'X-Content-Type-Options': 'nosniff' };
+      const previewOrigins=(await livePreview.origins()).join(' ');
+      const headers = { 'Content-Type': mime.startsWith('image/') ? mime : `${mime}; charset=utf-8`, 'Content-Security-Policy': `default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' ${previewOrigins}; frame-src 'self' ${previewOrigins}; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' blob:; worker-src 'self'; frame-ancestors 'none'`, 'X-Content-Type-Options': 'nosniff' };
       if (url.pathname === '/sw.js') headers['Cache-Control'] = 'no-cache';
       return respond(200, headers, fs.readFileSync(path.join(root, 'public', file)));
     }
     json(404, { error: 'Nije pronađeno.' });
   } catch (error) { json(400, { error: error.message }); }
 });
-server.listen(port, '127.0.0.1', () => {phone.start();
+server.listen(port, '127.0.0.1', () => {phone.start();livePreview.start();
   // Red čekanja prekinut restartom servera nastavlja sam; red pauziran zaustavljanjem ili greškom čeka korisnika.
   setTimeout(()=>{void resumeRestartChats({chats,isRunning:id=>running.has(id),send,changed:update,drainQueue,isShuttingDown:()=>shuttingDown}).then(()=>{for(const chat of chats)drainQueue(chat);}).catch(error=>console.error('Nastavak posle restarta:',error.message));},3000).unref();
   limits.start();warmup.start();if(process.env.AGENT_DESK_DISABLE_LIMITS!=='1')cliUpdates.start();console.log(`Agent Desk: http://127.0.0.1:${port}`);if(process.platform==='darwin' && !process.env.AGENT_DESK_CONFIG){try{if(installWatchdog({configDir:path.dirname(phoneOriginFile)}))console.log('Čuvar instaliran.');}catch(e){console.error('Čuvar: '+e.message);}}});
 function shutdown() {
  if(shuttingDown)return;shuttingDown=true;
  rememberRunningChats(chats,running);save();
- stopRiskCli();cliUpdates.close();clearInterval(folderNameTimer);syncChatFiles();clearInterval(archiveCleanup);limits.close();warmup.stop();phone.close();gmail.close();titleManager.close();
+ stopRiskCli();cliUpdates.close();clearInterval(folderNameTimer);syncChatFiles();clearInterval(archiveCleanup);limits.close();warmup.stop();livePreview.close();phone.close();gmail.close();titleManager.close();
  for(const [id,run] of running){run.restarting=!!chats.find(c=>c.id===id)?.restartResume;stop(id,{restart:true});}
  setTimeout(()=>process.exit(0),2200);server.close();
 }

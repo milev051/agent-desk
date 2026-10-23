@@ -1,3 +1,4 @@
+import {createLivePreview} from './live-preview.mjs';
 import {createContextInspector} from './context-inspector.mjs';
 import {adaptiveChatGroups,adaptiveFolder,adaptiveFolderId} from './adaptive-chats.mjs';
 import {createDispatcherPanel} from './dispatcher-panel.mjs';
@@ -50,6 +51,7 @@ const fitViewport=()=>{const vv=window.visualViewport;if(!vv)return;const covere
 window.visualViewport?.addEventListener('resize',fitViewport);window.visualViewport?.addEventListener('scroll',fitViewport);fitViewport();
 let events, defaults = {}, models = {}, meta, chats = [], active = localStorage.getItem('agent-desk-active'), selectedAgent = 'codex', menuChat = null, menuFolder = null, lastMessages = '', connected = true, appReady = false, sawEvents = false;
 const phoneRemote=!['127.0.0.1','localhost'].includes(location.hostname);
+const livePreview=createLivePreview({root:$('#live-preview'),conversation:$('#conversation'),api,phoneRemote,report:error=>console.error(error.message)});
 createAndroidPrompt($('#prompt'));
 startNotificationPresence({phoneRemote});
 let speechClip=null,speechAbort=null,speechSeeking=false,speechSelection=null;
@@ -365,6 +367,7 @@ function renderChatNavigation() {
 }
 function showChatList({replaceHistory=false}={}){if(messageSelectionMode){clearMessageSelection();return;}const inChat=document.body.classList.contains('chat-view');if(inChat && current()?.discardOnLeave){adoptPrompt();void discardEmptyChat(active);}if(inChat && !replaceHistory)rememberChatView();document.body.classList.remove('chat-view');renderSidebar();showDefaults(false);closePanels();menuChat=null;renderPopover();const url=new URL(location.href);url.hash='';history.replaceState(history.state,'',url);if(appReady)connectEvents();}
 function showHomeScreen(){
+ if($('#live-preview')?.hidden===false)livePreview.close();
  if(messageSelectionMode)clearMessageSelection();
  // Vrati listu kakva je bila pre ulaska u čet: isti otvoreni folderi i isti položaj.
  const list=chatNavigation.findLast(entry=>!entry.chatId);
@@ -373,6 +376,7 @@ function showHomeScreen(){
  if(list){openFolders=new Set(list.folders);pruneOpenFolders();renderSidebar();$('#chats').scrollTop=list.scroll;}
 }
 function backFromChat(){
+ if(livePreview.close())return;
  if(!$('#defaults').hidden){showDefaults(false);return;}
  if(messageSelectionMode){clearMessageSelection();return;}
  let previous;
@@ -409,7 +413,7 @@ function activateMobileHistory(e){if(!e.isTrusted || !mobileNavigation() || mobi
 document.addEventListener('click',activateMobileHistory,{capture:true});document.addEventListener('keydown',activateMobileHistory,{capture:true});
 
 function keepMobileHistory(){if(mobileNavigation())history.pushState({agentDesk:true,agentDeskGuard:true},'',location.href);}
-window.addEventListener('popstate',()=>{if(!$('#defaults').hidden){showDefaults(false);const url=new URL(location.href);url.hash=document.body.classList.contains('chat-view') && active?'chat='+encodeURIComponent(active):'';history.replaceState(history.state,'',url);keepMobileHistory();return;}if($('#attachment-view').open){$('#attachment-view').close();attachmentHistory=false;keepMobileHistory();return;}if($('#files-dialog').open){guard(async()=>{if(!filePickerClosing && fileListing.path!==fileListing.home && fileListing.parent){history.pushState({agentDesk:true,filePicker:true},'',location.href);await browseFolder(fileListing.parent);}else{filePickerClosing=false;$('#files-dialog').close();keepMobileHistory();}});return;}if(mobileNavigation()){if(document.body.classList.contains('chat-view')){if($('#files-dialog').open)$('#files-dialog').close();if($('#delete-dialog').open)$('#delete-dialog').close();showHomeScreen();}else if(openFolders.size)closeLastFolder();else showChatList({replaceHistory:true});keepMobileHistory();mobileHistoryActivated=false;}});
+window.addEventListener('popstate',()=>{if(livePreview.handleHistory())return;if(!$('#defaults').hidden){showDefaults(false);const url=new URL(location.href);url.hash=document.body.classList.contains('chat-view') && active?'chat='+encodeURIComponent(active):'';history.replaceState(history.state,'',url);keepMobileHistory();return;}if($('#attachment-view').open){$('#attachment-view').close();attachmentHistory=false;keepMobileHistory();return;}if($('#files-dialog').open){guard(async()=>{if(!filePickerClosing && fileListing.path!==fileListing.home && fileListing.parent){history.pushState({agentDesk:true,filePicker:true},'',location.href);await browseFolder(fileListing.parent);}else{filePickerClosing=false;$('#files-dialog').close();keepMobileHistory();}});return;}if(mobileNavigation()){if(document.body.classList.contains('chat-view')){if($('#files-dialog').open)$('#files-dialog').close();if($('#delete-dialog').open)$('#delete-dialog').close();showHomeScreen();}else if(openFolders.size)closeLastFolder();else showChatList({replaceHistory:true});keepMobileHistory();mobileHistoryActivated=false;}});
 
 $('#chat-parent').onclick=()=>{if(current()?.parentChatId)choose(current().parentChatId);};
 $('#chat-options').onclick=()=>{if(Date.now()<headerLogoBlock)return;if(current()){menuChat=menuChat===active?null:active;renderPopover();}};
@@ -1052,6 +1056,7 @@ async function speakMessage(messageId,selectedText=''){if(speechClip?.chatId===a
 function finishMessageInput(id){
  if(active!==id)return;
  const input=$('#prompt');
+ if($('#live-preview')?.hidden===false){input.focus();return;}
  if(mobileNavigation() && localStorage.getItem('leaveAfterSend')!=='0'){
   input.blur();
   clearMessageSelection();showChatList();

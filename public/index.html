@@ -96,6 +96,11 @@
     <section id="projects-panel" class="chat-panel" aria-label="Spisak projekata" hidden><div class="panel-content"><h2>Spisak projekata</h2><div id="projects-panel-content" class="panel-scroll-body"></div><div class="settings-actions"><button data-close-panel>Zatvori</button></div></div></section>
     <section id="capabilities-panel" class="chat-panel" aria-label="Mogućnosti Agent Deska" hidden><div class="panel-content"><h2>Šta umem</h2><div id="capabilities-panel-content" class="panel-scroll-body"></div><div class="settings-actions"><button data-close-panel>Zatvori</button></div></div></section>
 
+    <section id="live-preview" aria-label="Pregled uživo" hidden>
+      <div class="live-preview-toolbar"><span data-preview-address></span><button type="button" data-preview-refresh title="Osveži">↻</button><select aria-label="Širina pregleda"><option value="1920">1920</option><option value="1440">1440</option><option value="1280">1280</option><option value="390">Telefon 390</option></select><a data-preview-external target="_blank" rel="noopener noreferrer" title="Otvori u pretraživaču" aria-label="Otvori u pretraživaču">↗</a><button type="button" data-preview-close aria-label="Zatvori pregled">×</button></div>
+      <div data-preview-viewport><p role="status" hidden></p><iframe title="Stranica uživo" sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-modals" referrerpolicy="no-referrer"></iframe></div>
+      <div data-preview-resize role="separator" aria-label="Visina pregleda, povuci ili koristi strelice" aria-orientation="horizontal" tabindex="0"></div>
+    </section>
     <div id="chat-workspace">
     <div id="chat-workspace-main">
     <div id="chat-search" hidden role="search"><input id="chat-search-input" type="search" placeholder="Pretraži čet" aria-label="Pretraži poruke u četu"><span id="chat-search-count" aria-live="polite">0/0</span><button type="button" data-search-prev aria-label="Prethodni rezultat">↑</button><button type="button" data-search-next aria-label="Sledeći rezultat">↓</button><button type="button" data-search-close aria-label="Zatvori pretragu">×</button></div>

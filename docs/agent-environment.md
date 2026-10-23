@@ -8,7 +8,11 @@ Uz svaku korisničku poruku, uključujući nastavak postojeće sesije, server š
 
 Radni folder četa nije nužno folder aplikacije. Ako radiš na korisnikovom sajtu ili dokumentu, ostani u tom projektu. Agent Desk menjaj samo na korisnikov zahtev i pre izmena pročitaj njegov AGENTS.md.
 
-## Pregled uživo
+## Pregled stranica uživo
+
+Linkove ka sajtu šalji kao pune `http://` ili `https://` adrese, uključujući razvojne adrese kao `http://127.0.0.1:3000/`. Klik u poruci otvara ugrađeni pregled uživo u širini 1920 px iznad poruka; korisnik može i dalje da kuca. Cmd/Ctrl+klik otvara običan pretraživač. Dugme Pregled za snimak ostaje dostupno. Pregled koristi zaseban proxy origin i jednu zajedničku aktivnu metu, bez pristupa API-ju četa. `POST /api/preview` sa `{ "url": "http://127.0.0.1:3000/" }` vraća `{path, localOrigin, phoneOrigin}`, `DELETE /api/preview` briše metu. Oba zahteva imaju istu Origin proveru kao ostali upisi. Telefonski pregled zahteva postojeću prijavu i dodatnu Tailscale Serve rutu na 8443, opisanu u README-u. Ne pokreći povezivanje bez korisnikovog zahteva.
+
+## Provera okruženja uživo
 
 ```sh
 curl -sS http://127.0.0.1:4317/api/environment
