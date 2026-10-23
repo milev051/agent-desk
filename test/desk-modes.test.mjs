@@ -4,7 +4,7 @@ import {EventEmitter} from 'node:events';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {touchedFiles, blastWarnings, needsCacheConfirm, changeColumnHtml, shortDiff, fileState, diffStat, displayPath, diffPreviewHtml, changedLinesHtml, messageChangeHtml, changeSentences} from '../public/desk-modes.mjs';
+import {touchedFiles, blastWarnings, needsCacheConfirm, changeColumnHtml, shortDiff, fileState, diffStat, displayPath, diffPreviewHtml, githubDiffHtml, fileDiffStatsHtml, changedLinesHtml, messageChangeHtml, changeSentences} from '../public/desk-modes.mjs';
 import {parseEvent} from '../adapters.mjs';
 import {historyText} from '../context.mjs';
 import {buildAccounting} from '../accounting.mjs';
@@ -205,4 +205,26 @@ test('pregled prazni stderr, odbacuje neuspešan CLI i ne odobrava Gemini alate 
     if (choice.agent === 'claude') assert.equal(args[args.indexOf('--tools') + 1], '');
     else assert.ok(args.includes('--sandbox'));
   }
+});
+
+test('GitHub diff čuva kontekst, brojeve redova i bezbedno prikazuje kod',()=>{
+ const patch='--- a/file\n+++ b/file\n@@ -10,2 +10,3 @@\n context\n-old\n+<script>\n+new\n@@ -40 +41 @@\n-last\n+next\n';
+ const html=githubDiffHtml(patch,escape);
+ assert.match(html,/github-diff/);assert.match(html,/diff-row-add/);assert.match(html,/diff-row-del/);
+ assert.match(html,/role="cell">10<\/span>/);assert.match(html,/role="cell">41<\/span>/);
+ assert.match(html,/context/);assert.ok(!html.includes('<script>'));assert.ok(html.includes('&lt;script&gt;'));
+ const stats=fileDiffStatsHtml(patch,escape);assert.match(stats,/\+3/);assert.match(stats,/−2/);assert.match(stats,/5 izmena/);
+ assert.match(fileDiffStatsHtml('',escape),/—/);assert.match(fileDiffStatsHtml('',escape,{known:true}),/0 izmena/);
+});
+
+test('broj izmena u poruci ne računa samo prvih 1200 znakova patcha',()=>{
+ const diff='@@ -1 +1,3 @@\n-old\n+'+'x'.repeat(1300)+'\n+second\n+third';
+ const html=messageChangeHtml({actions:[{kind:'file',text:'a.js',change:'edit',diff}]},escape);
+ assert.match(html,/4 izmene/);assert.match(html,/\+3/);assert.match(html,/−1/);assert.match(html,/third/);
+});
+
+test('redovi koda sa dodatnim plus/minus znacima unutar hunka ulaze u statistiku',()=>{
+ assert.deepEqual(diffStat('--- a/file\n+++ b/file\n@@ -1 +1 @@\n---code\n+++code'),{added:1,removed:1});
+ const html=messageChangeHtml({actions:[{kind:'file',text:'x.js',change:'edit'}]},escape,{statsFor:()=>'+added\n-old'});
+ assert.match(html,/2 izmene/);
 });

@@ -35,8 +35,11 @@ export function touchedFiles(message) {
 export function diffStat(diff) {
   let added = 0, removed = 0;
   if (typeof diff !== 'string' || !diff) return {added, removed};
+  let inHunk = false;
   for (const line of diff.split('\n')) {
-    if (line.startsWith('+++') || line.startsWith('---') || line.startsWith('@@')) continue;
+    if (line.startsWith('diff --git ') || line.startsWith('*** Begin Patch')) { inHunk = false; continue; }
+    if (line.startsWith('@@')) { inHunk = true; continue; }
+    if (!inHunk && (line.startsWith('+++') || line.startsWith('---'))) continue;
     if (line.startsWith('+')) added += 1;
     else if (line.startsWith('-')) removed += 1;
   }
@@ -222,6 +225,34 @@ export function diffPreviewHtml(diff, escape, limit = 220) {
   }).join('')}</pre>`;
 }
 
+// Unified diff sa starim i novim brojevima redova, bez nagađanja kada hunk nema brojeve.
+export function githubDiffHtml(diff, escape, limit = 800) {
+  const all = String(diff || '').replace(/\r\n/g, '\n').split('\n');
+  if (all.at(-1) === '') all.pop();
+  if (!all.some(line => line.trim())) return '';
+  let before = null, after = null, inHunk = false;
+  const rows = all.slice(0, limit).map(line => {
+    const hunk = line.match(/^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
+    let kind = 'context', old = '', fresh = '', mark = ' ', code = line;
+    if (hunk) { before = Number(hunk[1]); after = Number(hunk[2]); inHunk = true; kind = 'hunk'; }
+    else if (line.startsWith('diff --git ')) { inHunk = false; before = after = null; kind = 'meta'; }
+    else if (line.startsWith('@@')) { before = after = null; inHunk = true; kind = 'hunk'; }
+    else if (!inHunk && /^(--- |\+\+\+ |index |new file mode|deleted file mode|Binary files |GIT binary patch|\*\*\*)/.test(line)) kind = 'meta';
+    else if (line.startsWith('\\')) kind = 'meta';
+    else if (line.startsWith('+')) { kind = 'add'; fresh = after ?? ''; if (after !== null) after++; mark = '+'; code = line.slice(1); }
+    else if (line.startsWith('-')) { kind = 'del'; old = before ?? ''; if (before !== null) before++; mark = '−'; code = line.slice(1); }
+    else if (line.startsWith(' ')) { old = before ?? ''; fresh = after ?? ''; if (before !== null) before++; if (after !== null) after++; code = line.slice(1); }
+    return `<div class="diff-row diff-row-${kind}${kind === 'add' ? ' diff-add' : kind === 'del' ? ' diff-del' : ''}" role="row"><span class="diff-line-number" role="cell">${old}</span><span class="diff-line-number" role="cell">${fresh}</span><span class="diff-sign" aria-hidden="true">${mark}</span><span class="diff-code" role="cell">${escape(code) || ' '}</span></div>`;
+  }).join('');
+  return `<div class="change-diff github-diff" role="table" aria-label="Izmene fajla, stari i novi red">${rows}</div>${all.length > limit ? '<p class="change-missing">Prikazano je prvih 800 redova diff-a.</p>' : ''}`;
+}
+
+export function fileDiffStatsHtml(diff, escape, {known = false} = {}) {
+  if (!diff && !known) return '<span class="chat-file-stats" title="Broj izmena nije sačuvan; klikni za proveru">—</span>';
+  const {added, removed} = diffStat(diff);
+  return `<span class="chat-file-stats" title="${escape(changesLabel(added + removed))}"><span class="file-add-count">+${added}</span><span class="file-del-count">−${removed}</span><span class="file-change-total">${escape(changesLabel(added + removed))}</span></span>`;
+}
+
 export function changeColumnHtml(message, index, escape, options = {}) {
   const files = touchedFiles(message);
   const warnings = blastWarnings(message);
@@ -331,8 +362,12 @@ export function changeSentences(message, cwd = '') {
   return shown.join(' ');
 }
 
-export function messageChangeHtml(message, escape, {cwd = '', openPath = ''} = {}) {
+export function messageChangeHtml(message, escape, {cwd = '', openPath = '', statsFor = () => undefined} = {}) {
   const files = touchedFiles(message);
+  for (const file of files) {
+    const patches = [...new Set((message?.actions || []).filter(action => action.kind === 'file' && sameFile(action.text, file.path, cwd) && typeof action.diff === 'string' && action.diff.trim()).map(action => action.diff))];
+    if (patches.length) file.diff = patches.join('\n');
+  }
   if (!files.length) return '';
   const note = changeSentences(message, cwd);
   const lead = note ? `<p class="chat-change-note">${escape(note)}</p>` : '';
@@ -341,7 +376,7 @@ export function messageChangeHtml(message, escape, {cwd = '', openPath = ''} = {
     const label = kind === 'delete' ? 'Brisanje' : kind === 'open' ? 'Otvoreno' : 'Izmenjeno';
     const shown = displayPath(file.path, cwd);
     const open = openPath && sameFile(file.path, openPath, cwd);
-    const body = file.diff ? changedLinesHtml(file.diff, escape) : '';
-    return `<div class="chat-file-block"><div class="chat-file-row"><button type="button" class="chat-file ${kind}${open ? ' selected' : ''}" data-chat-file="${escape(file.path)}" data-chat-file-label="${escape(shown)}" aria-expanded="${open ? 'true' : 'false'}" aria-label="${escape(shown)}" data-file-path="${escape(file.path)}" title="${escape(shown)} (⌘ klik: folder u Finderu)"><span class="chat-file-index">${index + 1}</span><span class="touched-path">${escape(shown)}</span><span class="touched-pill">${label}</span></button></div><div class="chat-diff-body"${open ? '' : ' hidden'}>${body}</div></div>`;
+    const body = file.diff ? githubDiffHtml(file.diff, escape) : '';
+    return `<div class="chat-file-block"><div class="chat-file-row"><button type="button" class="chat-file ${kind}${open ? ' selected' : ''}" data-chat-file="${escape(file.path)}" data-chat-file-label="${escape(shown)}" aria-expanded="${open ? 'true' : 'false'}" aria-label="${escape(shown)}" data-file-path="${escape(file.path)}" title="${escape(shown)} (⌘ klik: folder u Finderu)"><span class="chat-file-index">${index + 1}</span><span class="touched-path">${escape(shown)}</span><span class="touched-pill">${label}</span>${fileDiffStatsHtml(file.diff || statsFor(file.path), escape, {known: kind === 'open' || statsFor(file.path) !== undefined})}</button></div><div class="chat-diff-body"${open ? '' : ' hidden'}>${body}</div></div>`;
   }).join('')}</section>`;
 }

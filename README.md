@@ -381,3 +381,5 @@ Dispečer jednom u 5 sati, kad nijedan agent ne radi, sam pregleda projekte i u 
 Unutar aplikacije nema iskačućih potvrda radnji ni kartica obaveštenja o završenim odgovorima. Greške se prikazuju kao tekst uz polje za poruku. Zvuk i sistemska obaveštenja ostaju prema postojećim podešavanjima.
 
 Ponuđeni odgovori su uslovni: red „Ponuđeno:“ postoji samo kao konkretan odgovor na stvarno otvoreno pitanje koje traži korisnikov izbor ili podatak. Bez takvog pitanja red se izostavlja. Agenti ne izmišljaju nove zadatke radi nastavka razgovora i ne obećavaju fizičke radnje koje ne mogu da izvrše. Isto važi za čet Procesi.
+
+Klik na fajl ispod odgovora otvara unified diff sa kontekstom i starim/novim brojevima redova. Desno od putanje su dodati i uklonjeni redovi i njihov zbir. Bez sačuvanog patcha broj je nepoznat do provere; trenutni Git diff je posebno označen. Slike se otvaraju kao slike.

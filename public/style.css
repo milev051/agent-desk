@@ -741,3 +741,18 @@ body:has(> #restart-status:not([hidden])){padding-top:41px}
 /* Boja teksta označava agenta, bez promene prema preostalom limitu. */
 #new-agents .agent-limits,#new-agents .limit-good,#new-agents .limit-mid,#new-agents .limit-low,#new-agents .limit-unknown{color:var(--header-agent-color,#fff)}
 #new-agents #device-battery small{color:#4ade80}
+
+/* Pregled promenjenih redova, sa brojevima i statistikama uz putanju. */
+.chat-file .touched-path{flex:1;min-width:0}
+.chat-file .touched-pill{margin-left:0}
+.chat-file-stats{display:flex;gap:6px;align-items:center;flex-shrink:0;margin-left:auto;font:600 11px ui-monospace,monospace;white-space:nowrap}
+.chat-file-stats .file-add-count{color:#7ee2a8}.chat-file-stats .file-del-count{color:#ffadb5}.file-change-total{color:#a6adb8;font-weight:400}
+.chat-diff .github-diff.change-diff{display:block;padding:0;border:1px solid #30363d;border-radius:4px;background:#0d1117;color:#c9d1d9;overflow:auto;max-height:60dvh;font:12px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace;cursor:text}
+.github-diff .diff-row{display:grid;grid-template-columns:44px 44px 20px minmax(0,1fr);width:max-content;min-width:100%}
+.chat-diff .github-diff.change-diff .diff-row>span{display:block;margin:0;padding:0 6px;min-width:0;max-width:none;white-space:pre;overflow-wrap:normal;line-height:1.65;width:auto}
+.github-diff .diff-line-number{text-align:right;color:#8b949e;user-select:none;background:#ffffff04}
+.github-diff .diff-sign{user-select:none;text-align:center}
+.github-diff .diff-row-add{background:#122c20;color:#aff5b4}.github-diff .diff-row-del{background:#3c171b;color:#ffd1d7}
+.github-diff .diff-row-hunk{background:#142b42;color:#a5d6ff}.github-diff .diff-row-meta{color:#8b949e;background:#161b22}
+.chat-file-image{display:block;max-width:100%;max-height:65dvh;object-fit:contain;background:#111}
+@media(max-width:650px){.chat-file .touched-pill,.chat-file-stats .file-change-total{display:none}.github-diff .diff-row{grid-template-columns:32px 32px 18px minmax(0,1fr)}}
