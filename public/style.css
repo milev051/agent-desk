@@ -738,8 +738,5 @@ body:has(> #restart-status:not([hidden])){padding-top:41px}
 
 /* Zelena pozadina baterije telefona i Maca, sa svetlim čitljivim procentom. */
 .sidebar-actions #new-agents #defaults-open{background:#124225}
-#device-battery small:not(.battery-unknown){color:#e5ffed}
-#new-agents .limit-good{color:#9bffb0}
-#new-agents .limit-mid{color:#fff29a}
-#new-agents .limit-low{color:#ffc0c8}
-#new-agents .limit-unknown{color:#e0e5ee}
+/* Jedinstven beli tekst zaglavlja, bez bojenja prema preostalom limitu. */
+#new-agents .agent-limits,#new-agents .limit-good,#new-agents .limit-mid,#new-agents .limit-low,#new-agents .limit-unknown,#new-agents #device-battery small{color:#fff}
