@@ -389,3 +389,7 @@ Ispod odgovora stoji samo skupljena stavka „Izmene (N)“ sa stvarno menjanim 
 Otvorene i izmenjene slike/video prikazuju se kao thumbnailovi sa oznakom stanja. Audio i ostali binarni fajlovi imaju kompaktnu karticu bez brojača redova. Tekstualni fajlovi zadržavaju diff i brojače; samo pročitani tekstualni fajlovi ostaju u toku rada. Video/audio se puštaju klikom, bez automatskog reprodukovanja.
 
 Slike u prilozima i radu agenta imaju kompaktan pregled. Klik otvara veliku sliku u popupu na telefonu i računaru; Zatvori, Esc ili povratak zatvaraju pregled. Nedostupne slike prikazuju simbol i status.
+
+## Pregled stranice za računar
+
+Dugme „Pregled“ ispod unosa pravi snimak cele stranice u širini 1920 px, da se sa telefona vidi računarski izgled. Adresa je ona upisana u polje za poruku, a inače poslednji link iz četa. Snimak se prilaže poruci i otvara u popupu; dugačka stranica se skroluje, a klik prebacuje na pravu veličinu. Pre snimka Chrome bez prozora skroluje stranicu do dna, da se pokrenu animacije. Agenti isti snimak prave preko `POST /api/chats/ID/snapshot` (videti `docs/agent-controls.md`). Potreban je Google Chrome (ili `AGENT_DESK_CHROME`).

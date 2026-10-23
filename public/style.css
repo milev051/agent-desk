@@ -790,3 +790,6 @@ body:has(> #restart-status:not([hidden])){padding-top:41px}
 /* Kompaktni pregledi; puna slika se otvara u dijalogu. */
 .chat-media-list .media-tile.image{margin:0;cursor:zoom-in}
 .chat-media-list .media-tile.image.thumbnail-missing{cursor:default}
+
+/* Snimak cele stranice u popupu: širina ekrana i skrolovanje; klik daje pravu veličinu sa vodoravnim skrolovanjem. */
+#attachment-view.page-view[open]{overflow:auto;display:block;padding:0}#attachment-view.page-view img{display:block;flex:none;width:100%;height:auto;object-fit:initial;cursor:zoom-in}#attachment-view.page-view.actual-size img{width:auto;max-width:none;cursor:zoom-out}#attachment-view.page-view button{position:sticky;bottom:12px;left:50%;display:block;margin:10px auto 12px;transform:none}

@@ -8,6 +8,7 @@ import {answerText} from './final-answer.mjs';
 import {needsCacheConfirm,changeColumnHtml,lastTouchedMessage,touchedFiles,sameFile,fileState,fileParts,fileStamp,fileSize,changesLabel,diffPreviewHtml,githubDiffHtml,fileDiffStatsHtml,fileMediaKind,changedLinesHtml,messageChangeHtml} from './desk-modes.mjs';
 import {createAndroidPrompt,observePromptChanges} from './prompt-editor.mjs';
 import {createDraftHistory} from './draft-history.mjs';
+import {previewTarget} from './page-preview.mjs';
 import {startNotificationPresence} from './notification-presence.mjs';
 import {noticeTone,chooseNoticeSound} from './notice-sound.mjs';
 import {createCliUpdatesPanel} from './cli-updates.mjs';
@@ -1184,7 +1185,7 @@ $('#send-now').onclick=()=>guard(()=>enqueueMessage({interrupt:true}));
 $('#stop-run').onclick=()=>{const id=active;if(!current()?.running)return;guard(()=>api(`/api/chats/${id}/stop`,'POST'));};
 $('#usage-details').addEventListener('toggle',()=>{const box=$('#usage-details');box.hidden=!box.open;$('#usage-open').setAttribute('aria-expanded',String(box.open));});
 const composerTools=$('#composer-tools');
-function runComposerAction(action){if(action==='knowledge'){contextInspector.open();}else if(action==='usage'){const box=$('#usage-details');box.open=!box.open;box.hidden=!box.open;$('#usage-open').setAttribute('aria-expanded',String(box.open));}else if(action==='read')guard(readSelectedAnswer);else if(action==='computer' && !uploading)openComputerFiles();else if(action==='search' && current()){guard(openChatSearch);}else if(action==='bottom' && current()){chatSearch.close();stickToBottom($('#conversation'));}}
+function runComposerAction(action){if(action==='knowledge'){contextInspector.open();}else if(action==='usage'){const box=$('#usage-details');box.open=!box.open;box.hidden=!box.open;$('#usage-open').setAttribute('aria-expanded',String(box.open));}else if(action==='read')guard(readSelectedAnswer);else if(action==='preview')guard(capturePagePreview);else if(action==='computer' && !uploading)openComputerFiles();else if(action==='search' && current()){guard(openChatSearch);}else if(action==='bottom' && current()){chatSearch.close();stickToBottom($('#conversation'));}}
 composerTools.addEventListener('pointerdown',()=>{speechSelection=selectedSpeechText() || speechSelection;});
 composerTools.addEventListener('click',e=>{const b=e.target.closest('button');if(b && b.id!=='files-open' && !b.disabled)runComposerAction(b.dataset.action);});
 // Čiste funkcije za stare provere gestova; interfejs ih više ne koristi.
@@ -1457,6 +1458,21 @@ async function uploadFiles(files){
     }
   }finally{uploading=false;button.disabled=false;button.textContent='Dodaj fajl';button.setAttribute('aria-label','Dodaj prilog');renderLinkedFiles();renderComposerControls();}
 }
+// Pregled za računar: Agent Desk snimi celu stranicu u širini 1920 px, priloži snimak poruci i otvori ga u popupu.
+let capturingPreview=false;
+async function capturePagePreview(){
+  if(capturingPreview || uploading)return;const input=$('#prompt'),target=previewTarget(input.value,current()?.messages||[]);
+  if(!target)throw Error('Upiši adresu stranice u polje za poruku (npr. http://localhost:3000/), pa klikni Pregled.');
+  if(!current() && !await create())return;const id=active,button=$('#page-preview'),label=button.querySelector('span');
+  capturingPreview=true;button.disabled=true;label.textContent='Snimam…';
+  try{
+    const shot=await api(`/api/chats/${id}/snapshot`,'POST',{url:target.url,device:'desktop'});
+    if(target.typed && active===id && input.value.trim()===target.url){input.value='';recordDraft(id,'');resizePrompt();}
+    linkedFiles.set(id,[...(linkedFiles.get(id)||[]).filter(p=>p!==shot.path),shot.path]);if(active===id)renderLinkedFiles();
+    const src=attachmentUrl(shot.path);if(src && active===id)openAttachmentPreview(src,`Pregled za računar: ${shot.url}`);
+    if(shot.truncated)toast(`Stranica je duža od ${shot.height} px; snimak je odsečen na tu visinu.`,'error');
+  }finally{capturingPreview=false;button.disabled=false;label.textContent='Pregled';}
+}
 const openComputerFiles=()=>guard(async()=>{if(!current())await create();folderColumns=[];await browseFolder();filePickerClosing=false;$('#files-dialog').showModal();history.pushState({agentDesk:true,filePicker:true},'',location.href);});
 $('#files-dialog').addEventListener('cancel',e=>{e.preventDefault();closeFilePicker();});
 $('#folder-breadcrumbs').onclick=e=>guard(()=>{const b=e.target.closest('[data-folder-crumb]');if(b)return browseFolder(fileListing.crumbs[Number(b.dataset.folderCrumb)].path);});
@@ -1481,9 +1497,12 @@ $('#local-file-close').onclick=()=>{$('#local-file-dialog').close();$('#local-fi
 let attachmentHistory=false,pdfViewer;
 function showAttachmentDialog(){if(!$('#attachment-view').open)$('#attachment-view').showModal();if(!attachmentHistory){attachmentHistory=true;history.pushState({agentDesk:true,attachment:true},'',location.href);}}
 function openPdfPreview(src){$('#attachment-view-image').hidden=true;$('#attachment-pdf').hidden=false;$('#attachment-pdf').textContent='Učitavanje PDF-a…';showAttachmentDialog();guard(async()=>{pdfViewer ||= await import('/pdf-view.mjs');if($('#attachment-view').open && !$('#attachment-pdf').hidden)await pdfViewer.showPdf(src);});}
-function openAttachmentPreview(src,alt){pdfViewer?.closePdf();$('#attachment-pdf').hidden=true;const view=$('#attachment-view-image');view.hidden=false;view.alt=alt||'';view.src=src;showAttachmentDialog();}
+function openAttachmentPreview(src,alt){pdfViewer?.closePdf();$('#attachment-pdf').hidden=true;const view=$('#attachment-view-image');$('#attachment-view').classList.remove('page-view','actual-size');view.hidden=false;view.alt=alt||'';view.src=src;showAttachmentDialog();}
 function closeAttachmentPreview(){if(attachmentHistory){attachmentHistory=false;history.back();return;}if($('#attachment-view').open)$('#attachment-view').close();}
 $('#attachment-view-close').onclick=closeAttachmentPreview;
+// Snimak cele stranice (visina veća od 1,4 širine) prikazuje se po širini ekrana uz skrolovanje; klik menja na pravu veličinu.
+$('#attachment-view-image').addEventListener('load',e=>{const img=e.target;$('#attachment-view').classList.toggle('page-view',img.naturalHeight>img.naturalWidth*1.4);});
+$('#attachment-view-image').addEventListener('click',()=>{const view=$('#attachment-view');if(view.classList.contains('page-view'))view.classList.toggle('actual-size');});
 $('#attachment-view').addEventListener('cancel',e=>{e.preventDefault();closeAttachmentPreview();});
 $('#attachment-view').addEventListener('click',e=>{if(e.target===$('#attachment-view'))closeAttachmentPreview();});
 $('#attachment-view').addEventListener('close',()=>{pdfViewer?.closePdf();$('#attachment-pdf').hidden=true;$('#attachment-view-image').removeAttribute('src');});
