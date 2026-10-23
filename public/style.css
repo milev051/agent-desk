@@ -785,3 +785,12 @@ body:has(> #restart-status:not([hidden])){padding-top:41px}
 .media-tile.image:not(.thumbnail-missing){cursor:zoom-in}
 .media-block.image-expanded .media-tile.image{cursor:zoom-out}
 .media-tile.thumbnail-missing{cursor:default}
+
+/* Slike u porukama su uvek raširene, u punoj širini i bez odsecanja. */
+.message .attachment-thumbs{width:100%;max-width:100%}
+.attachment-thumbs .attachment-item:has(>a>img),.attachment-thumbs a:has(>img){width:100%;max-width:100%}
+.message .attachment-thumbs img{width:100%;height:auto;max-width:100%;max-height:none;object-fit:contain}
+.chat-media-list .media-block.image-expanded{width:100%;flex-basis:100%}
+.chat-media-list .media-block.image-expanded .media-tile.image{display:block;margin:0;width:100%;max-width:none;height:auto;min-height:0;cursor:default}
+.chat-media-list .media-block.image-expanded .media-thumbnail{position:relative;inset:auto;width:100%;height:auto;max-width:100%;max-height:none;object-fit:contain}
+.chat-media-list figure.media-tile{margin:0;cursor:default}

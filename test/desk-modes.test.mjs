@@ -268,19 +268,17 @@ test('slike i video su thumbnailovi sa stanjem, audio i binarni fajlovi nemaju b
 test('uvećanje slike zadržava samo jedan thumbnail bez dodatnog tela i zahteva za diff',()=>{
  const message={actions:[{kind:'file',text:'photo.jpg',change:'open'}]};
  const html=messageChangeHtml(message,escape,{cwd:'/project',imageExpanded:()=>true});
- assert.match(html,/image-expanded/);assert.match(html,/data-inline-image="photo.jpg"/);
+ assert.match(html,/image-expanded/);assert.match(html,/<figure class="chat-file media-tile image/);
  assert.equal((html.match(/<img/g)||[]).length,1);assert.doesNotMatch(html,/chat-diff-body|data-chat-file=/);
  const missing=messageChangeHtml(message,escape,{cwd:'/project',unavailableMedia:new Set(['/files/project/photo.jpg'])});
  assert.doesNotMatch(missing,/<img/);assert.match(missing,/thumbnail-missing/);
 });
 
-test('klik uvećava isti element, a ponovni ga smanjuje bez pristupa fajlu',()=>{
- const source=fs.readFileSync(new URL('../public/app.js',import.meta.url),'utf8').match(/function toggleInlineImage\(button\)\{[\s\S]*?\n\}/)[0];
- const classes=new Set(),blockClasses=new Set(),attrs={};
- const list=set=>({contains:name=>set.has(name),toggle:(name,on)=>on?set.add(name):set.delete(name)});
- const button={dataset:{inlineImage:'photo.jpg'},classList:list(classes),setAttribute:(k,v)=>attrs[k]=v,closest:selector=>selector==='[data-message]'?{dataset:{message:'m'}}:{classList:list(blockClasses)}};
- const context={active:'chat',expandedMediaImages:new Set()};vm.runInNewContext(source,context);
- context.toggleInlineImage(button);assert.equal(attrs['aria-expanded'],'true');assert.ok(blockClasses.has('image-expanded'));
- context.toggleInlineImage(button);assert.equal(attrs['aria-expanded'],'false');assert.ok(!blockClasses.has('image-expanded'));
- classes.add('thumbnail-missing');context.toggleInlineImage(button);assert.equal(attrs['aria-expanded'],'false');
+test('slike su odmah raširene i nemaju komandu za smanjivanje',()=>{
+ const message={actions:[{kind:'file',text:'photo.jpg',change:'open'}]};
+ const html=messageChangeHtml(message,escape,{cwd:'/project'});
+ assert.match(html,/media-block image-expanded/);assert.match(html,/<figure /);
+ assert.doesNotMatch(html,/data-inline-image|data-chat-file|chat-diff-body/);
+ const app=fs.readFileSync(new URL('../public/app.js',import.meta.url),'utf8');
+ assert.doesNotMatch(app,/toggleInlineImage|expandedMediaImages/);
 });
