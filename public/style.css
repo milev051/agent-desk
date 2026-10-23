@@ -517,7 +517,7 @@ body #chats .chat-row.working,body #agent-tree .agent-tree-item.working{backgrou
 
 /* Kompaktni limiti: boja okvira označava agenta, boja cifara preostali limit. */
 #new-agents .new-agent{min-width:0;min-height:38px;padding:5px 6px;gap:0;border:1px solid var(--header-agent-color,#aaa);border-radius:5px}
-#new-agents .new-agent[data-new-agent="codex"]{--header-agent-color:#55d6ad}
+#new-agents .new-agent[data-new-agent="codex"]{--header-agent-color:#c7b1ec}
 #new-agents .new-agent[data-new-agent="claude"]{--header-agent-color:#f2a36e}
 #new-agents .new-agent[data-new-agent="antigravity"]{--header-agent-color:#6eafff}
 #new-agents .new-agent[data-new-agent="grok"]{--header-agent-color:#c4c8d2}
@@ -732,6 +732,9 @@ body:has(> #restart-status:not([hidden])){padding-top:41px}
 #action-status{position:static;color:#ffb4b4;font-size:12px;margin:0 0 8px;overflow-wrap:anywhere}
 
 /* Jasno vidljive boje platformi i pri smanjenoj osvetljenosti ekrana. */
-#new-agents .new-agent{background:color-mix(in srgb,var(--header-agent-color) 32%,#080808);box-shadow:inset 0 3px 0 var(--header-agent-color)}
-#new-agents .new-agent:hover,#new-agents .new-agent.expanded{background:color-mix(in srgb,var(--header-agent-color) 43%,#080808);box-shadow:inset 0 3px 0 var(--header-agent-color)}
+#new-agents .new-agent{background:color-mix(in srgb,var(--header-agent-color) 32%,#080808);box-shadow:none}
+#new-agents .new-agent:hover,#new-agents .new-agent.expanded{background:color-mix(in srgb,var(--header-agent-color) 43%,#080808);box-shadow:none}
 #new-agents .new-agent:focus-visible{outline:2px solid var(--header-agent-color);outline-offset:-2px}
+
+/* Poznat procenat baterije ostaje zelen, bez bojenja po pragovima. */
+#device-battery small:not(.battery-unknown){color:#4ade80}
