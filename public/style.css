@@ -563,7 +563,7 @@ body #chats .chat-row.working,body #agent-tree .agent-tree-item.working{backgrou
 
 /* Svi okviri agenata i baterije imaju istu visinu. */
 .sidebar-actions #new-agents{align-items:stretch}
-.sidebar-actions #new-agents>.new-agent,.sidebar-actions #new-agents>#defaults-open{height:42px;min-height:42px;max-height:42px;align-self:stretch;justify-content:center}
+.sidebar-actions #new-agents>.new-agent,.sidebar-actions #new-agents>#defaults-open{height:48px;min-height:48px;max-height:48px;align-self:stretch;justify-content:center}
 #header-swipe-menu{max-width:calc(100vw - 56px)}
 #header-swipe-menu button,#logo-swipe-menu button{height:36px;min-height:36px;align-self:center}
 #context-dialog{width:min(900px,calc(100vw - 24px));max-height:calc(100dvh - 24px);padding:20px;border:1px solid #555;border-radius:8px;background:#111;color:#eee}
