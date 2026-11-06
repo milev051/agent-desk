@@ -1,5 +1,6 @@
 # Stanje
 _2026-11-06_
+- Tabla projekata (dugme u bočnoj traci, /#tabla): projekti, pitanja koja čekaju, odgovor i uputstvo bez otvaranja četa, merenje prelaza i predlozi (board.mjs, public/project-board.mjs, docs/tabla-projekata.md). 407/407. Početno: 16,1 prelaza dnevno, odgovor na pitanje 2 min. Sledeće: posle nedelju dana uporediti merenje sa početnim.
 - Istek arhive (3 dana) briše i Claude sesiju u ~/.claude/projects, pa čet nestaje i iz Claude aplikacije (claude-sessions.mjs). Obrisano 260 starih sesija Agent Deska. 400/400, aktivno posle restarta.
 - Arhiva četova čuva 3 dana (archive.mjs), važi posle restarta; postojeće arhive skraćene, 409 obrisano, 104 ostalo. 399/399.
 - Potvrde u Claude terminalu: most šalje „1“, posle 15 s bez zapisa u transkriptu Enter; dnevnik data/claude-terminal-log/ (8 uspešnih 2026-11-06). Zašto CLI ponekad ne primi „1“ nije utvrđeno. 400/400.

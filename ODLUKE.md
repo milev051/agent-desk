@@ -504,3 +504,8 @@
 ## 2026-11-06, agenti sami commituju
 - Odluka: posle izmene i uspešnog npm test agent commituje bez pitanja (AGENTS.md pravilo 7). Push na GitHub samo na zahtev.
 - Izvor: čet b7edfcb8-2c8c-4be7-b980-f0660ae86bc8, 2026-11-06T14:48:42Z.
+
+## 2026-11-06, tabla projekata kao pregled više projekata
+- Odluka: uz chat postoji tabla projekata koja pokazuje sve aktivne projekte i pitanja agenata; odgovori i uputstva idu sa table u postojeći čet projekta. Tabla meri prelaze između projekata i vreme odgovora i daje predloge po pravilima (docs/tabla-projekata.md).
+- Razlog: korisnik radi na više projekata istovremeno, a chat ga usporava; traži da se njegovo ponašanje analizira i pristup unapređuje.
+- Izvor: čet 4c7a0f5b-b2ca-4ce5-930d-ba5ccf7e883b, 2026-11-06T15:13Z i 15:18Z.

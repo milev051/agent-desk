@@ -66,6 +66,7 @@ import {createThoughts,thoughtsPrompt,thoughtsContext,improvePrompt} from './tho
 import {refreshDesktopProjects} from './desktop-projects.mjs';
 import {detectProject,applyDetected,projectDir,setProject} from './chat-project.mjs';
 import {createUserApproach,approachContext} from './user-approach.mjs';
+import {buildBoard,analyzeBehavior,createBoardLog,boardMessage,chatDir as chatDirForBoard} from './board.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const dataDir = process.env.AGENT_DESK_DATA || path.join(root, 'data');
@@ -82,6 +83,7 @@ const projectsFile=path.join(dataDir,'projekti.md'),projects=createProjectsIndex
 // Prilozi i uputstva Agent Deska se pominju u svakom četu, pa ne određuju projekat.
 const projectIgnore=[path.join(root,'data'),path.join(root,'docs'),path.join(os.homedir(),'.claude'),path.join(os.homedir(),'.codex')];
 const projectMemory=createProjectMemory(path.join(dataDir,'project-memory.json'),{onStateUpdated:(dir,text,at)=>projects.updateState(dir,text,at)});
+const boardLog=createBoardLog(path.join(dataDir,'board-events.jsonl'));
 function broadcastFolders(){const payload=`event: folders\ndata: ${JSON.stringify(folders.all())}\n\n`;for(const res of listeners)res.write(payload);}
 const dataFile = path.join(dataDir, 'chats.json');
 const contextSnapshots=createContextSnapshots(dataDir);
@@ -919,6 +921,28 @@ const server = http.createServer(async (req, res) => {
       return json(200,projectMemory.view(chat));
     }
     if (req.method === 'GET' && url.pathname === '/api/projects') return json(200, {file:projectsFile, projects:projects.list()});
+    // Tabla projekata: pregled svih projekata i odgovori agentima bez otvaranja četa (docs/tabla-projekata.md).
+    if(req.method==='GET' && url.pathname==='/api/board'){
+      const rows=projects.list(),now=Date.now();
+      const board=buildBoard({rows,chats,isRunning:id=>running.has(id),memoryView:chat=>{try{return projectMemory.view(chat);}catch{return null;}},now});
+      return json(200,{projects:board,behavior:analyzeBehavior({chats,rows,events:boardLog.read(now-30*86400000),now,days:Math.min(30,Math.max(1,Number(url.searchParams.get('days')) || 7))})});
+    }
+    if(req.method==='POST' && url.pathname==='/api/board/event'){const b=await body(req);return json(201,boardLog.add(b.type,b));}
+    if(req.method==='POST' && url.pathname==='/api/board/send'){
+      const b=await body(req);let chat=chats.find(c=>c.id===b.chatId);if(!chat)return json(404,{error:'Čet nije pronađen.'});
+      while(chat.continuedTo && chats.some(c=>c.id===chat.continuedTo))chat=chats.find(c=>c.id===chat.continuedTo);
+      if(!['answer','accept','continue','instruct'].includes(b.kind))throw Error('Nepoznata radnja table.');
+      const question=b.questionId?projectMemory.view(chat).openQuestions?.find(q=>q.id===b.questionId):null;
+      if(b.questionId && !question)return json(404,{error:'Pitanje je već zatvoreno.'});
+      const text=boardMessage({kind:b.kind,text:typeof b.text==='string'?b.text:'',question:question?.text || ''});
+      if(!text || text.length>100000)throw Error('Unesi poruku do 100.000 karaktera.');
+      if(lockedPart(chat))throw Error(lockedError);
+      if(running.has(chat.id)){chat.queue ||= [];if(chat.queue.length>=10)throw Error('Red čekanja je ograničen na 10 poruka.');chat.queue.push({id:randomUUID(),text,createdAt:Date.now()});chat.queuePaused=false;update();}
+      else{autoSession(chat);await send(chat,text,{origin:'board'});}
+      if(question){try{projectMemory.resolveQuestion(chat,question.id,`Korisnik sa table ${new Date().toISOString().slice(0,16)}Z: ${text.replace(/\s+/g,' ').slice(0,900)}`);}catch(error){console.error('Tabla:',error.message);}}
+      try{boardLog.add(b.kind,{project:chatDirForBoard(chat),chatId:chat.id,waitedMs:question?Date.now()-question.at:undefined});}catch(error){console.error('Tabla:',error.message);}
+      return json(202,{ok:true,chatId:chat.id});
+    }
     if (req.method === 'GET' && (url.pathname === '/api/capabilities' || url.pathname === '/api/docs/mogucnosti')) {
       const docPath = path.join(root, 'docs', 'mogucnosti.md');
       const text = fs.existsSync(docPath) ? fs.readFileSync(docPath, 'utf8') : '';

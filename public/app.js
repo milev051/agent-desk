@@ -7,6 +7,7 @@ import {createDispatcherPanel} from './dispatcher-panel.mjs';
 import {createAdaptivePanel} from './adaptive-panel.mjs';
 import {installVolumeZoom} from './volume-zoom.mjs';
 import {createThoughtsPanel} from './thoughts-panel.mjs';
+import {createProjectBoard} from './project-board.mjs';
 import {answerText} from './final-answer.mjs';
 import {needsCacheConfirm,changeColumnHtml,lastTouchedMessage,touchedFiles,sameFile,fileState,fileParts,fileStamp,fileSize,changesLabel,diffPreviewHtml,githubDiffHtml,fileDiffStatsHtml,fileMediaKind,changedLinesHtml,messageChangeHtml} from './desk-modes.mjs';
 import {createAndroidPrompt,observePromptChanges} from './prompt-editor.mjs';
@@ -1500,9 +1501,12 @@ async function proposeAdaptive(project){
  }catch(error){toast(error.message,'error');}
 }
 createThoughtsPanel({input:$('#sidebar-thoughts input'),api,onError:error=>toast(error.message,'error')});
+const projectBoard=createProjectBoard({api,openChat:id=>{if(chats.some(c=>c.id===id))choose(id);else location.hash='chat='+encodeURIComponent(id);},onError:error=>toast(error.message,'error')});
+$('#sidebar-board').onclick=()=>projectBoard.open();
+if(new URLSearchParams(location.hash.slice(1)).has('tabla'))projectBoard.open();
 function closePanels(){chatSearch.close();$('#record-panel').hidden=true;$('#projects-panel').hidden=true;$('#capabilities-panel').hidden=true;for(const el of [$('#conversation'),$('.composer-area'),$('#usage-details'),$('#change-column')].filter(Boolean))el.inert=!$('#defaults').hidden;}
 for(const button of document.querySelectorAll('[data-close-panel]'))button.onclick=closePanels;
-window.addEventListener('hashchange',()=>{const params=new URLSearchParams(location.hash.slice(1));if(params.has('dispatcher')){dispatcherPanel.open();return;}if(params.has('folder')){openLinkedFolder(params.get('folder'));return;}const id=params.get('chat');if(chats.some(c=>c.id===id))choose(id);});
+window.addEventListener('hashchange',()=>{const params=new URLSearchParams(location.hash.slice(1));if(params.has('tabla')){projectBoard.open();return;}if(params.has('dispatcher')){dispatcherPanel.open();return;}if(params.has('folder')){openLinkedFolder(params.get('folder'));return;}const id=params.get('chat');if(chats.some(c=>c.id===id))choose(id);});
 
 let phoneTimer;
 async function refreshPhone(){
