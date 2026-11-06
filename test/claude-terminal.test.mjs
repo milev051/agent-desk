@@ -171,6 +171,7 @@ f.write(json.dumps({'type':'user','message':{'content':a[-1]}})+'\\n');f.flush()
 sys.stdout.write('D\\x1b[2Cgerous rmdir operation on working directory\\r\\n\\x1b[2C\\u276f\\x1b[1C1.\\x1b[1CYes\\r\\n\\x1b[4C2.\\x1b[1CNo\\r\\n');sys.stdout.flush()
 import tty;tty.setraw(0);k=os.read(0,1)
 assert k==b'1',k
+sys.stdout.write('\\u273b Working\\u2026 (3s)\\r\\n');sys.stdout.flush()
 k=os.read(0,1)
 assert k==b'\\r',k
 f.write(json.dumps({'type':'assistant','message':{'id':'x','content':[{'type':'text','text':'PROSLO'}],'stop_reason':'end_turn','usage':{}}})+'\\n')

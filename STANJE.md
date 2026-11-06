@@ -2,7 +2,7 @@
 _2026-11-06_
 - Istek arhive (3 dana) briše i Claude sesiju u ~/.claude/projects, pa čet nestaje i iz Claude aplikacije (claude-sessions.mjs). Obrisano 260 starih sesija Agent Deska. 400/400, aktivno posle restarta.
 - Arhiva četova čuva 3 dana (archive.mjs), važi posle restarta; postojeće arhive skraćene, 409 obrisano, 104 ostalo. 399/399.
-- Zastoj na potvrdi plugina za privatnost (mejl naloga u komandi): most šalje „1“, posle 15 s Enter, dnevnik u data/claude-terminal-log/. Uzrok neuspelog Entera u pravom četu otvoren; sledeći zastoj proveriti u dnevniku. 399/399.
+- Potvrde u Claude terminalu: most šalje „1“, posle 15 s bez zapisa u transkriptu Enter; dnevnik data/claude-terminal-log/ (8 uspešnih 2026-11-06). Zašto CLI ponekad ne primi „1“ nije utvrđeno. 400/400.
 - Automatska potvrda nije radila: ESC(B sekvence razbijale „1. Yes“; ispravljeno u tools/claude-terminal.py (važi od sledećeg poteza, bez restarta). 398/398.
 - Claude terminal sam bira Yes na svakom dijalogu sa „1. Yes“ (proceed, Dangerous rmdir…) kad čet ima pun pristup; inače obaveštenje „Agent čeka“ na Mac i telefon (claude-terminal.py, adapters.mjs, server.mjs). Server restartovan 2026-11-06, aktivno. 397/397. Sledeće: proveriti prvi stvarni zastoj.
 - Claude četovi u kontekstu znaju da je Claude in Chrome instaliran (server.mjs, docs/agent-environment.md). 395/395, važi posle restarta.

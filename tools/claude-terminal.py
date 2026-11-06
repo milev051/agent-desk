@@ -118,8 +118,7 @@ def run(executable, args, prompt, timeout=None):
                 if not screen:
                     raise RuntimeError('Claude terminal se zatvorio pre završetka. Proveri Claude prijavu u terminalu.')
                 tail = (tail + screen)[-16384:]
-                if confirm_at is not None and len(ANSI.sub(b'', screen).strip()) > 3:
-                    confirm_at = None
+                # Crtanje ekrana (animacija, sat) nije znak da je potvrda prihvaćena; to je samo nov zapis u transkriptu.
                 # Terminal rendering is deliberately never parsed into user messages.
             if transcript.exists():
                 with transcript.open('rb') as f:
@@ -175,7 +174,7 @@ def run(executable, args, prompt, timeout=None):
                 if not asked:
                     asked = True
                     emit({'type': 'stall', 'session_id': sid, 'activity': f'Claude čeka potvrdu na ekranu, a ovaj čet nema pun pristup. Šta možeš: Zaustavi, uključi pun pristup i pošalji „nastavi“. Ekran: {seen_screen}'})
-            # Ako CLI 15 s posle „1“ ništa ne iscrta, pokušaj još jednom Enterom.
+            # Ako 15 s posle „1“ nema novog zapisa u transkriptu, pokušaj još jednom Enterom.
             if confirm_at is not None and not retried and time.monotonic() - confirm_at > confirm_retry:
                 retried = True
                 journal(sid, 'potvrda Enter (posle „1“ bez reakcije)', tail)
