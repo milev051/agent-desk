@@ -30,7 +30,7 @@ export function cardHtml(p,now=Date.now()){
  const questions=p.questions.map((q,i)=>`<div class="board-question" data-chat="${esc(q.chatId)}" data-question="${esc(q.id || '')}" data-at="${esc(q.at)}">
    <p><b>Pitanje${p.questions.length>1?` (${esc(q.chatTitle)})`:''}:</b> ${esc(q.text)}</p>
    <div class="board-actions">
-    <button type="button" data-board="accept">Prihvati preporuku</button>
+    ${/preporuč/i.test(q.text)?'<button type="button" data-board="accept">Prihvati preporuku</button>':''}
     <button type="button" data-board="reply">Odgovori</button>
     <button type="button" data-board="open">Otvori čet</button>
     <small>${esc(ago(q.at,now))}</small>
@@ -45,6 +45,7 @@ export function cardHtml(p,now=Date.now()){
   ${p.next?`<div class="board-next" data-chat="${esc(p.mainChatId)}"><p class="board-line"><b>Sledeće:</b> ${esc(p.next)}</p>${p.questions.length?'':'<button type="button" data-board="continue">Nastavi</button>'}</div>`:''}
   <form class="board-instruct" data-chat="${esc(p.mainChatId)}"><input type="text" placeholder="Uputstvo agentu u ovom projektu" aria-label="Uputstvo agentu za ${esc(p.name)}" enterkeyhint="send"><button type="submit">Pošalji</button></form>
   ${chats?`<div class="board-chats">${chats}</div>`:''}
+  ${p.oldQuestions?.length?`<details class="board-old"><summary>Starija pitanja bez odgovora (${p.oldQuestions.length})</summary>${p.oldQuestions.map(q=>`<button type="button" class="board-chat" data-board="open" data-chat="${esc(q.chatId)}">${esc(q.chatTitle || 'Čet')} · ${esc(ago(q.at,now))}</button>`).join('')}</details>`:''}
  </article>`;
 }
 

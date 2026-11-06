@@ -986,3 +986,4 @@ body #chats .folder-row:hover,body #chats .folder-row.open{color:#e6e6e6;backgro
 .board-card .board-chat.running{color:#8fc1ff;border-color:#2e4258}
 .board-empty{font-size:13px;color:#888}
 @media(max-width:650px){.board-grid{grid-template-columns:minmax(0,1fr)}.board-body{padding:10px 12px 40px}.board-top{padding:10px 12px}}
+.board-old summary{font-size:11px;color:#777;cursor:pointer}.board-old{display:flex;flex-wrap:wrap;gap:4px}.board-old[open]{display:block}.board-old .board-chat{margin:4px 4px 0 0}

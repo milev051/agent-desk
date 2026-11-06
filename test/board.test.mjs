@@ -35,6 +35,12 @@ test('tabla stavlja na vrh projekat koji čeka odgovor i čita samo pitanje iz p
  assert.equal(board[1].chats.find(c=>c.id==='c').running,true);
 });
 
+test('pitanje starije od 3 dana ne drži projekat u stanju čekanja',()=>{
+ const chats=[chat('a','/p/sajt',[user(now-6*24*H),reply('r',now-5*24*H,'Pitanje: x?')])];
+ const [p]=buildBoard({rows,chats,now});
+ assert.equal(p.status,'stoji');assert.equal(p.questions.length,0);assert.equal(p.oldQuestions.length,1);
+});
+
 test('stari projekat bez pitanja i rada ne ulazi u tablu',()=>{
  const chats=[chat('a','/p/sajt',[user(now-30*24*H),reply('r',now-30*24*H,'Urađeno.')])];
  assert.equal(buildBoard({rows,chats,now}).length,0);
@@ -71,9 +77,10 @@ test('dnevnik table čuva samo vrstu radnje, projekat i čet',()=>{
 });
 
 test('kartica table escapuje tekst i nudi radnje',()=>{
- const html=cardHtml({name:'<b>S</b>',path:'/p',status:'ceka',lastActivity:now,mainChatId:'a',chats:[{id:'a',title:'Čet'}],running:0,questions:[{id:'q',text:'<i>?</i>',chatId:'a',at:now}],lastResult:null,next:'',stateLine:''},now);
+ const html=cardHtml({name:'<b>S</b>',path:'/p',status:'ceka',lastActivity:now,mainChatId:'a',chats:[{id:'a',title:'Čet'}],running:0,oldQuestions:[{chatId:'z',chatTitle:'Staro',at:now-5*24*H}],questions:[{id:'q',text:'<i>?</i> Preporučujem da.',chatId:'a',at:now}],lastResult:null,next:'',stateLine:''},now);
  assert.ok(html.includes('&lt;b&gt;S&lt;/b&gt;') && !html.includes('<i>?'));
- assert.ok(html.includes('data-board="accept"') && html.includes('board-instruct'));
+ assert.ok(html.includes('data-board="accept"') && html.includes('board-instruct') && html.includes('Starija pitanja bez odgovora (1)'));
+ assert.ok(!cardHtml({name:'S',path:'/p',status:'ceka',lastActivity:now,mainChatId:'a',chats:[],running:0,questions:[{id:'q',text:'koje ime?',chatId:'a',at:now}]},now).includes('data-board="accept"'));
  assert.ok(behaviorHtml({summary:{days:7,avgSwitchesPerDay:3,medianQuestionReplyMinutes:null,questionsOpen:0},daily:[],suggestions:['a']}).includes('board-suggestions'));
  assert.equal(ago(now-5*60000,now),'pre 5 min');
 });

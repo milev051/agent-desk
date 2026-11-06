@@ -47,17 +47,19 @@ export function buildBoard({rows=[],chats=[],isRunning=()=>false,memoryView=()=>
   // Čeka korisnika samo pitanje iz poslednjeg odgovora četa, posle kog korisnik nije ništa napisao.
   const byMessage=new Map((memory.openQuestions || []).map(q=>[q.messageId,q]));
   const questions=roots.map(c=>{const last=(c.messages || []).at(-1);if(last?.role!=='assistant' || last.status!=='done' || isRunning(c.id))return null;const text=questionText(last.text);if(!text)return null;const q=byMessage.get(last.id);return {id:q?.id || null,text,chatId:c.id,chatTitle:clean(c.title,80),at:last.completedAt || last.createdAt || 0};}).filter(Boolean).sort((a,b)=>b.at-a.at);
-  const stale=Math.max(0,(memory.openQuestions || []).length-questions.filter(q=>q.id).length);
+  // Pitanje starije od 3 dana je verovatno napušteno; broji se, ali ne zauzima tablu.
+  const fresh=questions.filter(q=>now-q.at<=3*DAY),old=questions.filter(q=>now-q.at>3*DAY);
+  const stale=Math.max(0,(memory.openQuestions || []).length-questions.filter(q=>q.id).length)+old.length;
   const record=(memory.records || [])[0];
   const activity=Math.max(0,...own.map(lastAt));
-  if(now-activity>activeDays*DAY && !questions.length && !running.length)continue;
+  if(now-activity>activeDays*DAY && !fresh.length && !running.length)continue;
   list.push({
    name:project.name,path:project.path,stateLine:clean(project.state,240),date:project.date || '',
-   status:questions.length?'ceka':running.length?'radi':'stoji',
+   status:fresh.length?'ceka':running.length?'radi':'stoji',
    lastActivity:activity,
    mainChatId:roots[0]?.id || own[0]?.id,
    chats:roots.slice(0,5).map(c=>({id:c.id,title:clean(c.title,80),agent:c.settings?.agent,running:isRunning(c.id) || own.some(x=>x.parentChatId===c.id && isRunning(x.id)),lastAt:lastAt(c)})),
-   running:running.length,questions,staleQuestions:stale,
+   running:running.length,questions:fresh,staleQuestions:stale,oldQuestions:old.slice(0,10).map(q=>({chatId:q.chatId,chatTitle:q.chatTitle,at:q.at})),
    lastResult:record?.result?{text:clean(record.result),at:record.at,chatId:record.chatId}:null,
    next:clean(record?.remaining,240) || nextFromState(memory.state?.text),
    warnings:memory.warnings || []
