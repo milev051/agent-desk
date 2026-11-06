@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {createAdaptive,clampRules,adaptiveRules,adaptivePrompt,proposePrompt} from '../adaptive.mjs';
 import {adaptiveSummary} from '../public/adaptive-panel.mjs';
-import {autoHandoff,cacheMs} from '../public/handoff-advice.mjs';
+import {autoHandoff,cacheMs,sendMovesChat} from '../public/handoff-advice.mjs';
 test('pravila ostaju unutar granica, a neispravna vrednost vraća podrazumevanu',()=>{
  const def=adaptiveRules.prelazak;
  assert.deepEqual(clampRules(def,{coldMinContext:1,warmMinContext:'x'}),{coldMinContext:20000,warmMinContext:150000});
@@ -75,6 +75,11 @@ test('sam prelazak: dok keš važi tek kod velikog konteksta, broj poruka ne uti
  assert.equal(autoHandoff(chat(now-cacheMs-1)(60000),now).reason,'idle');
  assert.equal(autoHandoff(chat(now-cacheMs-1)(30000),now),null);
  assert.equal(autoHandoff({...chat(now)(500000),parentChatId:'p'},now),null);
+ const advice=autoHandoff(chat(now)(160000),now);
+ assert.equal(sendMovesChat(false,advice),false);
+ assert.equal(sendMovesChat(undefined,advice),false);
+ assert.equal(sendMovesChat(true,null),false);
+ assert.equal(sendMovesChat(true,advice),true);
 });
 
 test('četovi prilagođavanja nisu u listi četova, nego u prozoru Prilagođavanje', async () => {

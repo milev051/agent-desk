@@ -53,3 +53,11 @@ test('automatski reasoning bira Medium, GPT-6-Luna High, a nepodržane nivoe pre
  const catalog={codex:{defaultModel:'gpt-6-sol',models:['gpt-6-sol','gpt-6-luna','gpt-5.6-luna'].map(id=>({id,efforts:[{id:'medium'},{id:'high'}]}))},claude:{models:[{id:'default',efforts:[{id:'medium'}]},{id:'haiku',efforts:[]}]}};
  assert.equal(preferredEffort(catalog,'codex','gpt-6-luna'),'high');assert.equal(preferredEffort(catalog,'codex','gpt-5.6-luna'),'medium');assert.equal(preferredEffort(catalog,'codex',''),'medium');assert.equal(preferredEffort(catalog,'claude',''),'medium');assert.equal(preferredEffort(catalog,'claude','haiku'),'');
 });
+
+test('Antigravity bez modela koristi Claude Sonnet umesto Gemini', async () => {
+  const { command, ANTIGRAVITY_DEFAULT_MODEL } = await import('../adapters.mjs');
+  const spec = command({settings:{agent:'antigravity',model:'',access:'full',instructions:'',effort:'',cwd:'/tmp'},sessions:{}},'Test','agy');
+  const i = spec.args.indexOf('--model');
+  assert.equal(spec.args[i+1], ANTIGRAVITY_DEFAULT_MODEL);
+  assert.match(ANTIGRAVITY_DEFAULT_MODEL, /^claude-/);
+});

@@ -12,6 +12,12 @@ export function uniqueProjectTitle(title,chats=[],excludeId){
  return candidate;
 }
 export const titleContextLimit=64000;
+const automaticTitlePlaceholders=new Set(['Empty','Novi čet','New chat']);
+// Naziv posle promene modela ostaje. Privremeni naziv iz prve poruke Gemini zamenjuje posle prvog odgovora.
+export function keepExistingTitle(chat){
+ if(!chat?.titleManual && !chat?.titleFromPrompt && chat?.title && !automaticTitlePlaceholders.has(chat.title)){chat.titleManual=true;return true;}
+ return false;
+}
 function shortenTitleText(text,limit){
  if(text.length<=limit)return text;
  const marker=' […] ',room=Math.max(0,limit-marker.length),head=Math.ceil(room/2);
@@ -73,7 +79,7 @@ export function createTitleManager({settingsFile,keyFile,getChat,getChats=()=>[]
   while(queue.length && !closed){const job=queue.shift(),chat=getChat(job.id);if(!chat || chat.titleManual)continue;
    controller=new AbortController();const timer=setTimeout(()=>controller.abort(),15000);
    try{const {title,usage}=await generateChatTitle(job.model,titleRequest(job.seed,job.parentTitle,job.currentTitle,job.project),controller.signal);
-    if(getChat(job.id)===chat && !chat.titleManual && !closed && prefs.enabled){chat.title=uniqueProjectTitle(title,getChats(),chat.id);chat.titleGeneration={status:'done',model:job.model,createdAt:Date.now(),atUsers:job.atUsers||0,usage,usageCwd:job.cwd};lastError='';checked=true;changed();}
+    if(getChat(job.id)===chat && !chat.titleManual && !closed && prefs.enabled){chat.title=uniqueProjectTitle(title,getChats(),chat.id);chat.titleManual=true;delete chat.titleFromPrompt;chat.titleGeneration={status:'done',model:job.model,createdAt:Date.now(),atUsers:job.atUsers||0,usage,usageCwd:job.cwd};lastError='';checked=true;changed();}
    }catch(e){if(getChat(job.id)===chat && !closed){lastError=e.name==='AbortError'?'Google nije odgovorio na vreme.':e.message;chat.titleGeneration={status:'error',model:job.model,error:lastError,createdAt:Date.now(),atUsers:job.atUsers||chat.titleGeneration?.atUsers||0};changed();}}
    finally{clearTimeout(timer);controller=null;}
   }working=false;

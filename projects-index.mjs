@@ -6,7 +6,7 @@ const sep=' · ';
 const noState='nema zabeleženog stanja';
 
 export function projectsLine(file){
-  return `Pregled naziva i lokacija projekata je ${path.join(os.homedir(),'Desktop','PROJEKTI.md')} (automatski se osvežava dok Agent Desk radi). Detaljan spisak projekata je ${file} (jedan red po projektu: ime · putanja · stanje · datum). Ne učitavaj ga uz svaku poruku: otvori ga samo kad korisnik pomene projekat po imenu ili kad ti radni folder nije jasan. Kad završiš rad u projektu, ažuriraj njegov red u tom spisku i STANJE.md u folderu projekta (najviše 15-20 redova: gde smo stali, sledeći korak, otvorena pitanja; starije stavke skrati).`;
+  return `Pregled naziva i lokacija projekata je ${path.join(os.homedir(),'Desktop','milev_workflow','PROJEKTI.md')} (automatski se osvežava dok Agent Desk radi). Detaljan spisak projekata je ${file} (jedan red po projektu: ime · putanja · stanje · datum). Ne učitavaj ga uz svaku poruku: otvori ga samo kad korisnik pomene projekat po imenu ili kad ti radni folder nije jasan. Kad završiš rad u projektu, ažuriraj njegov red u tom spisku i STANJE.md u folderu projekta (najviše 15-20 redova: gde smo stali, sledeći korak, otvorena pitanja; starije stavke skrati).`;
 }
 
 export function parseProjects(text){

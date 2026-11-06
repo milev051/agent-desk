@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {wantsNewSession,lastContext,handoffAdvice,cleanSummary,clipHistory,mergeState,summaryRequest,contextLimit,cacheMs,lastMessages,carriedMessages,subagentBrief,archiveHandoff,handoffOffer} from '../handoff.mjs';
+import {wantsNewSession,lastContext,handoffAdvice,cleanSummary,clipHistory,mergeState,summaryRequest,contextLimit,cacheMs,lastMessages,carriedMessages,subagentBrief,linkHandoff,continuationTitle,handoffOffer} from '../handoff.mjs';
 const done=(agent,usage,at)=>({role:'assistant',status:'done',agent,usage,createdAt:at,completedAt:at});
 test('kontekst poslednjeg odgovora: claude sabira keš, codex samo ulaz',()=>{
  const claude={messages:[done('claude',{input:10,cacheRead:90,cacheWrite:5},1),{role:'user',text:'a'}]};
@@ -102,27 +102,21 @@ test('oznaka nove sesije pokazuje kontekst pre i posle i uštedu, red pokazuje t
  assert.equal(cacheStatus({tokens:59000,at:0},cacheMs+1,true),'kontekst 59k');
 });
 
-test('nastavak arhivira prethodni čet i prenosi sve podagente bez zadržavanja starog na listi',()=>{
- const previous={id:'old',continuedUnlocked:true,settings:{agent:'codex'},messages:[{text:'istorija'}],queue:[{text:'nacrt'}]};
- const child={id:'child',parentChatId:'old',running:true},other={id:'other'},next={id:'next',continuedFrom:'old',messages:[{text:'sažetak'}]};
- let saved;
- const list=archiveHandoff([previous,child,other],previous,next,{add(items){saved=items;return 'archive-id';}});
- assert.deepEqual(list.map(c=>c.id),['next','child','other']);
- assert.equal(next.continuedFromArchive,'archive-id');assert.equal(child.parentChatId,'next');assert.equal(child.running,true);
- assert.equal(saved[0].continuedTo,'next');assert.equal(saved[0].continuedUnlocked,undefined);
- assert.deepEqual(saved[0].messages,previous.messages);assert.notEqual(saved[0].messages,previous.messages);
- assert.equal(previous.continuedTo,undefined);assert.equal(next.parentChatId,undefined);
-});
-test('greška arhiviranja ostavlja prethodni čet i podagente netaknute',()=>{
- const previous={id:'old',messages:[{text:'istorija'}]},child={id:'child',parentChatId:'old'},next={id:'next'},list=[previous,child];
- assert.throws(()=>archiveHandoff(list,previous,next,{add(){throw Error('disk');}}),/disk/);
- assert.equal(child.parentChatId,'old');assert.equal(previous.continuedTo,undefined);
- assert.equal(next.continuedFromArchive,undefined);assert.equal(list[0],previous);
+test('nastavak zadržava prethodni čet, bez oznake u naslovu, i prenosi podagente',()=>{
+ const previous={id:'old',title:'Agent Desk (nastavak)',continuedUnlocked:true,settings:{agent:'codex'},messages:[{text:'istorija'}],queue:[{text:'nacrt'}]};
+ const child={id:'child',parentChatId:'old',running:true},other={id:'other'},next={id:'next',title:continuationTitle(previous.title),continuedFrom:'old',messages:[{text:'sažetak'}]};
+ const list=linkHandoff([previous,child,other],previous,next);
+ assert.equal(next.title,'Agent Desk');
+ assert.deepEqual(list.map(c=>c.id),['next','old','child','other']);
+ assert.equal(next.continuedFromArchive,undefined);assert.equal(child.parentChatId,'next');assert.equal(child.running,true);
+ assert.equal(previous.continuedTo,'next');assert.equal(previous.continuedUnlocked,undefined);assert.deepEqual(previous.queue,[]);
+ assert.equal(list[1],previous);assert.equal(next.parentChatId,undefined);
+ assert.throws(()=>linkHandoff([],previous,next),/nije na listi/);
 });
 
 test('dug čet nudi nastavak i kada se preporučuje nova sesija ili CLI ne prijavi kontekst',()=>{
  const now=Date.now(),chat={lastContext:{tokens:contextLimit+1,at:now},context:{history:{characters:20000}}};
- assert.match(handoffOffer(chat,now).text,/Kontekst/);
+ assert.match(handoffOffer(chat,now).text,/Kontekst \d+k/);assert.match(handoffOffer(chat,now).title,/Kontekst poslednjeg/);
  assert.equal(handoffAdvice(chat.lastContext,now,5000).pick,'session');
  assert.ok(handoffOffer({messageCount:40},now));assert.equal(handoffOffer({messageCount:39},now),null);
  assert.ok(handoffOffer({context:{history:{characters:120000}}},now));

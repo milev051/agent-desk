@@ -24,7 +24,7 @@ export function lastMessages(messages,each=4){
  const users=kept.filter(m=>m.role==='user').slice(-each),replies=kept.filter(m=>m.role==='assistant').slice(-each);
  return kept.filter(m=>users.includes(m) || replies.includes(m));
 }
-// Kopija bez potrošnje i sesijskih podataka; potrošnja ostaje u arhiviranom četu.
+// Kopija bez potrošnje i sesijskih podataka; potrošnja ostaje u prethodnom četu.
 export function carriedMessages(messages,from,id){
  return lastMessages(messages).map(m=>({id:id(),role:m.role,text:m.text,...(m.role==='assistant'?{agent:m.agent,model:m.model||'',status:'done',completedAt:m.completedAt}:{origin:'user'}),createdAt:m.createdAt,...(m.sentAt?{sentAt:m.sentAt}:{}),carriedFrom:from,usageInherited:true}));
 }
@@ -51,11 +51,15 @@ export function mergeState(existing,summary,date,max=20){
  return fresh.concat(old.length?['_Ranije:_',...old.slice(0,room)]:[]).join('\n')+'\n';
 }
 
-// Arhiva se piše pre promene liste, tako da neuspešan upis čuva prethodni čet.
-export function archiveHandoff(chats,previous,next,archive){
- const saved=structuredClone(previous);saved.continuedTo=next.id;saved.queue=[];delete saved.continuedUnlocked;
- const archiveId=archive.add([saved]);
- next.continuedFromArchive=archiveId;
+// Naslov nastavka ostaje isti, bez dodatka „(nastavak)“.
+export function continuationTitle(title){
+ const base=String(title||'').replace(/(?:\s*\(nastavak\))+$/u,'').trim();
+ return (base||String(title||'').trim()||'Čet').slice(0,100);
+}
+// Prethodni čet ostaje na listi, vezan za nastavak. Ne ide u arhivu.
+export function linkHandoff(chats,previous,next){
+ if(!chats.includes(previous))throw new Error('Prethodni čet nije na listi.');
+ previous.continuedTo=next.id;previous.queue=[];delete previous.continuedUnlocked;
  for(const child of chats)if(child.parentChatId===previous.id)child.parentChatId=next.id;
- return [next,...chats.filter(c=>c.id!==previous.id)];
+ return [next,...chats];
 }

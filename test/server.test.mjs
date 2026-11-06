@@ -12,7 +12,7 @@ import {speechHash} from '../speech.mjs';
 test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustavljanje', async () => {
   const temp = mkdtempSync(path.join(tmpdir(), 'agent-desk-test-'));
   const bin = path.join(temp, 'bin'); mkdirSync(bin);
-  writeFileSync(path.join(bin, 'codex'), `#!${process.execPath}\nlet input='';process.stdin.on('data',c=>input+=c);process.stdin.on('end',()=>{console.log(JSON.stringify({type:'thread.started',thread_id:'test-native-session'}));if(input.trimEnd().endsWith('WAIT'))setTimeout(()=>{},60000);else{if(input.includes('SLOW'))setTimeout(()=>{},300);console.log(JSON.stringify({type:'item.completed',item:{type:'agent_message',text:JSON.stringify({input,args:process.argv.slice(2)})}}));console.log(JSON.stringify({type:'turn.completed',usage:{input_tokens:process.argv.includes('resume')?240:120,cached_input_tokens:process.argv.includes('resume')?160:80,output_tokens:process.argv.includes('resume')?30:15}}));}});\n`, { mode: 0o755 });
+  writeFileSync(path.join(bin, 'codex'), `#!${process.execPath}\nlet input='';process.stdin.on('data',c=>input+=c);process.stdin.on('end',()=>{const last=input.trimEnd();const resume=process.argv.includes('resume')?process.argv[process.argv.indexOf('resume')+1]:'';const session=last.endsWith('NETWORK_ALWAYS')?'network-persistent':resume || 'test-native-session';console.log(JSON.stringify({type:'thread.started',thread_id:session}));const network=last.endsWith('NETWORK_ONCE')||last.endsWith('NETWORK_ALWAYS')||(session==='network-persistent'&&input.startsWith('Veza je prekinuta'));if(network){console.log(JSON.stringify({type:'error',message:'Reconnecting... 5/5 (stream disconnected before completion: websocket closed by server before response.completed)'}));console.log(JSON.stringify({type:'turn.failed',error:{message:'stream disconnected before completion: websocket closed by server before response.completed'}}));process.exitCode=1;return;}if(last.endsWith('FAIL_QUEUE')){console.log(JSON.stringify({type:'turn.failed',error:{message:'Nema prijave'}}));process.exitCode=1;return;}if(last.endsWith('RECONNECT_SUCCESS'))console.log(JSON.stringify({type:'error',message:'Reconnecting... 1/5 (stream disconnected before completion)'}));if(last.endsWith('WAIT'))setTimeout(()=>{},60000);else{if(input.includes('SLOW'))setTimeout(()=>{},300);console.log(JSON.stringify({type:'item.completed',item:{type:'agent_message',text:JSON.stringify({input,args:process.argv.slice(2)})}}));console.log(JSON.stringify({type:'turn.completed',usage:{input_tokens:process.argv.includes('resume')?240:120,cached_input_tokens:process.argv.includes('resume')?160:80,output_tokens:process.argv.includes('resume')?30:15}}));}});\n`, { mode: 0o755 });
   // Model discovery must not launch the user's real Claude or depend on its live catalog.
   writeFileSync(path.join(bin,'claude'), `#!${process.execPath}\nprocess.stdin.on('data',()=>{console.log(JSON.stringify({type:'control_response',response:{response:{models:[{value:'opus',supportsEffort:true,supportedEffortLevels:['low','medium','high','max']},{value:'haiku',supportsEffort:false}]}}}));});\n`,{mode:0o755});
   mkdirSync(path.join(temp,'data'));writeFileSync(path.join(temp,'data','provera-agenata.json'),JSON.stringify({enabled:false}));
@@ -20,7 +20,7 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
   mkdirSync(path.join(temp,'codex'));writeFileSync(path.join(temp,'codex','models_cache.json'),JSON.stringify({models:['gpt-6.1-sol','gpt-6-luna'].map(slug=>({slug,visibility:'list',supported_reasoning_levels:['low','medium','high','xhigh','max'].map(effort=>({effort}))}))}));
   // Ranije sačuvan privremeni čet nema keepEmpty i mora preživeti stari zahtev klijenta.
   writeFileSync(path.join(temp,'data','chats.json'),JSON.stringify([{id:'legacy-empty',title:'Empty',ephemeral:true,createdAt:Date.now(),updatedAt:Date.now(),settings:{agent:'codex',model:'',access:'full',cwd:temp,instructions:'',effort:''},sessions:{},messages:[]}]));
-  const port = 4400 + Math.floor(Math.random() * 1000), base = `http://127.0.0.1:${port}`;
+  const port = 4400 + Math.floor(Math.random() * 600), base = `http://127.0.0.1:${port}`;
   const server = spawn(process.execPath, ['server.mjs'], { cwd: path.resolve(import.meta.dirname, '..'), env: { ...process.env, PORT: String(port), AGENT_DESK_DISABLE_LIMITS:'1', CODEX_HOME: path.join(temp,'codex'), PATH: `${bin}${path.delimiter}${process.env.PATH}`, AGENT_DESK_CONFIG: path.join(temp, 'config'), AGENT_DESK_DATA: path.join(temp, 'data') }, stdio: ['ignore', 'pipe', 'pipe'] });
   try {
     await once(server.stdout, 'data');
@@ -46,7 +46,20 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal((await call('/api/adaptive')).data.agents.find(a=>a.id===pendingAgent.id).status,'aktivan');
     assert.equal((await call('/api/adaptive/agents','POST',adaptiveInput)).data.status,'aktivan');
     assert.equal((await call('/api/integrations/gmail')).data.state,'unconfigured');
-    const environment=(await call('/api/environment')).data;assert.equal(environment.app,'Agent Desk');assert.equal(environment.integrations.calendar.implemented,true);assert.equal(environment.chat,null);
+    assert.equal((await call('/api/integrations/webpros')).data.state,'disconnected');
+    assert.equal((await call('/api/environment')).data.integrations.webpros.canWrite,false);
+    assert.equal((await call('/api/integrations/webpros/tools')).status,400);
+    assert.equal((await call('/api/integrations/webpros/connect','POST',{},'https://evil.test')).status,403);
+    assert.equal((await call('/api/integrations/webpros/settings','PUT',{canWrite:true},'https://evil.test')).status,403);
+    assert.equal((await call('/api/integrations/webpros/settings','PUT',{canWrite:'true'})).status,400);
+    assert.equal((await call('/api/integrations/webpros/tools/call','POST',{chatId:'missing',name:'test'})).status,400);
+    assert.equal((await call('/api/integrations/webpros','DELETE',{})).status,200);
+
+    assert.equal((await call('/api/integrations/github')).data.connected,false);
+    assert.equal((await call('/api/integrations/github/repos')).status,400);
+    assert.equal((await call('/api/integrations/github/connect','POST',{},'https://evil.test')).status,403);
+    assert.equal((await call('/api/integrations/github','DELETE',{},'https://evil.test')).status,403);
+    const environment=(await call('/api/environment')).data;assert.equal(environment.app,'Agent Desk');assert.equal(environment.integrations.calendar.implemented,true);assert.equal(environment.integrations.github.connected,false);assert.ok(environment.githubApi.repos.endsWith('/api/integrations/github/repos'));assert.equal(environment.chat,null);
     assert.equal((await call('/api/environment?chatId=missing')).status,404);
     for(const service of ['drive','tasks','calendar']){assert.equal(environment.integrations[service].connected,false);assert.equal((await call('/api/integrations/'+service)).data.state,'unconfigured');assert.equal((await call('/api/integrations/'+service,'POST',{})).status,405);}
     assert.equal((await call('/api/integrations/drive/files?q=test')).status,400);
@@ -157,13 +170,17 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal(replaced.id,empty.id);assert.equal(replaced.settings.agent,'claude');
     assert.equal(replaced.settings.cwd,temp);assert.equal(replaced.settings.instructions,'Kontekst projekta');
     assert.equal(replaced.settings.model,'opus');assert.equal(replaced.settings.effort,'max');
+    assert.equal(replaced.title,'Empty');assert.equal(replaced.titleManual,undefined);
     assert.equal((await call('/api/chats')).data.length,count);assert.deepEqual(replaced.sessions,{});
 
     assert.equal((await call(`/api/chats/${a.id}`, 'PATCH', { settings: { cwd: '/missing-folder-agent-desk' } })).status, 400);
     await call(`/api/chats/${a.id}/send`, 'POST', { text: 'Prva poruka' });
-    let chat = await done(a.id);assert.notEqual(chat.title,'Empty');
+    let chat = await done(a.id);assert.equal(chat.title,'Prva poruka');assert.equal(chat.titleManual,undefined);assert.equal(chat.titleFromPrompt,true);
+    const modelSwitched=(await call(`/api/chats/${a.id}`,'PATCH',{settings:{model:'gpt-6-luna'}})).data;
+    assert.equal(modelSwitched.title,'Prva poruka');assert.equal(modelSwitched.titleManual,undefined);assert.equal(modelSwitched.settings.model,'gpt-6-luna');
     const chatEnvironment=(await call('/api/environment?chatId='+a.id)).data;assert.equal(chatEnvironment.chat.cwd,temp);assert.equal(chatEnvironment.chat.id,a.id);assert.doesNotMatch(JSON.stringify(chatEnvironment),/test-only-key|access_token|refresh_token/);
     assert.match(JSON.parse(chat.messages.at(-1).text).input,/Radiš unutar Agent Deska/);
+    if(chat.settings.agent==='claude')assert.match(JSON.parse(chat.messages.at(-1).text).input,/Claude in Chrome: proširenje je instalirano/);else assert.doesNotMatch(JSON.parse(chat.messages.at(-1).text).input,/Claude in Chrome/);
     const inspected=(await call('/api/chats/'+a.id+'/context-view')).data;
     assert.equal(inspected.last.text,JSON.parse(chat.messages.at(-1).text).input);
     assert.equal(inspected.last.messageId,chat.messages.at(-1).id);
@@ -294,6 +311,42 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal(q.messages[2].origin,'queue');assert.ok(q.messages[2].sentAt>=q.messages[2].createdAt);
     assert.match(JSON.parse(q.messages.at(-1).text).input,/Korisnik · .*Z/);
     assert.match(JSON.parse(q.messages.at(-1).text).input,/Okruženje: Agent Desk/);
+    // Privremeni prekid ne prekida logički odgovor i ne troši red pre oporavka.
+    async function waitFor(id,predicate){for(let i=0;i<800;i++){const c=(await call(`/api/chats/${id}`)).data;if(predicate(c))return c;await new Promise(r=>setTimeout(r,25));}throw Error('Oporavak nije završen');}
+    const recovering=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
+    await call(`/api/chats/${recovering.id}/send`,'POST',{text:'NETWORK_ONCE'});
+    await waitFor(recovering.id,c=>c.messages.at(-1)?.connectionRetries===1);
+    await call(`/api/chats/${recovering.id}/queue`,'POST',{text:'Poruka posle oporavka'});
+    let recovery=await waitFor(recovering.id,c=>!c.running && !c.queue?.length && c.messages.length===4);
+    assert.equal(recovery.messages[1].status,'done');assert.equal(recovery.messages[1].connectionRetries,1);assert.equal(recovery.messages[1].error,undefined);
+    assert.equal(recovery.messages[3].status,'done');assert.equal(recovery.queuePaused,false);
+    assert.match(JSON.parse(recovery.messages[1].text).input,/ne ponavljaj završene radnje/);
+    assert.ok(JSON.parse(recovery.messages[1].text).args.includes('resume'));
+    const reconnected=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
+    await call(`/api/chats/${reconnected.id}/send`,'POST',{text:'RECONNECT_SUCCESS'});
+    const successful=await waitFor(reconnected.id,c=>!c.running);
+    assert.equal(successful.messages.at(-1).status,'done');assert.equal(successful.messages.at(-1).error,undefined);
+    const persistent=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
+    await call(`/api/chats/${persistent.id}/send`,'POST',{text:'NETWORK_ALWAYS'});
+    await waitFor(persistent.id,c=>c.messages.at(-1)?.connectionRetries===1);
+    await call(`/api/chats/${persistent.id}/queue`,'POST',{text:'Nastavi red nakon iscrpljenih pokušaja'});
+    const exhausted=await waitFor(persistent.id,c=>!c.running && !c.queue?.length && c.messages.length===4);
+    assert.equal(exhausted.messages[1].connectionRetries,3);assert.equal(exhausted.messages[1].status,'error');assert.equal(exhausted.messages[3].status,'done');assert.equal(exhausted.queuePaused,false);
+    const stoppedRetry=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
+    await call(`/api/chats/${stoppedRetry.id}/send`,'POST',{text:'NETWORK_ONCE'});
+    await waitFor(stoppedRetry.id,c=>c.messages.at(-1)?.connectionRetries===1);
+    await call(`/api/chats/${stoppedRetry.id}/queue`,'POST',{text:'Ostaje posle stop'});
+    await call(`/api/chats/${stoppedRetry.id}/stop`,'POST',{});
+    const stoppedRecovery=await waitFor(stoppedRetry.id,c=>!c.running);
+    assert.equal(stoppedRecovery.messages[1].status,'stopped');assert.equal(stoppedRecovery.queuePaused,true);assert.equal(stoppedRecovery.queue.length,1);
+    const failedQueue=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
+    await call(`/api/chats/${failedQueue.id}/send`,'POST',{text:'SLOW početak'});
+    await call(`/api/chats/${failedQueue.id}/queue`,'POST',{text:'FAIL_QUEUE'});
+    await waitFor(failedQueue.id,c=>c.messages[3]?.status==='error');
+    await call(`/api/chats/${failedQueue.id}/queue`,'POST',{text:'Dalje automatski'});
+    const afterFailure=await waitFor(failedQueue.id,c=>!c.running && !c.queue?.length && c.messages.length===6);
+    assert.equal(afterFailure.messages[3].status,'error');assert.equal(afterFailure.messages[5].status,'done');
+
     const urgent=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
     await call(`/api/chats/${urgent.id}/send`,'POST',{text:'Dug posao WAIT'});
     await call(`/api/chats/${urgent.id}/queue`,'POST',{text:'Hitna dopuna'});
@@ -379,9 +432,11 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     const extra=[];for(let i=0;i<2;i++){const response=await call(`/api/chats/${queued.id}/delegate`,'POST',{agent:'codex',name:'Dodatni '+i,task:'Zadatak '+i});assert.equal(response.status,202);extra.push(await done(response.data.id));}
     assert.equal(extra[0].parentTurnId,childAfter.parentTurnId);assert.equal(extra[1].parentTurnId,childAfter.parentTurnId);
     for(const c of extra)assert.equal((await call(`/api/chats/${queued.id}/delegate`,'POST',{childId:c.id,task:'WAIT'})).status,202);
-    assert.equal((await call(`/api/chats/${queued.id}/delegate`,'POST',{agent:'codex',task:'Treći dok dva rade'})).status,409);
-    await call(`/api/chats/${queued.id}/stop`,'POST',{});for(const c of extra)await done(c.id);
-    const fourth=await call(`/api/chats/${queued.id}/delegate`,'POST',{agent:'codex',task:'Sledeći nakon oslobađanja mesta'});assert.equal(fourth.status,202);const fourthDone=await done(fourth.data.id);assert.match(JSON.parse(fourthDone.messages.at(-1).text).input,/Ukupan broj podčetova po odgovoru nije ograničen/);
+    const whileBusy=await call(`/api/chats/${queued.id}/delegate`,'POST',{agent:'codex',task:'Treći dok dva rade'});assert.equal(whileBusy.status,202);await done(whileBusy.data.id);
+    // Prekid roditelja ne gasi podagente; svaki se zaustavlja posebno.
+    await call(`/api/chats/${queued.id}/stop`,'POST',{});await new Promise(r=>setTimeout(r,300));for(const c of extra)assert.equal((await call(`/api/chats/${c.id}`)).data.running,true);
+    for(const c of extra)await call(`/api/chats/${c.id}/stop`,'POST',{});for(const c of extra)await done(c.id);
+    const fourth=await call(`/api/chats/${queued.id}/delegate`,'POST',{agent:'codex',task:'Sledeći nakon zaustavljanja'});assert.equal(fourth.status,202);const fourthDone=await done(fourth.data.id);assert.match(JSON.parse(fourthDone.messages.at(-1).text).input,/Broj istovremenih podčetova nije ograničen/);
     const reqId='test-request-once';await call(`/api/chats/${a.id}/send`,'POST',{text:'Poruka jednom',requestId:reqId});await done(a.id);
     await call(`/api/chats/${a.id}/send`,'POST',{text:'Poruka jednom',requestId:reqId});assert.equal((await call(`/api/chats/${a.id}`)).data.messages.filter(m=>m.requestId===reqId).length,1);
     const beforeReset=(await call(`/api/chats/${a.id}`)).data;

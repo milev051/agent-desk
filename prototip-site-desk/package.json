@@ -1,0 +1,9 @@
+{
+  "name": "site-desk",
+  "version": "0.6.0",
+  "private": true,
+  "type": "module",
+  "description": "Samostalan lokalni panel za GitHub projekte, CLI agente i SSH hosting",
+  "scripts": {"start": "node server.mjs", "test": "node --test test/*.test.mjs"},
+  "engines": {"node": ">=22"}
+}

@@ -3,9 +3,16 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import {createTitleManager,titleRequest,cleanTitle,recentTitleSeed,titleContextLimit,uniqueProjectTitle} from '../titles.mjs';
+import {createTitleManager,titleRequest,cleanTitle,recentTitleSeed,titleContextLimit,uniqueProjectTitle,keepExistingTitle} from '../titles.mjs';
 function fixture(t,fetchFn){const dir=fs.mkdtempSync(path.join(os.tmpdir(),'desk-title-test-'));const chat={id:'a',title:'Prva poruka',messages:[]};const settingsFile=path.join(dir,'settings.json'),keyFile=path.join(dir,'config','google-api-key');let changes=0;const manager=createTitleManager({settingsFile,keyFile,getChat:id=>id===chat.id?chat:undefined,changed:()=>changes++,fetchFn});t.after(()=>{manager.close();fs.rmSync(dir,{recursive:true,force:true});});return {manager,chat,settingsFile,keyFile,changes:()=>changes};}
 async function waitFor(fn){for(let i=0;i<100;i++){if(fn())return;await new Promise(r=>setTimeout(r,5));}throw Error('Naslov nije završen');}
+test('postojeći naslov ostaje pri promeni modela, a prazan čet i ručni naziv se ne diraju',()=>{
+ const named={title:'Sajt pekare'},empty={title:'Empty'},manual={title:'Moj naziv',titleManual:true};
+ assert.equal(keepExistingTitle(named),true);assert.equal(named.titleManual,true);
+ assert.equal(keepExistingTitle(empty),false);assert.equal(empty.titleManual,undefined);
+ assert.equal(keepExistingTitle(manual),false);assert.equal(manual.title,'Moj naziv');
+ assert.equal(keepExistingTitle({title:'Novi čet'}),false);assert.equal(keepExistingTitle({title:'New chat'}),false);
+});
 test('naslov šalje samo ograničen zadatak i roditeljski naslov, bez prepoznatljivih ključeva',()=>{const seed='Proveri '+ 'AQ.'+'x'.repeat(40)+' '+ 'a'.repeat(3000);const req=titleRequest(seed,'b'.repeat(200));const data=JSON.parse(req.contents[0].parts[0].text);assert.ok(data.zadatak.length<=titleContextLimit);assert.equal(data.roditeljskiNaslov.length,160);assert.ok(!data.zadatak.includes('x'.repeat(40)));assert.equal(req.generationConfig.thinkingConfig.thinkingLevel,'MINIMAL');assert.equal(cleanTitle('{"title":"Provera testova aplikacije"}'),'Provera testova aplikacije');assert.equal(cleanTitle('"Naslov"\nDodatni tekst'),'Naslov');});
 test('jedan Google poziv daje naslov i usage, ključ se ne izlaže kroz podešavanja',async t=>{let calls=0;const f=fixture(t,async(url,opts)=>{calls++;assert.match(url,/gemini-3\.5-flash-lite:generateContent$/);assert.equal(opts.headers['x-goog-api-key'],'test-only-key');return {ok:true,json:async()=>({candidates:[{content:{parts:[{thought:true,text:'ne koristiti'},{text:'{"title":"Popravka prikaza podagenata"}'}]}}],usageMetadata:{promptTokenCount:80,candidatesTokenCount:10}})};});f.manager.configure({enabled:true,key:'test-only-key'});f.manager.request(f.chat,'Popravi prikaz','Agent Desk');f.manager.request(f.chat,'Ne ponavljaj');await waitFor(()=>f.chat.titleGeneration.status==='done');assert.equal(calls,1);assert.equal(f.chat.title,'Popravka prikaza podagenata');assert.equal(f.chat.titleGeneration.usage.promptTokenCount,80);assert.equal(fs.statSync(f.keyFile).mode&0o777,0o600);assert.equal(fs.statSync(path.dirname(f.keyFile)).mode&0o777,0o700);assert.ok(!JSON.stringify(f.manager.settings()).includes('test-only-key'));assert.ok(!fs.readFileSync(f.settingsFile,'utf8').includes('test-only-key'));assert.equal(f.changes(),2);});
 test('ručni naziv podagenta i naknadno preimenovanje imaju prednost nad Gemini naslovom',async t=>{let release,calls=0;const f=fixture(t,()=>{calls++;return new Promise(resolve=>release=()=>resolve({ok:true,json:async()=>({candidates:[{content:{parts:[{text:'{"title":"Automatski naslov"}'}]}}]})}));});f.manager.configure({enabled:true,key:'test-only-key'});f.chat.titleManual=true;f.manager.request(f.chat,'Zadatak');assert.equal(calls,0);f.chat.titleManual=false;f.manager.request(f.chat,'Zadatak');f.chat.titleManual=true;f.chat.title='Moj naslov';release();await new Promise(r=>setTimeout(r,20));assert.equal(f.chat.title,'Moj naslov');});
@@ -73,10 +80,12 @@ test('prvi završen odgovor automatski imenuje karticu jednom, ručni naslov ost
  let calls=0;
  const f=fixture(t,async(url,opts)=>{calls++;const payload=JSON.parse(JSON.parse(opts.body).contents[0].parts[0].text);assert.match(payload.zadatak,/Agent: Prvi odgovor/);return {ok:true,json:async()=>({candidates:[{content:{parts:[{text:'{"title":"Naslov posle odgovora"}'}]}}]})};});
  f.manager.configure({key:'test-only-key'});
+ f.chat.titleFromPrompt=true;assert.equal(keepExistingTitle(f.chat),false);
  f.chat.messages=[{role:'user',text:'Prvi zahtev'},{role:'assistant',text:'Prvi odgovor',status:'running'}];
  f.manager.afterReply(f.chat);assert.equal(calls,0);
  f.chat.messages[1].status='done';f.manager.afterReply(f.chat);
  await waitFor(()=>f.chat.titleGeneration?.status==='done');assert.equal(f.chat.title,'Naslov posle odgovora');
+ assert.equal(f.chat.titleManual,true);assert.equal(f.chat.titleFromPrompt,undefined);
  f.manager.afterReply(f.chat);assert.equal(calls,1);
  delete f.chat.titleGeneration;f.chat.titleManual=true;f.chat.title='Moj naziv';f.manager.afterReply(f.chat);assert.equal(calls,1);assert.equal(f.chat.title,'Moj naziv');
 });

@@ -1,6 +1,10 @@
 export function previewScale(panelWidth,panelHeight,width=1920){const scale=Math.max(1,panelWidth)/width;return {scale,width,height:Math.max(1,panelHeight)/scale};}
 export function livePreviewLink(event){
- if(event.defaultPrevented||event.button>0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return null;
+ if(event.ctrlKey||event.shiftKey||!(event.metaKey||event.altKey))return null;
+ return messageWebLink(event);
+}
+function messageWebLink(event){
+ if(event.defaultPrevented||event.button>0)return null;
  const link=event.target.closest('a[href]');if(!link||!link.closest('.message-body')||link.closest('.attachment-thumbs')||link.matches('[data-local-file],[data-file-path],[download]'))return null;
  const href=link.getAttribute('href');return /^https?:\/\//i.test(href||'')?href:null;
 }
@@ -32,7 +36,7 @@ export function createLivePreview({root,conversation,api,phoneRemote=false,repor
  }
  function open(url){current=url;address.textContent=url;address.title=url;root.querySelector('[data-preview-external]').href=url;root.hidden=false;document.body.classList.add('live-preview-open');if(!historyOpen){history.pushState({...history.state,livePreview:true},'',location.href);historyOpen=true;}resize();void load();}
  function close({fromHistory=false}={}){if(root.hidden)return false;++generation;controller?.abort();root.hidden=true;navigate('about:blank');document.body.classList.remove('live-preview-open');document.body.style.removeProperty('--live-preview-height');if(historyOpen&&!fromHistory&&history.state?.livePreview){const state={...history.state};delete state.livePreview;delete state.livePreviewGuard;history.replaceState(state,'',location.href);}historyOpen=false;void api('/api/preview','DELETE').catch(report);return true;}
- conversation.addEventListener('click',event=>{const url=livePreviewLink(event);if(!url)return;event.preventDefault();event.stopImmediatePropagation();const app=ownAppLink(url);if(app)location.assign(app);else open(url);},{capture:true});
+ conversation.addEventListener('click',event=>{const url=messageWebLink(event);if(!url||event.ctrlKey||event.shiftKey)return;const internal=!!livePreviewLink(event);event.preventDefault();event.stopImmediatePropagation();if(!internal){window.open(url,'_blank','noopener,noreferrer');return;}const app=ownAppLink(url);if(app)location.assign(app);else open(url);},{capture:true});
  root.querySelector('[data-preview-close]').onclick=()=>close();root.querySelector('[data-preview-refresh]').onclick=()=>void load();width.onchange=resize;
  handle.onpointerdown=event=>{event.preventDefault();handle.setPointerCapture(event.pointerId);root.classList.add('resizing');};
  handle.onpointermove=event=>{if(!handle.hasPointerCapture(event.pointerId))return;ratio=Math.min(.7,Math.max(.2,event.clientY/(window.visualViewport?.height||window.innerHeight)));resize();};

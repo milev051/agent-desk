@@ -1,6 +1,10 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {sidebarGroups,sidebarBranch,visibleFolderChats} from '../public/sidebar-groups.mjs';
+import {sidebarGroups,sidebarBranch,visibleFolderChats,handoffChain,shortcutChats} from '../public/sidebar-groups.mjs';
+test('⌘1–⌘9 preskače podagente i broji samo glavne četove',()=>{
+ const visible=[{id:'main-1'},{id:'child',parentChatId:'main-1'},{id:'main-2'},{id:'orphan',parentChatId:'gone'}];
+ assert.deepEqual(shortcutChats(visible).map(c=>c.id),['main-1','main-2']);
+});
 test('podčetovi pripadaju roditelju; odvojene grane i četovi ostaju samostalni',()=>{
  const chats=[{id:'parent',updatedAt:1},{id:'child',parentChatId:'parent',updatedAt:10},{id:'other',updatedAt:3},{id:'branch',duplicatedFrom:'parent',updatedAt:2}];
  const before=structuredClone(chats),groups=sidebarGroups(chats);
@@ -45,4 +49,8 @@ test('prethodni delovi stoje ispod najnovijeg nastavka, ne kao podagenti',async(
  assert.deepEqual(head.parts.map(c=>c.id),['d1','d2']);assert.deepEqual(head.children.map(c=>c.id),['child']);
  assert.equal(head.updatedAt,3);
  assert.equal(lockedPart(chats[0]),true);assert.equal(lockedPart(chats[1]),false);assert.equal(lockedPart(chats[2]),false);
+ assert.deepEqual(handoffChain(chats,'d3'),['d3','d2','d1']);
+ assert.deepEqual(handoffChain(chats,'d1'),['d3','d2','d1']);
+ assert.deepEqual(handoffChain(chats,'lost'),['lost']);
+ assert.deepEqual(handoffChain(chats,'gone'),[]);
 });

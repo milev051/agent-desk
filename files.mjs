@@ -3,6 +3,25 @@ import path from 'node:path';
 import os from 'node:os';
 import {spawnSync} from 'node:child_process';
 const inside=(p,root)=>p===root || p.startsWith(root+path.sep);
+// Samo za klik korisnika u četu: Finder sme da otvori i skrivenu putanju u home-u.
+// Ne čita sadržaj i ne proširuje pregled foldera.
+export function openTarget(value,cwd,home=os.homedir()){
+ if(typeof value!=='string' || value.length>4096 || /[\0\r\n]/.test(value))throw Error('Neispravna putanja.');
+ const expanded=value==='~'?home:value.startsWith('~/')?path.join(home,value.slice(2)):value;
+ const target=path.resolve(expanded);
+ const roots=[home,cwd].flatMap(root=>{try{return [path.resolve(root),fs.realpathSync(root)];}catch{return [path.resolve(root)];}});
+ const insideRoot=p=>roots.some(root=>p===root || p.startsWith(root+path.sep));
+ if(!fs.existsSync(target)){
+  let parent;try{parent=fs.realpathSync(path.dirname(target));}catch{throw Error('Putanja ne postoji.');}
+  if(!insideRoot(parent) || !fs.statSync(parent).isDirectory())throw Error('Putanja ne postoji.');
+  return {path:parent,missing:true,directory:true};
+ }
+ const real=fs.realpathSync(target);
+ if(!insideRoot(real))throw Error('Putanja nije dostupna.');
+ const stat=fs.statSync(real);
+ if(!stat.isFile() && !stat.isDirectory())throw Error('Putanja nije fajl ili folder.');
+ return {path:real,missing:false,directory:stat.isDirectory()};
+}
 export function filePath(value,cwd,home=os.homedir()){
  if(typeof value!=='string' || value.length>4096)throw Error('Neispravna putanja.');
  const target=path.resolve(value.startsWith('~/')?path.join(home,value.slice(2)):value || cwd);

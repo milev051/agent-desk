@@ -7,6 +7,21 @@ export function latestPart(chats, chat) {
   return last;
 }
 export const lockedPart=chat=>!!chat?.continuedTo && !chat.continuedUnlocked;
+// ⌘1–⌘9 bira samo glavne četove. Podagent ima parentChatId i nikad ne ulazi u tu listu.
+export const shortcutChats=chats=>(chats||[]).filter(chat=>chat && !chat.parentChatId);
+// Ceo lanac prepiske: trenutni deo i svi prethodni koji još postoje.
+export function handoffChain(chats,id){
+  const byId=new Map((chats||[]).map(c=>[c.id,c])),start=byId.get(id);if(!start)return [];
+  const seen=new Set();let head=start;
+  while(head.continuedTo && byId.has(head.continuedTo) && !seen.has(head.id)){seen.add(head.id);head=byId.get(head.continuedTo);}
+  const ids=[];seen.clear();let cur=head;
+  while(cur && !seen.has(cur.id)){
+    seen.add(cur.id);ids.push(cur.id);
+    const older=cur.continuedFrom && byId.get(cur.continuedFrom);
+    cur=older||[...byId.values()].find(c=>c.continuedTo===cur.id && !seen.has(c.id))||null;
+  }
+  return ids;
+}
 // Četovi prilagodljivih agenata stoje u svom folderu „Prilagođavanje“, ne u ostalim folderima.
 export const adaptiveChat=chat=>!!(chat?.adaptiveAgent || chat?.adaptivePropose);
 // One level of Agent Desk delegation; orphaned children stay accessible.

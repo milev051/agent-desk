@@ -1,7 +1,11 @@
+import { fileURLToPath } from 'node:url';
 import { shortDiff } from './public/desk-modes.mjs';
+// Antigravity bez izabranog modela radi na Claude Sonnet, ne na Gemini (odluka 2026-11-05; Opus troši oko 5x više kvote).
+export const ANTIGRAVITY_DEFAULT_MODEL = 'claude-sonnet-4-6';
 export const names = { codex: 'Codex', claude: 'Claude Code', grok: 'Grok Build', antigravity: 'Antigravity' };
 export function command(chat, prompt, executable) {
-  const { agent, model, access, instructions, effort } = chat.settings;
+  const { agent, access, instructions, effort } = chat.settings;
+  const model = chat.settings.model || (agent === 'antigravity' ? ANTIGRAVITY_DEFAULT_MODEL : '');
   const session = chat.sessions[agent];
   let args;
   if (agent === 'codex') {
@@ -31,6 +35,10 @@ export function command(chat, prompt, executable) {
   // Keep the Grok prompt immediately after -p; other flags may precede it.
   if (agent === 'grok') { args.pop(); if (model) args.push('--model', model); args.push('-p', withInstructions(prompt, instructions)); }
   else if (model) args.splice(args.length - (agent === 'codex' ? 1 : 0), 0, '--model', model);
+  if (agent === 'claude' && chat.settings.claudeTerminal === true) {
+    args = args.filter((arg, i, all) => !['-p','--verbose','--include-partial-messages'].includes(arg) && !['--output-format','--permission-prompts'].includes(arg) && !['--output-format','--permission-prompts'].includes(all[i-1]));
+    return { executable: 'python3', args: ['-I', fileURLToPath(new URL('./tools/claude-terminal.py', import.meta.url)), executable, JSON.stringify(args)], input: withInstructions(prompt, instructions) };
+  }
   return { executable, args, input: agent === 'grok' ? null : agent === 'antigravity' ? JSON.stringify({event:'user',message:{content:withInstructions(prompt,instructions)}})+'\n' : withInstructions(prompt, instructions) };
 }
 function withInstructions(prompt, instructions) {
@@ -65,13 +73,22 @@ export function parseEvent(agent, event) {
     if (event.item?.type === 'file_change') result.activity = 'Izmena fajlova';
     if (event.type === 'item.completed' && event.item?.type === 'command_execution') result.actions = [{ kind: 'command', text: event.item.command, exit: event.item.exit_code }];
     if (event.type === 'item.completed' && event.item?.type === 'file_change') result.actions = (event.item.changes || []).map(c => { const action = { kind: 'file', text: c.path, change: c.kind }; const diff = shortDiff(c.diff || c.patch); if (diff) action.diff = diff; return action; });
-    if (event.type === 'error' || event.type === 'turn.failed') result.error = event.message || event.error?.message || 'Agent je prijavio grešku.';
+    if (event.type === 'error' || event.type === 'turn.failed') {
+      const message = event.message || event.error?.message || 'Agent je prijavio grešku.';
+      if (event.type === 'error' && /^Reconnecting\.\.\.\s*\d+\/\d+/i.test(message)) result.activity = 'Veza je prekinuta, ponovo povezujem…';
+      else result.error = message;
+    }
+    if (event.type === 'turn.completed') result.completed = true;
   } else {
     if (event.session_id) result.session = event.session_id;
     const inner = event.type === 'stream_event' ? event.event : event;
     if (inner?.type === 'content_block_delta' && inner.delta?.type === 'text_delta') result.delta = inner.delta.text;
     if (inner?.type === 'content_block_start' && inner.content_block?.type === 'tool_use') result.activity = inner.content_block.name;
     if (inner?.type === 'content_block_start' && inner.content_block?.type === 'text') result.textStart = true;
+    // claude-terminal.py javlja zastoj: nema pomaka u transkriptu, CLI verovatno čeka potvrdu na ekranu.
+    // stall traži korisnika (obaveštenje), confirmed znači da je Agent Desk sam odgovorio Yes.
+    if ((event.type === 'stall' || event.type === 'confirmed') && typeof event.activity === 'string') result.activity = event.activity.slice(0, 300);
+    if (event.type === 'stall' && typeof event.activity === 'string') result.attention = event.activity.slice(0, 300);
     if (event.type === 'assistant') {
       const u = event.message?.usage;
       if (u) { const context = [u.input_tokens, u.cache_read_input_tokens, u.cache_creation_input_tokens].reduce((s, n) => s + (Number.isSafeInteger(n) ? n : 0), 0); if (context > 0) result.context = context; }

@@ -4,7 +4,7 @@ Pregled mogućnosti lokalne aplikacije Agent Desk. Uz svaku mogućnost naveden j
 
 - **Četiri CLI agenta i modeli:** Podrška za Codex CLI, Claude Code, Grok Build i Antigravity CLI uz izbor odgovarajućeg modela i nivoa razmišljanja za svaki zadatak („prebaci ovaj čet na Claude Sonnet 4.5 sa visokim nivoom razmišljanja“).
 - **Automatski izbor agenta:** Mogućnost automatskog rutiranja zadatka prema vrsti posla i trenutnoj dostupnosti („delegiraj ovaj zadatak automatski najpovoljnijem agentu“).
-- **Podčetovi i delegiranje radnika:** Glavni agent može da otvori do dva paralelna podčeta koji rade u istoj fascikli i imaju sačuvane sesije („pokreni podagenta sa Codex-om da napiše testove za ovu funkciju dok ti istražuješ“).
+- **Podčetovi i delegiranje radnika:** Glavni agent može da otvori paralelne podčetove bez brojčane granice. Rade u istoj fascikli i imaju sačuvane sesije („pokreni podagenta sa Codex-om da napiše testove za ovu funkciju dok ti istražuješ“).
 - **Praćenje i zaštita limita:** Evidencija potrošnje i preostalih kvota po agentima i prozorima obnove, uz automatsko sprečavanje pokretanja iscrpljenih agenata („proveri limite agenata pre nego što delegiraš veliki posao“).
 - **Projekti i radni folderi:** Povezivanje proizvoljnih lokalnih projektnih fascikli na Macu, uz automatsko mapiranje i evidenciju u spisku projekata („postavi radni folder ovog četa na /Users/milev051/Desktop/milev.rs“).
 - **Stanje projekta (`STANJE.md`):** Kratak sažetak stanja projekta do 15–20 redova koji agenti čitaju pri ulasku i ažuriraju na kraju rada („pročitaj STANJE.md ovog projekta i reci mi gde smo stali“).

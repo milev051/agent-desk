@@ -14,7 +14,7 @@ export function previewTarget(prompt='',messages=[]){
   return null;
 }
 
-// Način prikaza slike u popupu: dugačka stranica ili snimak za računar se skroluju; snimak za računar se na uspravnom telefonu okreće (CSS).
+// Način prikaza slike u popupu: dugačka stranica ili snimak za računar se skroluju; orijentacija slike ostaje nepromenjena.
 export function attachmentViewMode(src='',width=0,height=0){
   const desktop=/pregled-racunar-[^/?#]*\.(webp|png|jpe?g)/i.test(decodeURIComponent(String(src)));
   return {page:desktop || height>width*1.4,desktop};

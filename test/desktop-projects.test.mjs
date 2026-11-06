@@ -15,8 +15,11 @@ test('pregled prati nove, premeštene i uklonjene projekte i čuva ručno stanje
     const file=path.join(base,'projekti.md'),index=createProjectsIndex(file);
     index.add([old]);
     fs.writeFileSync(file,fs.readFileSync(file,'utf8').replace('nema zabeleženog stanja','čeka podešavanje'));
+    fs.writeFileSync(path.join(desktop,'PROJEKTI.md'),'# Projekti\n\nStari pregled\n');
     const options={desktop,projectRoot};
     let result=refreshDesktopProjects(index,options);
+    assert.equal(result.file,path.join(desktop,'milev_workflow','PROJEKTI.md'));
+    assert.equal(fs.existsSync(path.join(desktop,'PROJEKTI.md')),false);
     assert.match(fs.readFileSync(result.file,'utf8'),/Google Speech to Text/);
     fs.mkdirSync(path.dirname(moved),{recursive:true});fs.renameSync(old,moved);
     refreshDesktopProjects(index,options);

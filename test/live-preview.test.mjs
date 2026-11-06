@@ -47,8 +47,8 @@ test('websocket upgrade prosleđuje HMR tok i uklanja kolačić prijave',async t
 });
 test('frontend: klik prihvata samo pune http(s) poruke, prečice i prilozi ostaju',()=>{
  const event=(href,props={})=>({button:0,target:{closest:()=>({getAttribute:()=>href,closest:selector=>selector==='.message-body'?{}:null,matches:()=>false})},...props});
- assert.equal(livePreviewLink(event('https://milev.rs/')),'https://milev.rs/');assert.equal(livePreviewLink(event('http://localhost:3000/')),'http://localhost:3000/');for(const href of ['/Users/name/a.txt','/api/chats/x/prilog','mailto:test@example.com'])assert.equal(livePreviewLink(event(href)),null);
- for(const props of [{ctrlKey:true},{metaKey:true},{button:1},{defaultPrevented:true}])assert.equal(livePreviewLink(event('https://milev.rs',props)),null);
+ for(const modifiers of [{metaKey:true},{altKey:true},{metaKey:true,altKey:true}]){assert.equal(livePreviewLink(event('https://milev.rs/',modifiers)),'https://milev.rs/');assert.equal(livePreviewLink(event('http://localhost:3000/',modifiers)),'http://localhost:3000/');}for(const href of ['/Users/name/a.txt','/api/chats/x/prilog','mailto:test@example.com'])assert.equal(livePreviewLink(event(href,{metaKey:true})),null);
+ for(const props of [{}, {ctrlKey:true,metaKey:true},{shiftKey:true,altKey:true},{button:1,metaKey:true},{defaultPrevented:true,altKey:true}])assert.equal(livePreviewLink(event('https://milev.rs',props)),null);
  const phone={href:'https://mac.tail.ts.net/#chat=1',origin:'https://mac.tail.ts.net'};
  assert.equal(ownAppLink('http://127.0.0.1:4317/',phone),'https://mac.tail.ts.net/');assert.equal(ownAppLink('http://localhost:4321/x?a=1',phone),'https://mac.tail.ts.net/x?a=1');assert.equal(ownAppLink('https://mac.tail.ts.net/#chat=2',phone),'https://mac.tail.ts.net/#chat=2');
  for(const href of ['http://127.0.0.1:3000/','https://milev.rs/','http://127.0.0.1:4322/'])assert.equal(ownAppLink(href,phone),null,href);
@@ -72,22 +72,22 @@ test('browser: stvarni klik, promena širine i visine, zatvaranje i unos ispod p
   const ui=createLivePreview({root,conversation:document.querySelector('#conversation'),api:async(url,method,data)=>(await fetch(url,{method,headers:{'Content-Type':'application/json'},body:data?JSON.stringify(data):undefined})).json()});
   window.addEventListener('popstate',()=>ui.handleHistory());
   window.addEventListener('error',e=>window.lastError=e.message);window.addEventListener('unhandledrejection',e=>window.lastError=String(e.reason));window.phase='open';
-  const a=document.querySelector('.message-body a');a.click();
+  const a=document.querySelector('.message-body a');window.externalLinks=[];window.open=(url,target,features)=>{window.externalLinks.push({url,target,features});return null;};a.click();const externalOnly=!ui.isOpen&&window.externalLinks.length===1&&window.externalLinks[0].target==='_blank';const previewClick=(modifiers={metaKey:true})=>a.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,button:0,...modifiers}));previewClick();
   for(let i=0;i<100&&(frame.hidden||!(frame.dataset.previewUrl||'').startsWith('http://127.0.0.1:${localPort}'));i++)await pause(25);
   window.phase='loaded';const initialWidth=frame.style.width;const opened=ui.isOpen&&!frame.hidden&&(frame.dataset.previewUrl||'').startsWith('http://127.0.0.1:${localPort}');
   const width=root.querySelector('select');width.value='1440';width.dispatchEvent(new Event('change'));const changed=frame.style.width==='1440px';
   const before=root.offsetHeight;root.querySelector('[role=separator]').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}));const taller=root.offsetHeight>before;
   root.querySelector('[data-preview-close]').click();await pause(150);const closed=!ui.isOpen;
-  a.click();await pause(150);const reopened=ui.isOpen;
+  previewClick({altKey:true});await pause(150);const reopened=ui.isOpen;
   window.phase='back';history.back();await pause(150);const backClosed=!ui.isOpen;
-  a.click();await pause(200);document.querySelector('#prompt').value='Još jedna poruka';
+  previewClick();await pause(200);document.querySelector('#prompt').value='Još jedna poruka';
   const r=root.getBoundingClientRect(),c=document.querySelector('#conversation').getBoundingClientRect(),p=document.querySelector('#composer').getBoundingClientRect();
-  window.results={initialWidth,opened,changed,taller,closed,reopened,backClosed,input:document.querySelector('#prompt').value,panelBottom:r.bottom,messagesTop:c.top,composerBottom:p.bottom,viewport:innerHeight,width:frame.style.width};
+  window.results={externalOnly,initialWidth,opened,changed,taller,closed,reopened,backClosed,input:document.querySelector('#prompt').value,panelBottom:r.bottom,messagesTop:c.top,composerBottom:p.bottom,viewport:innerHeight,width:frame.style.width};
   </script>`);
  });await listen(app);base=`http://127.0.0.1:${app.address().port}`;preview=createLivePreview({port:app.address().port,localPort,phonePort:0});await new Promise(resolve=>preview.local.listen(localPort,'127.0.0.1',resolve));
  const dir=mkdtempSync(fileURLToPath(new URL('../.live-preview-browser-',import.meta.url)));
  t.after(()=>{preview.close();app.closeAllConnections();app.close();upstream.closeAllConnections();upstream.close();rmSync(dir,{recursive:true,force:true});});
  const shot=await capturePage({url:base,device:'mobile',target:dir+'/mobile.webp',settle:900,inspect:'({results:window.results,error:window.lastError,phase:window.phase,href:location.href})'});
- const result=shot.inspected.results;assert.ok(result,JSON.stringify(shot.inspected));for(const key of ['opened','changed','taller','closed','reopened','backClosed'])assert.equal(result[key],true,key);
+ const result=shot.inspected.results;assert.ok(result,JSON.stringify(shot.inspected));for(const key of ['externalOnly','opened','changed','taller','closed','reopened','backClosed'])assert.equal(result[key],true,key);
  assert.equal(result.input,'Još jedna poruka');assert.ok(result.messagesTop>=result.panelBottom-1,JSON.stringify(result));assert.ok(result.composerBottom<=result.viewport+1,JSON.stringify(result));assert.equal(result.initialWidth,'1920px');assert.equal(result.width,'1440px');
 });

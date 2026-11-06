@@ -5,8 +5,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {createArchive} from '../archive.mjs';
-test('arhiva čuva originalne četove, traje 30 dana i preuzima prethodne zapise',()=>{
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agent-archive-'));let time=Date.now();const retention=30*86400000;
+test('arhiva čuva originalne četove, traje 3 dana i preuzima prethodne zapise',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agent-archive-'));let time=Date.now();const retention=3*86400000;
  try{fs.mkdirSync(path.join(dir,'trash'));const legacy=path.join(dir,'trash','old.json');const chats=[{id:'chat',title:'Primer',settings:{agent:'codex'},messages:[{text:'Originalni tekst'}],sessions:{codex:'session'}}];fs.writeFileSync(legacy,JSON.stringify(chats));fs.utimesSync(legacy,new Date(time),new Date(time));
  const archive=createArchive(dir,{now:()=>time});assert.equal(fs.existsSync(legacy),false);assert.deepEqual(archive.read('old').chats,chats);
  const id=archive.add(chats);assert.deepEqual(archive.read(id).chats,chats);assert.equal(archive.read(id).expiresAt,time+retention);assert.equal(fs.statSync(path.join(dir,'archive',chatFilename('Primer',id,'json'))).mode&0o777,0o600);

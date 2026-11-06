@@ -14,3 +14,4 @@ Agent Desk.app/
 **/client_secret_*.json
 **/oauth-client*.json
 **/tokens.json
+__pycache__/

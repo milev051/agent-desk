@@ -31,7 +31,12 @@ export function refreshDesktopProjects(index,{desktop,projectRoot}){
   index.add(discovered);
   const current=index.list().filter(row=>exists(row.path)).sort((a,b)=>a.name.localeCompare(b.name,'sr-Latn'));
   const lines=current.map(row=>`- [${row.name.replace(/[\\[\]]/g,'\\$&')}](<${row.path.replace(/%/g,'%25').replace(/ /g,'%20').replace(/</g,'%3C').replace(/>/g,'%3E')}>)`);
-  const file=path.join(desktop,'PROJEKTI.md');
+  const overviewDir=path.join(desktop,'milev_workflow');
+  fs.mkdirSync(overviewDir,{recursive:true});
+  const file=path.join(overviewDir,'PROJEKTI.md');
+  const previousFile=path.join(desktop,'PROJEKTI.md');
+  // Prenesi i pregled koji je prethodna verzija ponovo napravila pre restarta.
+  if(fs.existsSync(previousFile))fs.renameSync(previousFile,file);
   writeChanged(file,'# Projekti\n\n'+lines.join('\n')+'\n');
   return {file,count:current.length};
 }

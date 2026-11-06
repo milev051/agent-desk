@@ -52,6 +52,8 @@ export function createPhoneAccess({port, gatewayPort=port+2, origin:configuredOr
   active.set(res,cookie);res.on('close',()=>active.delete(res));
   // Local desktop actions never reach the loopback API through this gateway.
   if(/^\/api\/(phone(?:\/|$)|title-settings(?:\/|$)|antigravity\/login|open-file(?:\/|$)|statistics\/reveal(?:\/|$)|notifications\/preview(?:\/|$))/.test(url.pathname) || /\/api\/chats\/[^/]+\/(reveal|record)$/.test(url.pathname))return json(403,{error:'Ova radnja je dostupna samo na računaru.'});
+  if(/^\/api\/integrations\/github(?:\/.*)?$/.test(url.pathname) && !['GET','HEAD'].includes(req.method))return json(403,{error:'GitHub povezivanje je dostupno samo na računaru.'});
+  if(/^\/api\/integrations\/webpros(?:\/(?:connect|cancel|settings))?$/.test(url.pathname) && !['GET','HEAD'].includes(req.method))return json(403,{error:'WebPros povezivanje i dozvole dostupni su samo na računaru.'});
   if(/^\/api\/integrations\/(?:gmail(?:\/(?:configure|connect|cancel|check))?|google(?:\/.*)?)$/.test(url.pathname) && !['GET','HEAD'].includes(req.method))return json(403,{error:'Povezivanje i prekid Google veze dostupni su samo na računaru.'});
   const headers={...req.headers,host:`127.0.0.1:${port}`};delete headers.cookie;for(const k of Object.keys(headers))if(k.startsWith('tailscale-')||k.startsWith('x-forwarded-'))delete headers[k];if(headers.origin)headers.origin=`http://127.0.0.1:${port}`;
   const upstream=http.request({hostname:'127.0.0.1',port,path:req.url,method:req.method,headers},response=>{res.writeHead(response.statusCode,{...response.headers,'Cache-Control':'no-store','Referrer-Policy':'no-referrer'});response.pipe(res);});

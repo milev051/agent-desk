@@ -170,3 +170,18 @@ test('Mac obaveštenja istog četa brišu se i posle restarta servera',()=>{
  clear('a');assert.equal(calls.length,2);
  assert.ok(calls.every(c=>c.args[1]==='agent-desk-a'));
 });
+
+
+test('podagenti nemaju oznake nepročitanog odgovora ni doprinos broju obaveštenja foldera',()=>{
+ const source=readFileSync(new URL('../public/app.js',import.meta.url),'utf8');
+ const start=source.indexOf('function notification(chat)'),end=source.indexOf('function promptTextHeight(',start);
+ const notification=vm.runInNewContext(source.slice(start,end)+';notification',{
+  completion:chat=>({token:chat.id+':'+chat.status,messageId:'reply',status:chat.status}),seen:{},syncedReads:new Map()
+ });
+ for(const status of ['done','error','stopped','interrupted']){
+  assert.equal(notification({id:'child',parentChatId:'parent',status}),'');
+  assert.equal(notification({id:'regular',status}),status==='done'?'completed':'unread');
+ }
+ assert.equal(notification({id:'regular',running:true,status:'done'}),'');
+ assert.equal(notification({id:'regular',readMessageId:'reply',status:'done'}),'');
+});

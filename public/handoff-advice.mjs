@@ -46,8 +46,8 @@ export function cacheStatus(context,now=Date.now(),running=false){
  const s=Math.ceil(left/1000);return `${size} · keš još ${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
 }
 
-// Sam prelazak gleda samo kontekst i keš: dok keš važi nastavak je jeftin, pa se prelazi tek kod velikog konteksta.
-// Broj poruka i dužina teksta ostaju samo ponuda. Pragove podešava zakazani pregled (adaptive.mjs).
+// Prag za ponudu prelaska gleda samo kontekst i keš: dok keš važi nastavak je jeftin, pa se nudi tek kod velikog konteksta.
+// Poruka ne prelazi sama. Broj poruka i dužina teksta ostaju samo ponuda. Pragove podešava zakazani pregled (adaptive.mjs).
 export function autoHandoff(chat,now=Date.now(),rules={coldMinContext:idleMinContext,warmMinContext:150000}){
  if(!chat || chat.parentChatId || chat.continuedTo)return null;
  const c=chat.lastContext;if(!c?.tokens)return null;
@@ -55,15 +55,20 @@ export function autoHandoff(chat,now=Date.now(),rules={coldMinContext:idleMinCon
  if(warm?c.tokens>=rules.warmMinContext:c.tokens>=rules.coldMinContext)return {reason:warm?'size':'idle',tokens:c.tokens};
  return null;
 }
+// Slanje prelazi u nov čet samo kad je prag pređen i korisnik to potvrdi.
+export function sendMovesChat(confirm,advice){return confirm===true && !!advice;}
 // Ponuda novog četa je odvojena od automatskog izbora CLI sesije.
 export function handoffOffer(chat,now=Date.now()){
  if(!chat || chat.parentChatId || chat.continuedTo)return null;
  const counted=Number.isFinite(chat.historyTokenCount?.tokens),historyTokens=counted?chat.historyTokenCount.tokens:Math.ceil((chat.context?.history?.characters || chat.historyChars || (chat.messages || []).reduce((n,m)=>n+(m.text?.length || 0),0))/4);
  const count=chat.messageCount ?? chat._historyPage?.total ?? chat.historyPage?.total ?? chat.messages?.length ?? 0;
  const number=n=>Math.round(n).toLocaleString('sr-Latn-RS');
+ // Kratak zapis (109k, 1,4k) drži traku u jednom redu i na telefonu; puni brojevi ostaju u title.
+ const short=n=>n>=1000?`${(n/1000).toLocaleString('sr-Latn-RS',{maximumFractionDigits:n>=10000?0:1})}k`:number(n);
  const length=`Tekst razgovora: ${counted?'':'≈ '}${number(historyTokens)} tokena · ${number(count)} poruka.`;
  const context=chat.lastContext?.tokens?`Kontekst poslednjeg odgovora: ${number(chat.lastContext.tokens)} tokena. `:'';
+ const brief=[chat.lastContext?.tokens?`Kontekst ${short(chat.lastContext.tokens)}`:'',`razgovor ${counted?'':'≈'}${short(historyTokens)}`,`${number(count)} por.`].filter(Boolean).join(' · ');
  const advice=handoffAdvice(chat.lastContext,now,historyTokens);
- if(advice || historyTokens>=sessionMaxHistory || count>=40)return {text:`${context}${length} Možeš da nastaviš u novom četu sa sažetkom.`};
+ if(advice || historyTokens>=sessionMaxHistory || count>=40)return {text:brief,title:`${context}${length} Možeš da nastaviš u novom četu sa sažetkom.`};
  return null;
 }

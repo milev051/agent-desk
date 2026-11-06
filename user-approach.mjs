@@ -18,5 +18,5 @@ export function createUserApproach(file){
 }
 export function approachContext(text){
  if(!text)return '';
- return ` Korisnikov stalni pristup (podešava se u „Šta agent zna o aplikaciji“). Primenjuj ga na sadržajne odgovore: analize, tvrdnje, preporuke i odluke. Kod tehničkih potvrda ga ne ponavljaj. Kritiku i suprotno mišljenje daj posle glavnih redova, sažeto, a detaljno kad korisnik traži: «${text.replace(/\s+/g,' ')}»`;
+ return ` Korisnikov stalni pristup (podešava se u „Šta agent zna o aplikaciji“). Primenjuj ga na sadržajne odgovore: analize, tvrdnje, preporuke i odluke. Kod tehničkih potvrda ga ne ponavljaj. Kritiku i suprotno mišljenje daj posle glavnih redova, u najviše dve rečenice (samo ono što može da promeni odluku), a detaljno kad korisnik traži: «${text.replace(/\s+/g,' ')}»`;
 }

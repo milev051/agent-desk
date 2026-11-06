@@ -14,7 +14,7 @@ test('server restart API: GET /api/restart, POST /api/restart, 409 i whenIdle', 
   mkdirSync(path.join(temp, 'codex'));
   writeFileSync(path.join(temp, 'codex', 'models_cache.json'), JSON.stringify({ models: [{ slug: 'gpt-6.1-sol', visibility: 'list', supported_reasoning_levels: [{ effort: 'medium' }] }] }));
 
-  const port = 4500 + Math.floor(Math.random() * 1000), base = `http://127.0.0.1:${port}`;
+  const port = 4500 + Math.floor(Math.random() * 500), base = `http://127.0.0.1:${port}`;
   const server = spawn(process.execPath, ['server.mjs'], {
     cwd: path.resolve(import.meta.dirname, '..'),
     env: {
