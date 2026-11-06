@@ -500,3 +500,7 @@
 - Izvor: čet b7edfcb8-2c8c-4be7-b980-f0660ae86bc8, 2026-11-06T14:39:58Z.
 - Dopuna 2026-11-06T14:42Z: korisnik potvrdio da i postojeće arhive dobiju rok od 3 dana; 409 starijih obrisano.
 - Dopuna 2026-11-06T14:44Z: istek arhive briše i Claude sesiju (transkript), da četovi nestanu i iz Claude aplikacije; rok ostaje 3 dana. Ručno pokrenute Claude sesije se ne brišu.
+
+## 2026-11-06, agenti sami commituju
+- Odluka: posle izmene i uspešnog npm test agent commituje bez pitanja (AGENTS.md pravilo 7). Push na GitHub samo na zahtev.
+- Izvor: čet b7edfcb8-2c8c-4be7-b980-f0660ae86bc8, 2026-11-06T14:48:42Z.
