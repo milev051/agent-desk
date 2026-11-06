@@ -61,3 +61,8 @@ test('Antigravity bez modela koristi Claude Sonnet umesto Gemini', async () => {
   assert.equal(spec.args[i+1], ANTIGRAVITY_DEFAULT_MODEL);
   assert.match(ANTIGRAVITY_DEFAULT_MODEL, /^claude-/);
 });
+
+test('Claude sa punim pristupom gasi plugin za privatnost koji traži Allow', async () => {
+  const { CLAUDE_FULL_SETTINGS } = await import('../adapters.mjs');
+  assert.deepEqual(JSON.parse(CLAUDE_FULL_SETTINGS), { enabledPlugins: { 'cc-plugin-privacy@builtin': false } });
+});

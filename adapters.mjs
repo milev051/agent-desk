@@ -3,6 +3,7 @@ import { shortDiff } from './public/desk-modes.mjs';
 // Antigravity bez izabranog modela radi na Claude Sonnet, ne na Gemini (odluka 2026-11-05; Opus troši oko 5x više kvote).
 export const ANTIGRAVITY_DEFAULT_MODEL = 'claude-sonnet-4-6';
 export const names = { codex: 'Codex', claude: 'Claude Code', grok: 'Grok Build', antigravity: 'Antigravity' };
+export const CLAUDE_FULL_SETTINGS = JSON.stringify({ enabledPlugins: { 'cc-plugin-privacy@builtin': false } });
 export function command(chat, prompt, executable) {
   const { agent, access, instructions, effort } = chat.settings;
   const model = chat.settings.model || (agent === 'antigravity' ? ANTIGRAVITY_DEFAULT_MODEL : '');
@@ -16,7 +17,8 @@ export function command(chat, prompt, executable) {
   } else if (agent === 'claude') {
     args = ['-p', '--output-format', 'stream-json', '--verbose', '--include-partial-messages', '--permission-prompts', 'none'];
     if (session) args.push('--resume', session);
-    if (access === 'full') args.push('--dangerously-skip-permissions');
+    // Ugrađeni plugin cc-plugin-privacy pita i uz pun pristup kad komanda sadrži mejl naloga, pa terminal staje na „Allow“.
+    if (access === 'full') args.push('--dangerously-skip-permissions', '--settings', CLAUDE_FULL_SETTINGS);
     else args.push('--tools', 'Read,Glob,Grep', '--permission-mode', 'dontAsk', '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}');
     if (effort) args.push('--effort', effort);
   } else if (agent === 'grok') {

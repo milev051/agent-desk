@@ -1,5 +1,6 @@
 # Stanje
 _2026-11-06_
+- „Allow“ u Claude terminalu: uzrok je ugrađeni plugin cc-plugin-privacy (mejl naloga u komandi). Za četove sa punim pristupom isključen preko --settings (adapters.mjs); most više ne gubi rezervni Enter. 409/409, važi posle restarta. Interaktivne sesije van Agent Deska i dalje pitaju.
 - Tabla projekata (dugme u bočnoj traci, /#tabla): projekti, pitanja koja čekaju, odgovor i uputstvo bez otvaranja četa, merenje prelaza i predlozi (board.mjs, public/project-board.mjs, docs/tabla-projekata.md). 407/407. Početno: 16,1 prelaza dnevno, odgovor na pitanje 2 min. Sledeće: posle nedelju dana uporediti merenje sa početnim.
 - Istek arhive (3 dana) briše i Claude sesiju u ~/.claude/projects, pa čet nestaje i iz Claude aplikacije (claude-sessions.mjs). Obrisano 260 starih sesija Agent Deska. 400/400, aktivno posle restarta.
 - Arhiva četova čuva 3 dana (archive.mjs), važi posle restarta; postojeće arhive skraćene, 409 obrisano, 104 ostalo. 399/399.

@@ -127,7 +127,9 @@ def run(executable, args, prompt, timeout=None):
                     offset = f.tell()
                 if chunk:
                     progress = time.monotonic()
-                    confirm_at = None
+                    # Zapis tool_use stiže isti tren kad i dijalog; tek kasniji zapis znači da je potvrda prošla.
+                    if confirm_at is not None and progress - confirm_at > 2:
+                        confirm_at = None
                     warned = 0
                 pending += chunk
                 while b'\n' in pending:
