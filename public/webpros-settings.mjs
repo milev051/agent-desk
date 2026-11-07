@@ -25,7 +25,7 @@ export function createWebprosSettings({root,api,phoneRemote}){
     if(busy)return;busy=true;clearTimeout(timer);if(view)render(view);
     try{render(await api('/api/integrations/webpros'+route,method,data));}
     catch(e){if(view)render(view);get('status').textContent=e.message;}
-    finally{busy=false;if(view)render(view);get('write').disabled=phoneRemote || !view?.connected;if(!paused)timer=setTimeout(refresh,4000);}
+    finally{busy=false;if(view){const message=get('status').textContent;render(view);get('status').textContent=message;}get('write').disabled=phoneRemote || !view?.connected;if(!paused)timer=setTimeout(refresh,4000);}
   }
   get('connect').onclick=()=>run('POST','/connect',{});
   get('check').onclick=()=>run('POST','/check',{});
