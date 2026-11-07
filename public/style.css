@@ -987,3 +987,24 @@ body #chats .folder-row:hover,body #chats .folder-row.open{color:#e6e6e6;backgro
 .board-empty{font-size:13px;color:#888}
 @media(max-width:650px){.board-grid{grid-template-columns:minmax(0,1fr)}.board-body{padding:10px 12px 40px}.board-top{padding:10px 12px}}
 .board-old summary{font-size:11px;color:#777;cursor:pointer}.board-old{display:flex;flex-wrap:wrap;gap:4px}.board-old[open]{display:block}.board-old .board-chat{margin:4px 4px 0 0}
+/* Ruter na tabli: jedno polje, Enter šalje u čet kome poruka pripada (public/board-router.mjs). */
+.board-router{display:flex;flex-direction:column;gap:8px;padding:12px 16px;border-bottom:1px solid #222;background:#0b0b0b}
+.board-router textarea{width:100%;box-sizing:border-box;resize:vertical;min-height:52px;padding:10px 12px;font:inherit;font-size:15px;line-height:1.4;color:#eee;background:#141414;border:1px solid #333;border-radius:var(--r-md)}
+.board-router textarea:focus{outline:none;border-color:#c9a227}
+.router-buttons,.router-options{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.board-router button,.router-attach{padding:8px 14px;font-size:14px;border:1px solid #333;background:#161616;color:#ddd;border-radius:var(--r-sm);cursor:pointer}
+.board-router button.primary{background:#c9a227;border-color:#c9a227;color:#000;font-weight:600}
+.board-router button:disabled{opacity:.5;cursor:default}
+.router-options button.suggested{border-color:#c9a227;color:#f2d16b}
+.router-files{display:flex;flex-wrap:wrap;gap:6px}
+.router-files span{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;font-size:12px;background:#1d1d1d;border:1px solid #333}
+.router-files button{padding:0 4px;border:0;background:none;font-size:14px}
+.router-status{font-size:14px;color:#ccc}
+.router-status p{margin:0 0 6px}
+.router-status small{color:#888;margin:0 6px}
+.router-status [data-router="undo"]{border-color:#c9a227;color:#f2d16b}
+/* Glavni čet je završio, a njegovi podčetovi još rade: tri plave tačke koje se smenjuju umesto žutog kružića. */
+#chats .chat-row.children-working .chat-item{display:flex;align-items:center;gap:6px}
+#chats .chat-row.children-working .chat-item::after{content:"";flex:none;margin-left:auto;margin-right:12px;width:4px;height:4px;border-radius:50%;background:#6fa8ff;box-shadow:6px 0 #6fa8ff,12px 0 #6fa8ff;animation:children-working-dots 1.2s ease-in-out infinite}
+@keyframes children-working-dots{0%,100%{background:#6fa8ff;box-shadow:6px 0 #6fa8ff44,12px 0 #6fa8ff44}33%{background:#6fa8ff44;box-shadow:6px 0 #6fa8ff,12px 0 #6fa8ff44}66%{background:#6fa8ff44;box-shadow:6px 0 #6fa8ff44,12px 0 #6fa8ff}}
+@media (prefers-reduced-motion:reduce){#chats .chat-row.children-working .chat-item::after{animation:none}}

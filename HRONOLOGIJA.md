@@ -70,3 +70,4 @@ Format: `- **Šta:** … · **Modeli/alati:** … · **Zašto / pouka:** …` po
 ## 2026-11-07 · Podčet sam budi glavnog agenta
 - child-report.mjs + server.mjs: kad podčet završi (gotovo ili greška), izveštaj ide u red glavnog četa i pokreće ga posle 3 s; glavni agent po pravilu ne čeka u petlji nego završava odgovor. Ograničenje 30 izveštaja po glavnom četu za 3 h. Povod: glavni agent u četu ce629ff8 stajao uključen dok GPT podčetovi rade po 20 min. Čet 3f369728, npm test 422/422, važi posle restarta.
 - **Dopuna:** izveštaj podčeta (uz uključeno automatsko arhiviranje) traži od glavnog agenta da posle preuzimanja i beleženja rezultata arhivira nepotrebne podčete. Povod: pravilo je stajalo samo u početnom kontekstu, a čet ce629ff8 je imao 15 nearhiviranih podčeta.
+- **Izmena 2026-11-07:** glavni čet koji je završio, a podčetovi mu još rade, u bočnoj traci ima tri plave tačke koje se smenjuju umesto žutog kružića (app.js klasa children-working, style.css). Čet b7edfcb8.
