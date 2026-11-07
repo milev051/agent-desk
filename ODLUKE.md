@@ -539,3 +539,4 @@
 - Razlog: korisnik traži pravi, trajan pristup umesto test režima u kom prijava ističe posle 7 dana i rade samo test korisnici.
 - Izvor: čet b7edfcb8-2c8c-4be7-b980-f0660ae86bc8, 2026-11-07T18:14Z; potvrdu „Confirm“ kliknuo korisnik 2026-11-07T18:22Z.
 - Dopuna 2026-11-07T18:24–18:32Z: jedini način dodavanja naloga je „+ Dodaj nalog“ (prvi Google nalog postaje glavni), radnje naloga su ikonice; isto za GitHub. Razlog: korisnik ne želi razliku „Poveži“/„Dodaj nalog“ ni tekstualna dugmad.
+- Dopuna 2026-11-07T18:37–18:39Z: uklanjanje naloga traži potvrdu Da/Ne; WebPros dobio isti izgled kao Google i GitHub. Razlog: korisnik je slučajno odjavio GitHub iz gh jednim klikom.

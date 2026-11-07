@@ -1,9 +1,9 @@
 # Stanje
-_2026-11-07 19:35, čet b7edfcb8_
+_2026-11-07 19:43, čet b7edfcb8_
 - Više Google naloga (google-accounts.mjs): „+ Dodaj Google nalog“, token po nalogu, rute biraju nalog preko `?account=ADRESA`, ime i slika profila (dozvola userinfo.profile). Commit 359d03d, a01051b; server restartovan.
-- Nalozi (Google i GitHub): samo „+ Dodaj nalog“ kao poslednji red spiska, u redu naloga ikonice (koristi, proveri, ukloni). GitHub kanta radi gh auth logout (41e8643, c071cf0). Uklanjanje naloga traži potvrdu Da/Ne.
+- Nalozi (Google, GitHub, WebPros): samo „+ Dodaj nalog“ kao poslednji red spiska, u redu naloga ikonice (koristi, proveri, ukloni). GitHub kanta radi gh auth logout; WebPros je jedan red sa proveri/ponovo poveži/ukloni (aef09f0). Uklanjanje naloga traži potvrdu Da/Ne.
 - Google: milev051 povezan (glavni); ROOM211 (office@room211.studio) i baubu543 još nisu dodati, poslednji pokušaj dao Google 500.
-- GitHub trenutno nije povezan: gh nema prijavljen nalog (kanta kliknuta 2026-11-07); korisnik treba da završi gh auth login.
+- GitHub ponovo povezan (milev051) posle odjave iz gh.
 - Google OAuth aplikacija (projekat Default, default-510913) objavljena 2026-11-07 (In production, neverifikovana). Stare prijave iz Testing režima ističu za 7 dana: ponovo povezati svaki nalog. Popup za prekinute veze radi (integration-watch.mjs).
 - Red za GPT slike za sve četove (image-queue.mjs, bb35b93). Grok i Gemini nisu u redu dok se ne izmeri preklapanje.
 - Glavni čet ćuti posle izveštaja podčeta dok drugi podčetovi rade (d644eec); plave tačke kad glavni miruje a podčetovi rade (0684067).
