@@ -78,3 +78,4 @@ Format: `- **Šta:** … · **Modeli/alati:** … · **Zašto / pouka:** …` po
 - **Izmena 2026-11-07:** podešavanja bez dugih objašnjenja (Google, GitHub, WebPros, provera limita, imena četova); povezan nalog se vidi samo u spisku naloga, bez duplog statusa. Čet b7edfcb8.
 - **Izmena 2026-11-07:** popup i obaveštenje kad se prekine Google, GitHub ili WebPros veza (integration-watch.mjs, provera na 15 min); podaci o Google aplikaciji (projekat Default, režim Testing) u google-app.json i podešavanjima. Test korisnici baubu543 i office@room211.studio dodati u Google Cloud. Čet b7edfcb8.
 - **Odluka 2026-11-07:** Google aplikacija objavljena (In production); google-app.json i docs/google.md ažurirani. Čet b7edfcb8.
+- **Izmena 2026-11-07:** jedno dugme „+ Dodaj Google nalog“ (prvi nalog postaje glavni), Proveri/Ukloni u redu svakog naloga; bez glavnog naloga podrazumevano se koristi prvi povezan dodatni. Čet b7edfcb8.

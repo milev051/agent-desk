@@ -44,7 +44,9 @@ test('Google nalozi: dodavanje otvara prijavu, a otkazana prijava nestaje iz spi
   await assert.rejects(accounts.add(),/već otvorena/);
   made.at(-1).set({state:'disconnected'});
   assert.deepEqual(accounts.list().map(a=>a.id),['primary']);
-  await assert.rejects(accounts.remove('primary'),/Prekini vezu/);
+  await accounts.remove('primary');
+  assert.equal(made[0].status().email,'');
+  assert.equal((await accounts.add()).id,'primary','prazno mesto glavnog naloga se popunjava prvo');
   fs.rmSync(dir,{recursive:true,force:true});
 });
 
@@ -65,5 +67,12 @@ test('GitHub: spisak naloga iz gh prijave bez tokena, promena aktivnog naloga',a
   await assert.rejects(g.switchAccount('nepoznat'),e=>e.status===404);
   assert.equal((await g.avatar('room211')).length,3);
   assert.equal(await g.avatar('nepoznat'),null);
+  fs.rmSync(dir,{recursive:true,force:true});
+});
+
+test('Google nalozi: bez glavnog naloga podrazumevano se koristi prvi povezan dodatni',()=>{
+  const {dir,accounts}=setup({room211aaaa:fakeGmail('office@room211.studio')});
+  accounts.get('primary').gmail.set({email:'',connected:false,state:'disconnected'});
+  assert.equal(accounts.pick('').id,'room211aaaa');
   fs.rmSync(dir,{recursive:true,force:true});
 });

@@ -12,15 +12,16 @@ export function createGmailSettings({root,api,phoneRemote}){
     // Povezan nalog se vidi u spisku naloga; status piše samo kad nešto treba uraditi.
     status.textContent=(data.state==='connected'?'':labels[data.state] || 'Gmail nije dostupan.')+(data.error?' '+data.error:'');
     get('google-services-status').hidden=data.connected;
-    get('gmail-connect').hidden=phoneRemote || data.state==='connecting' || (data.connected && !data.upgradeRequired);
+    // Jedino dugme za nov nalog je „+ Dodaj Google nalog“; ovo ostaje samo za nove dozvole glavnog naloga.
+    get('gmail-connect').hidden=phoneRemote || data.state==='connecting' || !(data.connected && data.upgradeRequired);
     get('gmail-connect').disabled=busy || !data.configured;
-    get('gmail-check').hidden=phoneRemote || !data.connected;
+    get('gmail-check').hidden=true;
     get('gmail-cancel').hidden=phoneRemote || data.state!=='connecting';
-    get('gmail-disconnect').hidden=phoneRemote || !(data.connected || data.email);
+    get('gmail-disconnect').hidden=true;
     get('gmail-setup').hidden=phoneRemote || data.configured===true;
     get('gmail-configure-row').hidden=phoneRemote || data.configured===true;
     for(const id of actions.filter(id=>id!=='gmail-connect'))get(id).disabled=busy;
-    get('google-add').hidden=phoneRemote || !data.configured || accounts.some(a=>!a.primary && a.state==='connecting');get('google-add').disabled=busy;
+    get('google-add').hidden=phoneRemote || !data.configured || accounts.some(a=>a.state==='connecting');get('google-add').disabled=busy;
     showAccounts();
     if(phoneRemote && !data.connected)status.textContent+=' Povezivanje je dostupno u Agent Desku na računaru.';
   }
@@ -29,7 +30,7 @@ export function createGmailSettings({root,api,phoneRemote}){
     renderAccounts(get('google-accounts'),accounts.filter(a=>a.email || a.state==='connecting').map(a=>({
       title:a.email || 'Novi nalog: završi prijavu u browseru',avatarUrl:a.avatar?'/api/integrations/google/accounts/'+a.id+'/avatar':'',
       note:(a.name?a.name+' · ':'')+(a.primary?'glavni nalog · ':'')+(a.state==='connecting'?'čeka prijavu':a.connected?services(a) || 'povezan':'potrebna ponovna prijava')+(a.error?' · '+a.error:''),
-      actions:phoneRemote?[]:a.primary?[]:a.state==='connecting'?[{label:'Otkaži',disabled:busy,run:()=>account('POST','/'+a.id+'/cancel')}]:[{label:'Proveri',disabled:busy,run:()=>account('POST','/'+a.id+'/check')},{label:'Ukloni',disabled:busy,run:()=>account('DELETE','/'+a.id)}]
+      actions:phoneRemote?[]:a.state==='connecting'?[{label:'Otkaži',disabled:busy,run:()=>account('POST','/'+a.id+'/cancel')}]:[{label:'Proveri',disabled:busy,run:()=>account('POST','/'+a.id+'/check')},{label:'Ukloni',disabled:busy,run:()=>account('DELETE','/'+a.id)}]
     })));
   }
   function showApp(app){

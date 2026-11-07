@@ -8,11 +8,11 @@ Desktop app JSON i tokeni čuvaju se u privatnoj konfiguraciji izvan projekta i 
 
 ## Više Google naloga
 
-Glavni nalog je onaj povezan dugmetom „Poveži Google“ (`gmail/tokens.json`). „Dodaj Google nalog“ povezuje još naloga istim OAuth klijentom; svaki ima svoj token u `gmail/accounts/ID.json` i sliku profila u `gmail/avatars/` (dozvola `userinfo.profile`, samo ime i slika).
+Nalozi se povezuju samo dugmetom „+ Dodaj Google nalog“. Prvi postaje glavni (`gmail/tokens.json`), a svaki sledeći se povezuje istim OAuth klijentom; svaki ima svoj token u `gmail/accounts/ID.json` i sliku profila u `gmail/avatars/` (dozvola `userinfo.profile`, samo ime i slika).
 
 - GET `/api/integrations/google/accounts` vraća naloge (id, email, ime, glavni, servisi); GET `/ID/avatar` sliku profila.
 - POST `/api/integrations/google/accounts` otvara Google prijavu za nov nalog; POST `/ID/check`, POST `/ID/cancel`, DELETE `/ID` proveravaju, otkazuju ili uklanjaju dodatni nalog (samo sa računara).
-- Sve Gmail, Drive, Tasks i Calendar rute primaju `?account=ADRESA` (ili ID). Bez njega rade sa glavnim nalogom. Nepoznat nalog vraća 404, a nalog kome je istekla prijava 409; ruta tada ne prelazi tiho na glavni nalog.
+- Sve Gmail, Drive, Tasks i Calendar rute primaju `?account=ADRESA` (ili ID). Bez njega rade sa glavnim nalogom, a ako on nije povezan, sa prvim povezanim dodatnim. Svaki red u podešavanjima ima Proveri i Ukloni. Nepoznat nalog vraća 404, a nalog kome je istekla prijava 409; ruta tada ne prelazi tiho na glavni nalog.
 
 Workspace nalog (npr. room211.studio) sa External aplikacijom u režimu Testing mora biti test korisnik, a prijava ističe posle sedam dana. Za trajnu prijavu: u Google Auth Platform → Audience klikni „Publish app“ (In production). Bez Google verifikacije prijava prikazuje upozorenje „Google hasn't verified this app“, koje lično prihvataš preko „Advanced“; limit je 100 korisnika. Ako Workspace blokira neverifikovane aplikacije, administrator u Admin konzoli (Security → API controls → App access control) označi ovaj OAuth klijent kao Trusted.
 

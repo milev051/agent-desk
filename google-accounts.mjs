@@ -25,7 +25,8 @@ export function createGoogleAccounts({configDir,makeGmail,makeServices,makeWrite
     list(){prune();dedupe();return [...accounts.values()].filter(a=>a.id==='primary' || a.gmail.status().email || a.gmail.status().state==='connecting').map(view);},
     // Bez naloga ili sa adresom glavnog naloga vraća glavni; nepoznat nalog je greška, ne tihi prelazak na glavni.
     pick(account){
-      if(!account)return primary;
+      // Bez naloga: glavni, a ako on nije povezan, prvi povezan dodatni nalog.
+      if(!account)return primary.gmail.status().connected?primary:[...accounts.values()].find(a=>a.gmail.status().connected) || primary;
       const want=String(account).toLowerCase();
       for(const a of accounts.values())if(a.id===want || a.gmail.status().email.toLowerCase()===want){if(!a.gmail.status().connected)throw Object.assign(Error('Google nalog '+account+' nije povezan. Ponovo ga poveži u podešavanjima.'),{status:409});return a;}
       throw Object.assign(Error('Google nalog '+account+' nije povezan u Agent Desku. Dodaj ga u podešavanjima.'),{status:404});
@@ -34,12 +35,14 @@ export function createGoogleAccounts({configDir,makeGmail,makeServices,makeWrite
     async add(){
       prune();
       if([...accounts.values()].some(a=>a.gmail.status().state==='connecting'))throw Error('Google prijava je već otvorena. Završi je ili je otkaži.');
+      // Prazno mesto glavnog naloga popunjava se prvo; ostali nalozi dobijaju svoj fajl.
+      if(!primary.gmail.status().email){await primary.gmail.connect();return view(primary);}
       const id=randomBytes(8).toString('hex'),a=attach(id,makeGmail({tokenFile:path.join(dir,id+'.json')}));
       try{await a.gmail.connect();}catch(error){a.gmail.close();accounts.delete(id);throw error;}
       return view(a);
     },
     async remove(id){
-      if(id==='primary')throw Error('Glavni nalog prekidaš dugmetom Prekini vezu.');
+      if(id==='primary'){await primary.gmail.disconnect();return this.list();}
       const a=this.get(id);await a.gmail.disconnect();a.gmail.close();accounts.delete(id);return this.list();
     },
     close(){for(const a of accounts.values())a.gmail.close();}
