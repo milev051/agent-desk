@@ -1011,3 +1011,13 @@ body #chats .folder-row:hover,body #chats .folder-row.open{color:#e6e6e6;backgro
 
 /* Podčet koji čeka red za GPT slike. */
 #chats .compact-status.image-wait{font-size:12px;line-height:1;opacity:.85}
+
+/* Povezani nalozi (Google, GitHub): slika profila, adresa, stanje i dugmad u jednom redu. */
+.account-list{list-style:none;margin:10px 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.account-list:empty{display:none}
+.account-list li{display:flex;align-items:center;gap:10px;min-width:0}
+.account-list .account-avatar{width:28px;height:28px;border-radius:50%;flex-shrink:0;background:#333;object-fit:cover;display:flex;align-items:center;justify-content:center;color:#ddd;font-size:13px}
+.account-list .account-text{display:flex;flex-direction:column;min-width:0;flex:1}
+.account-list .account-text b{font-weight:500;color:#ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.account-list .account-text span{color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.account-list button{padding:4px 10px;font-size:12px}

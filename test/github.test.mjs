@@ -26,7 +26,8 @@ test('GitHub koristi postojeću gh prijavu bez otvaranja browsera i čuva samo i
     assert.equal(fs.statSync(path.join(f.dir,'github.json')).mode&0o777,0o600);
     assert.ok(!JSON.stringify(g.status()).includes('must-not-leak'));
     g.disconnect();assert.equal(g.status().enabled,false);
-    assert.ok(f.calls.every(args=>args[0]==='api'));
+    // Pored gh api dozvoljen je samo spisak naloga, bez --show-token.
+    assert.ok(f.calls.every(args=>args[0]==='api' || args.join(' ')==='auth status --hostname github.com --json hosts'));
     assert.equal(createGithub(f.options).status().enabled,false);
   }finally{f.close();}
 });

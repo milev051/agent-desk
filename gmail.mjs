@@ -12,6 +12,8 @@ export const calendarScope='https://www.googleapis.com/auth/calendar.readonly';
 export const driveScope='https://www.googleapis.com/auth/drive.readonly';
 export const tasksScope='https://www.googleapis.com/auth/tasks.readonly';
 export const gmailScope='https://www.googleapis.com/auth/gmail.readonly';
+// Samo ime i slika profila, za prikaz povezanih naloga u podešavanjima.
+export const profileScope='https://www.googleapis.com/auth/userinfo.profile';
 const tokenUrl='https://oauth2.googleapis.com/token';
 const apiRoot='https://gmail.googleapis.com/gmail/v1/users/me';
 function privateWrite(file,value){
@@ -40,16 +42,32 @@ export function gmailMessage(message){
   return {id:message.id,threadId:message.threadId,messageId:header('message-id'),from:header('from'),to:header('to'),subject:header('subject'),date:header('date'),snippet:message.snippet || '',labels:message.labelIds || [],text:text.slice(0,100000),truncated:text.length>100000,attachments};
 }
 
-export function createGmail({configDir,fetchImpl=fetch,now=Date.now,openBrowser=async()=>{},loginTimeoutMs=600000,scopes=[gmailScope]}={}){
-  if(!scopes.length || scopes.some(scope=>![gmailScope,gmailWriteScope,gmailComposeScope,driveScope,driveWriteScope,tasksScope,tasksWriteScope,calendarScope,calendarWriteScope].includes(scope)))throw Error('Nepodržana Google dozvola.');
-  const clientFile=path.join(configDir,'gmail','oauth-client.json'),tokenFile=path.join(configDir,'gmail','tokens.json');
+export function createGmail({configDir,fetchImpl=fetch,now=Date.now,openBrowser=async()=>{},loginTimeoutMs=600000,scopes=[gmailScope],tokenFile:tokenPath=''}={}){
+  if(!scopes.length || scopes.some(scope=>![profileScope,gmailScope,gmailWriteScope,gmailComposeScope,driveScope,driveWriteScope,tasksScope,tasksWriteScope,calendarScope,calendarWriteScope].includes(scope)))throw Error('Nepodržana Google dozvola.');
+  const clientFile=path.join(configDir,'gmail','oauth-client.json'),tokenFile=tokenPath || path.join(configDir,'gmail','tokens.json'),avatarDir=path.join(configDir,'gmail','avatars');
+  const avatarFile=email=>path.join(avatarDir,createHash('sha256').update(String(email).toLowerCase()).digest('hex').slice(0,24)+'.img');
   let client=null,tokens=readPrivate(tokenFile),pending=null,starting=false,refreshing=null,epoch=0,error='',needsReconnect=false;
   try{const saved=readPrivate(clientFile);if(saved)client=clientFrom(saved).installed;}catch{error='OAuth podešavanje nije ispravno. Ponovo uvezi Desktop app JSON fajl.';}
   if(tokens && (!tokens.refresh_token || !tokens.email || !tokens.scope?.split(' ').includes(gmailScope))){tokens=null;needsReconnect=true;}
   function status(){
     const granted=tokens?.scope.split(' ') || [],connected=!!tokens && !needsReconnect;
     const services=Object.fromEntries([['gmail',gmailScope,gmailWriteScope],['drive',driveScope,driveWriteScope],['tasks',tasksScope,tasksWriteScope],['calendar',calendarScope,calendarWriteScope]].map(([name,read,write])=>[name,{connected:connected && (granted.includes(read) || name!=='calendar' && granted.includes(write)),canWrite:connected && granted.includes(write) && (name!=='gmail' || granted.includes(gmailComposeScope)),readOnly:!connected || !granted.includes(write) || name==='gmail' && !granted.includes(gmailComposeScope)}]));
-    return {configured:!!client,connected,email:tokens?.email || '',state:starting || pending?'connecting':needsReconnect?'reconnect_required':tokens?'connected':client?'disconnected':'unconfigured',error,readOnly:services.gmail.readOnly,canWrite:services.gmail.canWrite,services,upgradeRequired:connected && scopes.some(scope=>!granted.includes(scope))};
+    return {configured:!!client,connected,email:tokens?.email || '',name:tokens?.name || '',avatar:!!tokens?.email && fs.existsSync(avatarFile(tokens.email)),state:starting || pending?'connecting':needsReconnect?'reconnect_required':tokens?'connected':client?'disconnected':'unconfigured',error,readOnly:services.gmail.readOnly,canWrite:services.gmail.canWrite,services,upgradeRequired:connected && scopes.some(scope=>!granted.includes(scope))};
+  }
+  // Ime i slika profila: samo uz dozvolu userinfo.profile, greška ne prekida vezu.
+  async function loadProfile(access){
+    if(!tokens?.scope.split(' ').includes(profileScope))return;
+    try{
+      const info=await google('https://www.googleapis.com/oauth2/v2/userinfo',{headers:{Authorization:'Bearer '+access}});
+      if(!info.response.ok)return;
+      const name=String(info.data.name || '').slice(0,120),picture=String(info.data.picture || '');
+      if(name!==tokens.name){tokens={...tokens,name};privateWrite(tokenFile,tokens);}
+      if(!/^https:\/\/[a-z0-9.-]+\.googleusercontent\.com\//.test(picture))return;
+      const image=await fetchImpl(picture.replace(/=s\d+(-c)?$/,'')+'=s96-c',{signal:AbortSignal.timeout(15000)});
+      const type=image.headers.get('content-type') || '';if(!image.ok || !type.startsWith('image/'))return;
+      const data=Buffer.from(await image.arrayBuffer());if(data.length>500000)return;
+      fs.mkdirSync(avatarDir,{recursive:true,mode:0o700});fs.writeFileSync(avatarFile(tokens.email),data,{mode:0o600});
+    }catch{}
   }
   function cancel(){epoch++;starting=false;if(pending){clearTimeout(pending.timer);pending.server.close();pending.server.closeAllConnections();pending=null;}}
   async function google(url,options={},content=false){
@@ -104,7 +122,7 @@ export function createGmail({configDir,fetchImpl=fetch,now=Date.now,openBrowser=
         const profile=await google(apiRoot+'/profile',{headers:{Authorization:'Bearer '+data.access_token}});
         if(generation!==epoch)throw Error('Povezivanje je otkazano.');
         if(!profile.response.ok || !profile.data.emailAddress)throw Error('Nalog nije potvrđen. Proveri da je Gmail API uključen u Google projektu.');
-        tokens={access_token:data.access_token,refresh_token:data.refresh_token,scope,email:profile.data.emailAddress,expiresAt:now()+Number(data.expires_in || 3600)*1000};privateWrite(tokenFile,tokens);needsReconnect=false;error='';respond(200,'Google nalog je povezan. Agent Desk ima samo dozvole koje si odobrio.');
+        tokens={access_token:data.access_token,refresh_token:data.refresh_token,scope,email:profile.data.emailAddress,expiresAt:now()+Number(data.expires_in || 3600)*1000};privateWrite(tokenFile,tokens);needsReconnect=false;error='';await loadProfile(data.access_token);respond(200,'Google nalog je povezan. Agent Desk ima samo dozvole koje si odobrio.');
       }catch(e){if(generation===epoch)error=e.message;respond(400,'Povezivanje nije završeno. Detalji su u podešavanjima Agent Deska.');}
       finally{if(pending?.server===server){clearTimeout(pending.timer);pending=null;}server.close();}
     });
@@ -145,7 +163,8 @@ export function createGmail({configDir,fetchImpl=fetch,now=Date.now,openBrowser=
       if(typeof messageId!=='string' || !/^[a-f0-9]{1,100}$/i.test(messageId) || typeof attachmentId!=='string' || !/^[a-zA-Z0-9_-]{1,2000}$/.test(attachmentId))throw Error('Neispravan Gmail ID priloga.');
       const result=await request('/messages/'+messageId+'/attachments/'+attachmentId);if(typeof result.data!=='string' || result.data.length>14*1024*1024 || result.size>10*1024*1024)throw Error('Prilog nedostaje ili je veći od 10 MB.');const data=Buffer.from(result.data,'base64url');if(data.length>10*1024*1024)throw Error('Prilog je veći od 10 MB.');return data;
     },
-    async verify(){await request('/profile');return status();},
+    async verify(){await request('/profile');if(tokens && (!tokens.name || !fs.existsSync(avatarFile(tokens.email))))await loadProfile(await refresh());return status();},
+    avatar(){if(!tokens?.email)return null;try{return fs.readFileSync(avatarFile(tokens.email));}catch{return null;}},
     configure(source){
       if(typeof source!=='string' || !path.isAbsolute(source) || !fs.existsSync(source) || !fs.statSync(source).isFile() || fs.statSync(source).size>20000)throw Error('Unesi punu putanju do preuzetog Google OAuth JSON fajla na ovom računaru.');
       let value;try{value=JSON.parse(fs.readFileSync(source,'utf8'));}catch{throw Error('Fajl nije ispravan JSON. Preuzmi OAuth klijent iz Google Cloud konzole.');}
@@ -156,7 +175,7 @@ export function createGmail({configDir,fetchImpl=fetch,now=Date.now,openBrowser=
     },
     cancel(){cancel();return status();},
     async disconnect(){
-      const saved=tokens;cancel();tokens=null;refreshing=null;needsReconnect=false;error='';fs.rmSync(tokenFile,{force:true});
+      const saved=tokens;cancel();tokens=null;refreshing=null;needsReconnect=false;error='';fs.rmSync(tokenFile,{force:true});if(saved?.email)fs.rmSync(avatarFile(saved.email),{force:true});
       if(saved){try{const response=await fetchImpl('https://oauth2.googleapis.com/revoke',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({token:saved.refresh_token}),signal:AbortSignal.timeout(10000)});if(!response.ok && response.status!==400)throw Error();}catch{error='Lokalna veza je prekinuta. Google opoziv nije potvrđen; ukloni Agent Desk i u dozvolama Google naloga.';}}
       return status();
     },

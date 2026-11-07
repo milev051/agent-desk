@@ -1,3 +1,4 @@
+import {renderAccounts} from './account-list.mjs';
 export function createGithubSettings({root,api,phoneRemote}){
   const get=id=>root.querySelector('#github-'+id);
   let paused=true,timer,busy=false,view,page=1,hasMore=false,listing=false,generation=0;
@@ -7,6 +8,10 @@ export function createGithubSettings({root,api,phoneRemote}){
     get('connect').hidden=phoneRemote || data.connected || data.state==='connecting';
     get('check').hidden=!data.enabled;get('disconnect').hidden=phoneRemote || !data.enabled;
     get('repos').hidden=!data.connected;
+    get('add').hidden=phoneRemote || !data.connected;get('add').disabled=busy;
+    renderAccounts(get('accounts'),(data.accounts || []).map(a=>({title:a.login,avatarUrl:'/api/integrations/github/accounts/'+encodeURIComponent(a.login)+'/avatar',
+      note:a.active?'aktivan nalog: agenti rade sa njim':a.ok?'sačuvan u gh prijavi':'prijava nije ispravna',
+      actions:phoneRemote || a.active?[]:[{label:'Koristi',disabled:busy,run:()=>action('POST','/accounts/'+encodeURIComponent(a.login)+'/switch')}]})));
     for(const id of ['connect','check','disconnect'])get(id).disabled=busy;
     if(!data.connected){generation++;get('list').replaceChildren();}
   }
@@ -40,6 +45,7 @@ export function createGithubSettings({root,api,phoneRemote}){
     finally{listing=false;get('search').disabled=false;get('previous').disabled=page===1;get('next').disabled=!hasMore;}
   }
   get('connect').onclick=()=>action('POST','/connect');
+  get('add').onclick=()=>action('POST','/accounts');
   get('check').onclick=()=>action('POST','/check');
   get('disconnect').onclick=()=>action('DELETE','');
   get('search').onclick=()=>{page=1;void load();};

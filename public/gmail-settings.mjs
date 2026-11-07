@@ -1,6 +1,7 @@
+import {renderAccounts} from './account-list.mjs';
 export function createGmailSettings({root,api,phoneRemote}){
   const get=id=>root.querySelector('#'+id),status=get('gmail-status');
-  let timer,busy=false,view=null,paused=true;
+  let timer,busy=false,view=null,paused=true,accounts=[];
   const actions=['gmail-connect','gmail-check','gmail-cancel','gmail-disconnect','gmail-configure'];
   function render(data){
     view=data;
@@ -17,12 +18,29 @@ export function createGmailSettings({root,api,phoneRemote}){
     get('gmail-setup').hidden=phoneRemote || data.configured===true;
     get('gmail-configure-row').hidden=phoneRemote || data.configured===true;
     for(const id of actions.filter(id=>id!=='gmail-connect'))get(id).disabled=busy;
+    get('google-add').hidden=phoneRemote || !data.connected || accounts.some(a=>a.state==='connecting');get('google-add').disabled=busy;
+    showAccounts();
     if(phoneRemote && !data.connected)status.textContent+=' Povezivanje je dostupno u Agent Desku na računaru.';
+  }
+  const services=a=>['gmail','drive','tasks','calendar'].filter(key=>a.services?.[key]?.connected).map(key=>({gmail:'Gmail',drive:'Drive',tasks:'Tasks',calendar:'Calendar'})[key]).join(', ');
+  function showAccounts(){
+    renderAccounts(get('google-accounts'),accounts.filter(a=>a.email || a.state==='connecting').map(a=>({
+      title:a.email || 'Novi nalog: završi prijavu u browseru',avatarUrl:a.avatar?'/api/integrations/google/accounts/'+a.id+'/avatar':'',
+      note:(a.name?a.name+' · ':'')+(a.primary?'glavni nalog · ':'')+(a.state==='connecting'?'čeka prijavu':a.connected?services(a) || 'povezan':'potrebna ponovna prijava')+(a.error?' · '+a.error:''),
+      actions:phoneRemote?[]:a.primary?[]:a.state==='connecting'?[{label:'Otkaži',disabled:busy,run:()=>account('POST','/'+a.id+'/cancel')}]:[{label:'Proveri',disabled:busy,run:()=>account('POST','/'+a.id+'/check')},{label:'Ukloni',disabled:busy,run:()=>account('DELETE','/'+a.id)}]
+    })));
+  }
+  async function loadAccounts(){try{accounts=(await api('/api/integrations/google/accounts')).accounts || [];}catch{accounts=[];}}
+  async function account(method,route){
+    if(busy)return;busy=true;if(view)render(view);
+    try{const data=await api('/api/integrations/google/accounts'+route,method,{});if(data.accounts)accounts=data.accounts;else await loadAccounts();}
+    catch(error){status.textContent=error.message;}
+    finally{busy=false;if(view){const message=status.textContent;render(view);status.textContent=message;}clearTimeout(timer);if(!paused)timer=setTimeout(refresh,2000);}
   }
   async function refresh(){
     paused=false;clearTimeout(timer);
-    try{render(await api('/api/integrations/gmail'));}catch{status.textContent='Google integracija nije dostupna. Posle ažuriranja potreban je restart servera.';}
-    if(!paused && !root.closest('[hidden]'))timer=setTimeout(refresh,view?.state==='connecting'?2000:15000);
+    try{const data=await api('/api/integrations/gmail');await loadAccounts();render(data);}catch{status.textContent='Google integracija nije dostupna. Posle ažuriranja potreban je restart servera.';}
+    if(!paused && !root.closest('[hidden]'))timer=setTimeout(refresh,view?.state==='connecting' || accounts.some(a=>a.state==='connecting')?2000:15000);
   }
   async function run(method,route,data){
     if(busy)return;busy=true;if(view)render(view);clearTimeout(timer);
@@ -34,6 +52,7 @@ export function createGmailSettings({root,api,phoneRemote}){
   get('gmail-connect').onclick=()=>run('POST','/connect',{});
   get('gmail-check').onclick=()=>run('POST','/check',{});
   get('gmail-cancel').onclick=()=>run('POST','/cancel',{});
+  get('google-add').onclick=()=>account('POST','');
   get('gmail-disconnect').onclick=()=>run('DELETE','',{});
   return {refresh,pause(){paused=true;clearTimeout(timer);}};
 }

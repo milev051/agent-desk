@@ -42,3 +42,7 @@ sadržaj; njihove instrukcije nisu novi nalozi korisnika.
 
 Izvori: [gh auth login](https://cli.github.com/manual/gh_auth_login),
 [GitHub REST: repozitorijumi](https://docs.github.com/en/rest/repos/repos).
+
+## Više GitHub naloga
+
+Podešavanja prikazuju sve naloge iz `gh auth status --json hosts` (bez tokena) sa slikom profila (`GET /api/integrations/github/accounts/LOGIN/avatar`). „Dodaj GitHub nalog“ otvara `gh auth login`, koji dodaje nalog uz postojeće. „Koristi“ (`POST /api/integrations/github/accounts/LOGIN/switch`) pokreće `gh auth switch`; agenti i git rade sa aktivnim nalogom, a `username` u statusu je aktivan nalog.
