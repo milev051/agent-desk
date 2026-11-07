@@ -1,3 +1,4 @@
+import {quietParentFinish} from '../child-report.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -146,7 +147,7 @@ test('podagenti ne šalju završni push telefonu ni desktop popup, ostali četov
  for(const status of ['done','error','stopped','interrupted'])for(const child of [false,true])for(const origin of ['user','dispatcher-watch']){
   const sent=[],opened=[],chat={id:'chat',...(child?{parentChatId:'parent'}:{})},reply={id:'reply',createdAt:123,status};
   vm.runInNewContext(source.slice(start,end),{
-   chat,reply,watchReport:null,options:{origin},run:{},chats:[],folders:{list:()=>[]},
+   chat,reply,watchReport:null,options:{origin},run:{},chats:[],folders:{list:()=>[]},running:new Set(),quietParentFinish,
    replyNotification:()=>({title:'Rezultat',body:'Poruka',agent:'codex'}),
    desktopNotify:()=>sent.push('desktop'),phonePush:{notify:()=>sent.push('phone')},
    desktopPresence:{view:()=>({desktopActive:false})},warnPhoneOffline(){},openFinishedWork:()=>opened.push('work')
@@ -184,4 +185,20 @@ test('podagenti nemaju oznake nepročitanog odgovora ni doprinos broju obavešte
  }
  assert.equal(notification({id:'regular',running:true,status:'done'}),'');
  assert.equal(notification({id:'regular',readMessageId:'reply',status:'done'}),'');
+});
+
+test('glavni čet posle izveštaja podčeta ne šalje obaveštenje dok drugi podčet radi',()=>{
+ const source=readFileSync(new URL('../server.mjs',import.meta.url),'utf8');
+ const start=source.indexOf('    const outcome={done:'),end=source.indexOf('    // Greška podčeta',start);
+ for(const busy of [true,false]){
+  const sent=[],chat={id:'main'},reply={id:'r',createdAt:1,status:'done'};
+  vm.runInNewContext(source.slice(start,end),{
+   chat,reply,watchReport:null,options:{origin:'child-report'},run:{},chats:[chat,{id:'kid',parentChatId:'main'}],folders:{list:()=>[]},
+   running:new Set(busy?['kid']:[]),quietParentFinish,
+   replyNotification:()=>({title:'R',body:'P',agent:'claude'}),
+   desktopNotify:()=>sent.push('desktop'),phonePush:{notify:()=>sent.push('phone')},
+   desktopPresence:{view:()=>({desktopActive:false})},warnPhoneOffline(){},openFinishedWork(){}
+  });
+  assert.deepEqual(sent,busy?[]:['desktop','phone']);
+ }
 });

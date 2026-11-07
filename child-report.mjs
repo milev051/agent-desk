@@ -38,3 +38,11 @@ export function queueChildReport(child,reply,{origin,silent,chats,isRunning=()=>
  parent.queue.push(item);parent.childReports.push(now);
  return {parent,item};
 }
+
+// Glavni čet koji je odgovorio na izveštaj podčeta ne šalje obaveštenje dok drugi podčetovi
+// rade ili dok u redu čeka sledeći izveštaj; korisnik dobija jedno obaveštenje na kraju.
+export function quietParentFinish(chat,{origin,chats=[],isRunning=()=>false}={}){
+ if(origin!==childReportOrigin || !chat)return false;
+ if(chats.some(c=>c.parentChatId===chat.id && isRunning(c.id)))return true;
+ return Boolean(chat.queue?.some(item=>item?.origin===childReportOrigin));
+}

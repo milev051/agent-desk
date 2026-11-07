@@ -8,7 +8,7 @@ import {createCliUpdates} from './cli-updates.mjs';
 import {plannerActivity,chatChanges} from './planner-activity.mjs';
 import {createDispatcher,chooseDispatcher,dispatcherContext} from './dispatcher.mjs';
 import {watchAllowed,startWatch,finishWatch,queueOrigin} from './dispatcher-watch.mjs';
-import {queueChildReport} from './child-report.mjs';
+import {queueChildReport,quietParentFinish} from './child-report.mjs';
 import {createGoogleWrite} from './google-write.mjs';
 import {createGoogleServices} from './google-services.mjs';
 import {createWebpros} from './webpros.mjs';
@@ -69,6 +69,7 @@ import {refreshDesktopProjects} from './desktop-projects.mjs';
 import {detectProject,applyDetected,projectDir,setProject} from './chat-project.mjs';
 import {createUserApproach,approachContext} from './user-approach.mjs';
 import {buildBoard,analyzeBehavior,createBoardLog,boardMessage,chatDir as chatDirForBoard} from './board.mjs';
+import {routerCandidates,routerPrompt,parseRoute,runRouterModel,createPendingSends,isImage as routerImage} from './board-router.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const dataDir = process.env.AGENT_DESK_DATA || path.join(root, 'data');
@@ -86,6 +87,30 @@ const projectsFile=path.join(dataDir,'projekti.md'),projects=createProjectsIndex
 const projectIgnore=[path.join(root,'data'),path.join(root,'docs'),path.join(os.homedir(),'.claude'),path.join(os.homedir(),'.codex')];
 const projectMemory=createProjectMemory(path.join(dataDir,'project-memory.json'),{onStateUpdated:(dir,text,at)=>projects.updateState(dir,text,at)});
 const boardLog=createBoardLog(path.join(dataDir,'board-events.jsonl'));
+const boardUploads=path.join(dataDir,'prilozi','tabla');
+// Isporuka poruke sa table: postojeći čet (red čekanja ako radi) ili nov čet u izabranom projektu.
+async function deliverRouted(job){
+ let chat;
+ if(job.newChat){
+  const agent=binaries[job.newChat.agent]?job.newChat.agent:'claude';
+  chat={id:randomUUID(),title:'Empty',createdAt:Date.now(),updatedAt:Date.now(),settings:validate({agent,model:'',access:'full',instructions:'',effort:'',...defaults[agent],cwd:job.newChat.dir}),sessions:{},sessionOffsets:{},messages:[]};
+  chats.unshift(chat);update();
+ }else{
+  chat=chats.find(c=>c.id===job.chatId);if(!chat)throw Error('Čet za poruku sa table više ne postoji.');
+  while(chat.continuedTo && chats.some(c=>c.id===chat.continuedTo))chat=chats.find(c=>c.id===chat.continuedTo);
+  if(lockedPart(chat))throw Error(lockedError);
+ }
+ const files=[];
+ for(const file of job.files || []){const dir=path.join(dataDir,'prilozi',chat.id);fs.mkdirSync(dir,{recursive:true,mode:0o700});const target=path.join(dir,path.basename(file));fs.copyFileSync(file,target);files.push(target);}
+ const text=withFiles(job.text || 'Pogledaj priloženo.',files.length?files:undefined,chat.settings.cwd);
+ if(running.has(chat.id)){chat.queue ||= [];chat.queue.push({id:randomUUID(),text,createdAt:Date.now()});chat.queuePaused=false;update();}
+ else{autoSession(chat);await send(chat,text,{origin:'board'});}
+ try{boardLog.add(job.newChat?'route-new':'route',{project:chatDirForBoard(chat),chatId:chat.id,auto:job.auto});}catch(error){console.error('Tabla:',error.message);}
+ routedTo.set(job.pendingId,chat.id);if(routedTo.size>200)routedTo.delete(routedTo.keys().next().value);
+}
+const routedTo=new Map();
+const pendingSends=createPendingSends({deliver:deliverRouted,onError:(error,job)=>{console.error('Tabla, slanje:',error.message);routedTo.set(job.pendingId,{error:error.message});}});
+
 function broadcastFolders(){const payload=`event: folders\ndata: ${JSON.stringify(folders.all())}\n\n`;for(const res of listeners)res.write(payload);}
 const dataFile = path.join(dataDir, 'chats.json');
 const contextSnapshots=createContextSnapshots(dataDir);
@@ -506,7 +531,7 @@ async function send(chat, prompt, options={}) {
     if(outcome && !watchReport && !options.silent && !run.sendQueueNow && !chat.parentChatId){
       if(!chat.thoughts)openFinishedWork(chat,reply);
       // Izveštaj Dispečera o završenom podagentu ostaje u četu, bez drugog završnog popupa.
-      if(options.origin!=='dispatcher-watch'){
+      if(options.origin!=='dispatcher-watch' && !quietParentFinish(chat,{origin:options.origin,chats,isRunning:id=>running.has(id)})){
         const notification=chat.thoughts?{title:'Agent Desk',body:'Imaš novu poruku.',agent:reply.agent}:replyNotification(chat,reply,chats,folders.list());
         desktopNotify(notification.title,notification.body,chat.id,notification.agent);
         if(!desktopPresence.view().desktopActive)void warnPhoneOffline();
@@ -963,6 +988,61 @@ const server = http.createServer(async (req, res) => {
       if(question){try{projectMemory.resolveQuestion(chat,question.id,`Korisnik sa table ${new Date().toISOString().slice(0,16)}Z: ${text.replace(/\s+/g,' ').slice(0,900)}`);}catch(error){console.error('Tabla:',error.message);}}
       try{boardLog.add(b.kind,{project:chatDirForBoard(chat),chatId:chat.id,waitedMs:question?Date.now()-question.at:undefined});}catch(error){console.error('Tabla:',error.message);}
       return json(202,{ok:true,chatId:chat.id});
+    }
+    // Ruter table: prilozi pre izbora četa idu u data/prilozi/tabla, a pri slanju se kopiraju u čet.
+    if(req.method==='POST' && url.pathname==='/api/board/upload'){
+      const name=decodeURIComponent(req.headers['x-file-name'] || 'prilog').normalize('NFC').replace(/[\x00-\x1f\x7f/\\:*?"<>|]/g,' ').replace(/^[.\s]+/,'').slice(-80).trim() || 'prilog';
+      const chunks=[];let size=0;for await(const chunk of req){size+=chunk.length;if(size>25*1024*1024)return json(413,{error:'Prilog može imati najviše 25 MB.'});chunks.push(chunk);}
+      fs.mkdirSync(boardUploads,{recursive:true,mode:0o700});
+      const target=path.join(boardUploads,new Date().toISOString().replace(/[-:]/g,'').replace('T','-').slice(0,15)+'-'+randomUUID().slice(0,4)+'-'+name);
+      fs.writeFileSync(target,Buffer.concat(chunks),{mode:0o600});return json(201,{path:await webp.convert(target)});
+    }
+    if(req.method==='POST' && url.pathname==='/api/board/route'){
+      const b=await body(req),mode=b.mode==='new'?'new':'route';
+      const text=typeof b.text==='string'?b.text.trim():'';
+      if(text.length>100000)throw Error('Unesi poruku do 100.000 karaktera.');
+      const files=(Array.isArray(b.files)?b.files:[]).slice(0,20).map(f=>path.resolve(String(f)));
+      if(files.some(f=>path.dirname(f)!==boardUploads || !fs.existsSync(f)))throw Error('Prilog nije pronađen. Dodaj ga ponovo.');
+      if(!text && !files.length)throw Error('Napiši poruku ili dodaj sliku.');
+      const rows=projects.list(),board=buildBoard({rows,chats,isRunning:id=>running.has(id),memoryView:chat=>{try{return projectMemory.view(chat);}catch{return null;}}});
+      // Za nov čet nude se i projekti iz spiska koji nisu aktivni na tabli.
+      const extra=mode==='new' || b.projectPath?rows.filter(r=>r.path && path.isAbsolute(r.path) && !board.some(p=>p.path===path.resolve(r.path))).map(r=>({name:r.name,path:path.resolve(r.path),status:'stoji',lastResult:r.state?{text:r.state}:null,next:'',chats:[]})):[];
+      const candidates=routerCandidates([...board,...extra],id=>chats.find(c=>c.id===id));
+      // Korisnik je sam izabrao čet ili projekat: bez modela.
+      let decision=null,auto=false;
+      if(b.chatId){const chat=chats.find(c=>c.id===b.chatId);if(!chat)return json(404,{error:'Čet nije pronađen.'});decision={chat:{id:chat.id,title:String(chat.title || '').slice(0,80),project:null},reason:'tvoj izbor'};}
+      else if(b.projectPath){const p=candidates.projects.find(x=>x.path===b.projectPath);if(!p)return json(404,{error:'Projekat nije pronađen.'});decision={project:p,reason:'tvoj izbor'};}
+      else{
+        const images=files.filter(routerImage);
+        const output=await runRouterModel({prompt:routerPrompt({text,mode,candidates,images}),images,executable:binaries.claude});
+        const parsed=parseRoute(output,candidates,mode);auto=true;
+        const options={chats:candidates.chats.slice(0,12).map(c=>({id:c.id,title:c.title,project:candidates.projects.find(p=>p.key===c.project)?.name})),projects:candidates.projects.map(p=>({path:p.path,name:p.name}))};
+        if(!parsed.ok || !parsed.sure){
+          const suggested=mode==='new'?(parsed.project?[{path:parsed.project.path,name:parsed.project.name}]:[]):[parsed.chat,...(parsed.alternatives || [])].filter(Boolean).map(c=>({id:c.id,title:c.title,project:candidates.projects.find(p=>p.key===c.project)?.name}));
+          return json(200,{needsChoice:true,mode,reason:parsed.reason || 'Nisam siguran gde ide.',suggested,options});
+        }
+        decision=mode==='new'?{project:parsed.project,reason:parsed.reason}:{chat:parsed.chat,reason:parsed.reason};
+      }
+      let job,target;
+      if(mode==='new' || decision.project){
+        const p=decision.project;
+        job={newChat:{dir:p.path,agent:p.agent || 'claude'},text,files,auto};target={kind:'new',project:p.name};
+      }else{
+        const c=decision.chat;job={chatId:c.id,text,files,auto};
+        target={kind:'chat',chatId:c.id,title:c.title,project:candidates.projects.find(p=>p.key===c.project)?.name || ''};
+      }
+      const {id,sendAt}=pendingSends.add(job);job.pendingId=id;
+      return json(202,{pendingId:id,sendAt,reason:decision.reason,target});
+    }
+    if(req.method==='POST' && url.pathname==='/api/board/route/undo'){
+      const b=await body(req),job=pendingSends.undo(String(b.pendingId || ''));
+      if(!job)return json(409,{error:'Poruka je već poslata.',chatId:typeof routedTo.get(b.pendingId)==='string'?routedTo.get(b.pendingId):null});
+      try{boardLog.add('route-undo',{project:job.newChat?.dir,chatId:job.chatId,auto:job.auto});}catch{}
+      return json(200,{ok:true,text:job.text,files:job.files});
+    }
+    if(req.method==='GET' && url.pathname==='/api/board/route/status'){
+      const r=routedTo.get(url.searchParams.get('pendingId') || '');
+      return json(200,typeof r==='string'?{sent:true,chatId:r}:r?{sent:false,error:r.error}:{sent:false});
     }
     if (req.method === 'GET' && (url.pathname === '/api/capabilities' || url.pathname === '/api/docs/mogucnosti')) {
       const docPath = path.join(root, 'docs', 'mogucnosti.md');
