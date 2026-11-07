@@ -62,3 +62,4 @@ Format: `- **Šta:** … · **Modeli/alati:** … · **Zašto / pouka:** …` po
 
 ## 2026-11-07 · Slike redom, bez paralelnih generatora
 - Pravilo za podagente (server.mjs, kontekst delegate; docs/agent-environment.md): najviše jedan generator slika u isto vreme, slike redom, generatoru samo umanjena ulazna fotografija (JPG do 1600 px) i kratak prompt, bez ranijih slika; nova tura u novom podčetu. Merenje u četu ce629ff8: pet GPT podčeta čekalo je ~20 min po slici, svaki korak ~90k tokena, Codex sesija 49 MB, upload 6 do 7 Mbit/s. Čet 3f369728. npm test prošao, važi posle restarta servera.
+- **Dopuna:** ograničenje slika je sada po modelu (jedan generator po GPT/Grok/Gemini, modeli paralelno, unutar modela redom). Korisnik potvrdio 07:45Z.

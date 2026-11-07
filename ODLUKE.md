@@ -514,3 +514,4 @@
 - Odluka: izuzetak od neograničenog broja podčetova: za slike radi najviše jedan generator u isto vreme, slike idu jedna po jedna, generator dobija samo umanjenu ulaznu fotografiju i kratak prompt, a nova tura ide u novom podčetu.
 - Razlog: pet paralelnih GPT podčeta čekalo je po ~20 min na sliku, slalo ~90k tokena po koraku i stalan upload od 6 do 7 Mbit/s; korisnik ne želi da se resursi troše bez koristi.
 - Izvor: čet 3f369728-a996-46e2-afb3-e8537fec4053, 2026-11-07T07:41Z.
+- Dopuna 2026-11-07T07:45Z: ograničenje važi po modelu: najviše jedan generator po modelu (GPT/Codex, Grok, Gemini), različiti modeli rade istovremeno, unutar modela redom. Razlog: Grok je dao 3 slike za oko 9 minuta, a GPT oko 20 minuta po slici, pa paralelni rad različitih modela ne usporava. Korisnik potvrdio u četu 3f369728.
