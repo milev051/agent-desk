@@ -63,3 +63,6 @@ Format: `- **Šta:** … · **Modeli/alati:** … · **Zašto / pouka:** …` po
 ## 2026-11-07 · Slike redom, bez paralelnih generatora
 - Pravilo za podagente (server.mjs, kontekst delegate; docs/agent-environment.md): najviše jedan generator slika u isto vreme, slike redom, generatoru samo umanjena ulazna fotografija (JPG do 1600 px) i kratak prompt, bez ranijih slika; nova tura u novom podčetu. Merenje u četu ce629ff8: pet GPT podčeta čekalo je ~20 min po slici, svaki korak ~90k tokena, Codex sesija 49 MB, upload 6 do 7 Mbit/s. Čet 3f369728. npm test prošao, važi posle restarta servera.
 - **Dopuna:** ograničenje slika je sada po modelu (jedan generator po GPT/Grok/Gemini, modeli paralelno, unutar modela redom). Korisnik potvrdio 07:45Z.
+
+## 2026-11-07 · Čuvar Upwork oglasa
+- Dodat `upwork-watch.mjs`: na 3 sata besplatna provera Gmail oznake Upwork; novi mejlovi idu u mali čet „Upwork oglasi“ (Sonnet), koji ocenjuje oglase, briše nepotrebne i piše nacrte. API `/api/upwork-watch`. Gmail oznaka Upwork napravljena; filter pravi korisnik. Povod: korisnik 07:48Z, da ne pokreće skupi glavni čet (113k tokena).

@@ -31,6 +31,7 @@ import {createArchive} from './archive.mjs';
 import {removeClaudeSessions,claudeSessionIds} from './claude-sessions.mjs';
 import {handoffBaseline,handoffReport,reportMarkdown} from './handoff-report.mjs';
 import {createAdaptive,adaptivePrompt,proposePrompt} from './adaptive.mjs';
+import {createUpworkWatch,upworkPrompt,watchQuery} from './upwork-watch.mjs';
 import {createWebpConverter,migrateAttachments} from './attachment-webp.mjs';
 import {createSnapshotter,snapshotName} from './page-snapshot.mjs';
 import {createFolders,automaticFolderName} from './folders.mjs';
@@ -606,6 +607,22 @@ function reviewAdaptive(){
  if(item && adaptiveAgent())runAdaptive(item).catch(error=>console.error('Prilagođavanje:',error.message));
 }
 const adaptiveTimer=setInterval(reviewAdaptive,10*60000);adaptiveTimer.unref();
+// Upwork oglasi: Gmail oznaka se proverava besplatno; mali čet (Sonnet) radi samo kad stignu novi mejlovi.
+const upworkWatch=createUpworkWatch(path.join(dataDir,'upwork-watch.json'));
+async function reviewUpwork(force=false){
+ if(shuttingDown || cliUpdates.view().running || !gmail.status().connected)return {skipped:'nedostupno'};
+ if(!force && !upworkWatch.due())return {skipped:'nije vreme'};
+ const state=upworkWatch.markCheck();
+ const found=await gmail.search({q:watchQuery(state.label),maxResults:50}),ids=upworkWatch.fresh((found.messages||[]).map(m=>m.id));
+ if(!ids.length)return {checked:true,new:0};
+ let chat=chats.find(c=>c.upworkWatch && !lockedPart(c));
+ if(chat && (running.has(chat.id) || chat.queue?.length))return {checked:true,new:ids.length,busy:chat.id};
+ if(!chat){const models=quickCatalog(binaries),model=models.claude?.models?.find(m=>/sonnet/i.test(m.id))?.id || '';if(!binaries.claude)throw Object.assign(Error('Claude nije dostupan.'),{status:409});const now=Date.now();chat={id:randomUUID(),title:'Upwork oglasi',titleManual:true,upworkWatch:true,createdAt:now,updatedAt:now,settings:validateEffort(models,validate({agent:'claude',model,effort:'low',access:'full',cwd:state.project,instructions:''})),sessions:{},sessionOffsets:{},messages:[]};chats.unshift(chat);update();}
+ upworkWatch.markRun(ids,chat.id);
+ await send(chat,upworkPrompt({address:`http://127.0.0.1:${port}`,project:state.project,ids}),{origin:'upwork-watch'});
+ return {checked:true,new:ids.length,chatId:chat.id};
+}
+const upworkTimer=setInterval(()=>reviewUpwork().catch(error=>console.error('Upwork oglasi:',error.message)),10*60000);upworkTimer.unref();
 const server = http.createServer(async (req, res) => {
   // Lista četova ima više od 1 MB; gzip je oko pet puta manji, što se oseća na telefonu.
   const gzip=/\bgzip\b/.test(req.headers['accept-encoding'] || '');
@@ -626,6 +643,8 @@ const server = http.createServer(async (req, res) => {
       return json(405,{error:'Podržani su GET i POST.'});
     }
     if(req.method==='GET' && url.pathname==='/api/planner/activity')return json(200,{chats:plannerActivity(chats.map(c=>({...c,running:running.has(c.id)})),{folderId:url.searchParams.get('folderId'),since:url.searchParams.get('since') || 0})});
+    if(url.pathname==='/api/upwork-watch'){if(req.method==='GET')return json(200,upworkWatch.state());if(req.method==='PUT'){try{return json(200,upworkWatch.update(await body(req)));}catch(error){return json(400,{error:error.message});}}}
+    if(url.pathname==='/api/upwork-watch/run' && req.method==='POST'){await body(req);try{return json(200,await reviewUpwork(true));}catch(error){return json(error.status||500,{error:error.message});}}
     if(url.pathname==='/api/adaptive' && req.method==='GET')return json(200,{agents:adaptive.list(),settings:adaptive.settings(),projects:projects.list().map(p=>({name:p.name,path:p.path}))});
     if(url.pathname==='/api/adaptive/settings' && req.method==='PUT'){try{return json(200,adaptive.setSettings(await body(req)));}catch(error){return json(400,{error:error.message});}}
     if(url.pathname==='/api/adaptive/agents' && req.method==='POST'){const b=await body(req);try{return json(201,adaptive.propose(b,{chatId:b.chatId}));}catch(error){return json(error.status||400,{error:error.message});}}

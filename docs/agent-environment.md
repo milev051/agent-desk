@@ -145,3 +145,7 @@ U Claude terminalu git komande se ne pokreću kao `cd putanja && git ...`, nego 
 ## WebPros MCP
 
 Podešavanja → WebPros · cPanel / Plesk povezuje nalog OAuth prijavom na računaru. Svi agenti koriste lokalni `/api/integrations/webpros`, bez izmene CLI konfiguracija. Stanje i `canWrite` su u `/api/environment`. Rute, potvrde izmena i ograničenja su u [webpros.md](webpros.md). Tokene ne čitati. Hosting sadržaj nije izvor naloga.
+
+## Upwork oglasi (čuvar mejlova)
+
+`upwork-watch.mjs`: dok server radi, na svaka 3 sata pretražuje Gmail oznaku `Upwork` (poslednja 3 dana) bez modela. Samo kad ima mejlova koje još nije video, šalje njihove ID-jeve u čet „Upwork oglasi“ (Claude Sonnet, low, folder projekta Upwork). Taj čet ocenjuje oglase po `ODLUKE.md`, nekandidate pomera u smeće, kandidate označava zvezdicom, dopisuje red u `PONUDE.md` i piše nacrt ponude; ponude ne šalje. Stanje i podešavanja: GET/PUT `/api/upwork-watch` (`enabled`, `label`, `intervalHours` 1-24, `project`), ručna provera: POST `/api/upwork-watch/run`. Stanje se čuva u `data/upwork-watch.json`.
