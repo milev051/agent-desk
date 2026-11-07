@@ -532,3 +532,4 @@
 - Razlog: korisnik želi pristup i ROOM211 pošti i Drive-u (room211.studio, Google Workspace), sa slikama profila i adresama u podešavanjima; pošta za ROOM211 ne stiže u milev051.
 - Izvor: čet b7edfcb8-2c8c-4be7-b980-f0660ae86bc8, 2026-11-07T17:15Z.
 - Dopuna 2026-11-07T17:25Z: pretraga repozitorijuma uklonjena iz podešavanja na zahtev korisnika.
+- Dopuna 2026-11-07T17:58Z: podešavanja bez dugih objašnjenja; korisnik smatra da je dovoljno videti šta je povezano. Uputstva ostaju u docs/.
