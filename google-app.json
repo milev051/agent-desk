@@ -1,7 +1,7 @@
 {
   "projectId": "default-510913",
   "projectName": "Default",
-  "publishing": "testing",
-  "note": "Google OAuth aplikacija Agent Deska (Google Auth Platform). U režimu testing prijava ističe posle 7 dana i rade samo upisani test korisnici; objava (production) traži početnu stranicu i politiku privatnosti na proverenom domenu.",
+  "publishing": "production",
+  "note": "Google OAuth aplikacija Agent Deska (Google Auth Platform), objavljena 2026-11-07 (In production, nije verifikovana: pri prijavi upozorenje 'Google hasn't verified this app', limit 100 korisnika). Početna stranica milev.rs/agent-desk/, privatnost milev.rs/privatnost/.",
   "consoleUrl": "https://console.cloud.google.com/auth/audience?project=default-510913"
 }

@@ -533,3 +533,8 @@
 - Izvor: čet b7edfcb8-2c8c-4be7-b980-f0660ae86bc8, 2026-11-07T17:15Z.
 - Dopuna 2026-11-07T17:25Z: pretraga repozitorijuma uklonjena iz podešavanja na zahtev korisnika.
 - Dopuna 2026-11-07T17:58Z: podešavanja bez dugih objašnjenja; korisnik smatra da je dovoljno videti šta je povezano. Uputstva ostaju u docs/.
+
+## 2026-11-07, Google aplikacija objavljena
+- Odluka: Google OAuth aplikacija Agent Deska (projekat Default) prebačena iz Testing u In production, bez Google verifikacije. Branding: milev.rs/agent-desk/, milev.rs/privatnost/, domen milev.rs.
+- Razlog: korisnik traži pravi, trajan pristup umesto test režima u kom prijava ističe posle 7 dana i rade samo test korisnici.
+- Izvor: čet b7edfcb8-2c8c-4be7-b980-f0660ae86bc8, 2026-11-07T18:14Z; potvrdu „Confirm“ kliknuo korisnik 2026-11-07T18:22Z.

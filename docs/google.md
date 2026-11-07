@@ -18,7 +18,7 @@ Workspace nalog (npr. room211.studio) sa External aplikacijom u režimu Testing 
 
 ## Naša Google aplikacija
 
-Projekat „Default“ (`default-510913`), Google Auth Platform, tip External. Podaci su u `google-app.json` i vide se u podešavanjima. Režim je Testing jer je aplikacija napravljena kao lična i nije objavljena: rade samo upisani test korisnici (milev051@gmail.com, baubu543@gmail.com, office@room211.studio), a prijava ističe posle 7 dana. Za objavu (In production) Branding mora imati početnu stranicu, politiku privatnosti i autorizovan domen (milev.rs/agent-desk/, milev.rs/privatnost/). Posle objave ostaje upozorenje „Google hasn't verified this app“, a za neverifikovanu aplikaciju važi limit od 100 korisnika. Kad promeniš režim, ažuriraj `google-app.json`.
+Projekat „Default“ (`default-510913`), Google Auth Platform, tip External. Podaci su u `google-app.json` i vide se u podešavanjima. Do 2026-11-07 je bila u režimu Testing (samo test korisnici, prijava ističe posle 7 dana). Objavljena je 2026-11-07 (In production) posle dopune Branding-a: početna stranica milev.rs/agent-desk/, politika privatnosti milev.rs/privatnost/, domen milev.rs. Prijave napravljene dok je bila Testing i dalje ističu posle 7 dana; nova prijava (Dodaj Google dozvole / ponovno povezivanje) daje trajnu. Posle objave ostaje upozorenje „Google hasn't verified this app“, a za neverifikovanu aplikaciju važi limit od 100 korisnika. Kad promeniš režim, ažuriraj `google-app.json`.
 
 ## Prekinute veze
 
