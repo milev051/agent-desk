@@ -1029,3 +1029,7 @@ body #chats .folder-row:hover,body #chats .folder-row.open{color:#e6e6e6;backgro
 #integration-alert-list span{color:#aaa}
 #integration-alert-dialog .settings-actions{display:flex;gap:8px;justify-content:flex-end}
 #google-app-info a{color:inherit}
+
+/* Ikonice umesto teksta na dugmadima naloga. */
+button.icon-action{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;padding:0}
+.account-list button.icon-action{padding:0}

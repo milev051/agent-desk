@@ -67,6 +67,7 @@ test('GitHub: spisak naloga iz gh prijave bez tokena, promena aktivnog naloga',a
   await assert.rejects(g.switchAccount('nepoznat'),e=>e.status===404);
   assert.equal((await g.avatar('room211')).length,3);
   assert.equal(await g.avatar('nepoznat'),null);
+  s=await g.removeAccount('milev051');assert.ok(calls.includes('auth logout --hostname github.com --user milev051'));
   fs.rmSync(dir,{recursive:true,force:true});
 });
 

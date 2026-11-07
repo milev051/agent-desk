@@ -46,3 +46,5 @@ Izvori: [gh auth login](https://cli.github.com/manual/gh_auth_login),
 ## Više GitHub naloga
 
 Podešavanja prikazuju sve naloge iz `gh auth status --json hosts` (bez tokena) sa slikom profila (`GET /api/integrations/github/accounts/LOGIN/avatar`). „Dodaj GitHub nalog“ otvara `gh auth login`, koji dodaje nalog uz postojeće. „Koristi“ (`POST /api/integrations/github/accounts/LOGIN/switch`) pokreće `gh auth switch`; agenti i git rade sa aktivnim nalogom, a `username` u statusu je aktivan nalog.
+
+U podešavanjima postoji samo dugme „+“: prvi put uključuje GitHub (postojeća gh prijava ili nova u Terminalu), posle dodaje nalog. Red naloga ima ikonice „koristi“, „proveri“ i „odjavi iz gh“ (`DELETE /api/integrations/github/accounts/LOGIN`, `gh auth logout --user`). Kad se odjavi poslednji nalog, GitHub se isključuje u Agent Desku.

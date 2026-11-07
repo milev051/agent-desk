@@ -79,6 +79,15 @@ export function createGithub({configDir,executable,run=execute,openLogin=async()
       try{await openLogin();}catch{throw Error('GitHub prijava nije otvorena. Povezivanje pokreni na računaru.');}
       enabled=true;persist();loginUntil=now()+600000;checkedAt=null;return status();
     },
+    // Odjava jednog naloga iz gh prijave; kad nestane poslednji, GitHub se isključuje u Agent Desku.
+    async removeAccount(login){
+      if(!executable)throw Error('GitHub CLI nije instaliran.');
+      if(!accounts.some(a=>a.login===login))throw Object.assign(Error('GitHub nalog nije u gh prijavi.'),{status:404});
+      try{await run(executable,['auth','logout','--hostname','github.com','--user',login]);}catch{throw Error('GitHub nalog nije uklonjen.');}
+      accounts=accounts.filter(a=>a.login!==login);avatars.delete(login);epoch++;pending=null;
+      if(!accounts.length){enabled=false;connected=false;username='';persist();return status();}
+      return refresh({force:true});
+    },
     async avatar(login){
       if(!accounts.some(a=>a.login===login))return null;
       const cached=avatars.get(login);if(cached && now()-cached.at<86400000)return cached.data;

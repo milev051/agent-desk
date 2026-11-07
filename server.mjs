@@ -811,6 +811,7 @@ const server = http.createServer(async (req, res) => {
         if(req.method==='POST' && route==='/connect')return json(200,await github.connect());
         if(req.method==='POST' && route==='/accounts')return json(200,await github.addAccount());
         const sw=route.match(/^\/accounts\/([a-zA-Z0-9_.-]{1,100})\/switch$/);if(req.method==='POST' && sw)return json(200,await github.switchAccount(sw[1]));
+        const rm=route.match(/^\/accounts\/([a-zA-Z0-9_.-]{1,100})$/);if(req.method==='DELETE' && rm)return json(200,await github.removeAccount(rm[1]));
         if(req.method==='POST' && route==='/check')return json(200,await github.refresh({force:true}));
         if(req.method==='DELETE' && route==='')return json(200,github.disconnect());
       }

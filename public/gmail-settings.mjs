@@ -1,4 +1,4 @@
-import {renderAccounts} from './account-list.mjs';
+import {renderAccounts,iconButton} from './account-list.mjs';
 export function createGmailSettings({root,api,phoneRemote}){
   const get=id=>root.querySelector('#'+id),status=get('gmail-status');
   let timer,busy=false,view=null,paused=true,accounts=[];
@@ -7,7 +7,7 @@ export function createGmailSettings({root,api,phoneRemote}){
     view=data;
     const serviceNames={gmail:'Gmail',drive:'Drive',tasks:'Tasks',calendar:'Calendar'};
     get('google-services-status').textContent=Object.entries(serviceNames).map(([key,name])=>name+': '+(data.services?.[key]?.connected?(data.services[key].canWrite?'čitanje i pisanje':'samo čitanje'):'nije povezan')).join(' · ');
-    get('gmail-connect').textContent=data.upgradeRequired?'Dodaj Google dozvole':'Poveži Google';
+    
     const labels={unconfigured:'Google OAuth klijent nije podešen.',disconnected:'Google nije povezan.',connecting:'Završi Google prijavu u browseru na računaru.',connected:'Povezan nalog: '+data.email,reconnect_required:'Potrebna je ponovna Google prijava.'};
     // Povezan nalog se vidi u spisku naloga; status piše samo kad nešto treba uraditi.
     status.textContent=(data.state==='connected'?'':labels[data.state] || 'Gmail nije dostupan.')+(data.error?' '+data.error:'');
@@ -30,7 +30,7 @@ export function createGmailSettings({root,api,phoneRemote}){
     renderAccounts(get('google-accounts'),accounts.filter(a=>a.email || a.state==='connecting').map(a=>({
       title:a.email || 'Novi nalog: završi prijavu u browseru',avatarUrl:a.avatar?'/api/integrations/google/accounts/'+a.id+'/avatar':'',
       note:(a.name?a.name+' · ':'')+(a.primary?'glavni nalog · ':'')+(a.state==='connecting'?'čeka prijavu':a.connected?services(a) || 'povezan':'potrebna ponovna prijava')+(a.error?' · '+a.error:''),
-      actions:phoneRemote?[]:a.state==='connecting'?[{label:'Otkaži',disabled:busy,run:()=>account('POST','/'+a.id+'/cancel')}]:[{label:'Proveri',disabled:busy,run:()=>account('POST','/'+a.id+'/check')},{label:'Ukloni',disabled:busy,run:()=>account('DELETE','/'+a.id)}]
+      actions:phoneRemote?[]:a.state==='connecting'?[{label:'Otkaži prijavu',icon:'cancel',disabled:busy,run:()=>account('POST','/'+a.id+'/cancel')}]:[{label:'Proveri vezu',icon:'check',disabled:busy,run:()=>account('POST','/'+a.id+'/check')},{label:'Ukloni nalog',icon:'remove',disabled:busy,run:()=>account('DELETE','/'+a.id)}]
     })));
   }
   function showApp(app){
@@ -60,6 +60,7 @@ export function createGmailSettings({root,api,phoneRemote}){
   get('gmail-connect').onclick=()=>run('POST','/connect',{});
   get('gmail-check').onclick=()=>run('POST','/check',{});
   get('gmail-cancel').onclick=()=>run('POST','/cancel',{});
+  iconButton(get('google-add'),'plus','Dodaj Google nalog');iconButton(get('gmail-connect'),'key','Dodaj Google dozvole glavnom nalogu');
   get('google-add').onclick=()=>account('POST','');
   get('gmail-disconnect').onclick=()=>run('DELETE','',{});
   return {refresh,pause(){paused=true;clearTimeout(timer);}};
