@@ -509,3 +509,8 @@
 - Odluka: uz chat postoji tabla projekata koja pokazuje sve aktivne projekte i pitanja agenata; odgovori i uputstva idu sa table u postojeći čet projekta. Tabla meri prelaze između projekata i vreme odgovora i daje predloge po pravilima (docs/tabla-projekata.md).
 - Razlog: korisnik radi na više projekata istovremeno, a chat ga usporava; traži da se njegovo ponašanje analizira i pristup unapređuje.
 - Izvor: čet 4c7a0f5b-b2ca-4ce5-930d-ba5ccf7e883b, 2026-11-06T15:13Z i 15:18Z.
+
+## 2026-11-07, slike redom, jedan generator
+- Odluka: izuzetak od neograničenog broja podčetova: za slike radi najviše jedan generator u isto vreme, slike idu jedna po jedna, generator dobija samo umanjenu ulaznu fotografiju i kratak prompt, a nova tura ide u novom podčetu.
+- Razlog: pet paralelnih GPT podčeta čekalo je po ~20 min na sliku, slalo ~90k tokena po koraku i stalan upload od 6 do 7 Mbit/s; korisnik ne želi da se resursi troše bez koristi.
+- Izvor: čet 3f369728-a996-46e2-afb3-e8537fec4053, 2026-11-07T07:41Z.
