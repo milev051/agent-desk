@@ -1,35 +1,14 @@
 # Stanje
-_2026-11-06_
-- „Allow“ u Claude terminalu: uzrok je ugrađeni plugin cc-plugin-privacy (mejl naloga u komandi). Za četove sa punim pristupom isključen preko --settings (adapters.mjs); most više ne gubi rezervni Enter. 409/409, važi posle restarta. Interaktivne sesije van Agent Deska i dalje pitaju.
-- Tabla projekata (dugme u bočnoj traci, /#tabla): projekti, pitanja koja čekaju, odgovor i uputstvo bez otvaranja četa, merenje prelaza i predlozi (board.mjs, public/project-board.mjs, docs/tabla-projekata.md). 407/407. Početno: 16,1 prelaza dnevno, odgovor na pitanje 2 min. Sledeće: posle nedelju dana uporediti merenje sa početnim.
-- Istek arhive (3 dana) briše i Claude sesiju u ~/.claude/projects, pa čet nestaje i iz Claude aplikacije (claude-sessions.mjs). Obrisano 260 starih sesija Agent Deska. 400/400, aktivno posle restarta.
-- Arhiva četova čuva 3 dana (archive.mjs), važi posle restarta; postojeće arhive skraćene, 409 obrisano, 104 ostalo. 399/399.
-- Potvrde u Claude terminalu: most šalje „1“, posle 15 s bez zapisa u transkriptu Enter; dnevnik data/claude-terminal-log/ (8 uspešnih 2026-11-06). Zašto CLI ponekad ne primi „1“ nije utvrđeno. 400/400.
-- Automatska potvrda nije radila: ESC(B sekvence razbijale „1. Yes“; ispravljeno u tools/claude-terminal.py (važi od sledećeg poteza, bez restarta). 398/398.
-- Claude terminal sam bira Yes na svakom dijalogu sa „1. Yes“ (proceed, Dangerous rmdir…) kad čet ima pun pristup; inače obaveštenje „Agent čeka“ na Mac i telefon (claude-terminal.py, adapters.mjs, server.mjs). Server restartovan 2026-11-06, aktivno. 397/397. Sledeće: proveriti prvi stvarni zastoj.
-- Claude četovi u kontekstu znaju da je Claude in Chrome instaliran (server.mjs, docs/agent-environment.md). 395/395, važi posle restarta.
-- Upozorenje o zastoju Claude terminala: posle 10 min bez pomaka status pokazuje „Nema pomaka N min“ i tekst sa ekrana (tools/claude-terminal.py, adapters.mjs). Uzrok: FON čet dva puta stao na Bash komandi sa novim redom u navodnicima (commit poruka); bez toga prolazi. Otvoreno: pravilo u uputstvu za Claude terminal. 395/395, važi posle restarta.
-- Kružić rada u kartici četa više ne prelazi preko naslova; nacrt je zelena olovka ispred kružića, sve uz desnu ivicu i kod kartica sa podčetovima (app.js, style.css). 394/394.
-- Traka za nov čet iznad unosa je jedan niski red: „Kontekst 109k · razgovor 1,4k · 4 por.“ sa dugmetom „Nov čet“ levo, ispred teksta; puni tekst u title (handoff-advice.mjs, app.js, style.css). 394/394. Osvežiti ⌘R.
-- Redizajn: stari izgled sačuvan kao git oznaka dizajn-pre-redizajna-2026-11-05. Metod (council sa snimcima i poređenjem sa drugim aplikacijama) i jeftin plan: docs/redizajn-metod.md. Prvi korak urađen: četovi su sive kartice bez okvira; čet koji radi ima žutu pozadinu i kružić koji se vrti (kraj public/style.css). Zaobljenje: --r-sm/md/lg na vrhu style.css, sada 0 (oštro). 393/393. Prilagođavanje i Dispečer sakriveni, prilagodljivi agenti pauzirani. Kružić rada poravnat desno; imena agenata iznad limita probana i uklonjena. Limit Antigravity-ja prati nalog iz agy CLI (baubu543). Antigravity podrazumevano na Claude Sonnet (Opus 5x skuplji, merenje u HRONOLOGIJA.md). 394/394.
-- Odgovori agenata vode korisnika: na kraju jedno Pitanje: sa preporukom ili Sledeće:, detalji u fajl. server.mjs i user-approach.mjs, 393/393. Aktivno od restarta 2026-11-05. Prva provera (45 odgovora): na Pitanje: direktno 12/28, preskočeno 13/28; izveštaj u data/prilozi/da2d9653.../provera-pitanja-2026-11-05.md. Dopuna: pitaj samo ono što zna korisnik, preskočeno pitanje ne ponavljaj (394/394, važi posle restarta).
-- Žuti okvir četa koji radi zadržava donju ivicu iznad uvučenog podčeta koji radi (style.css). 393/393 testova. Osvežiti ⌘R.
-- Prekid glavnog četa više ne gasi podagente (server.mjs, stop route). 393/393 testova. Važi posle restarta servera.
-- Dugme Pokreni uz shell komande: public/command-buttons.mjs, message-commands.mjs, POST run-command. Vidljivi Terminal, izvorna poruka proverena, clipboard netaknut. 393/393 testova prošlo; HTTP modul 200 i vizuelni pregled prošli. Server restartovan 2026-11-04; messageCommands:true i zaštita rute provereni, dugmad su aktivna.
-- Unos je jedno tekstualno polje: citati i putanje su tekst, pregled slike prati tekst, Ctrl+Z/⌘Z i redo rade za ceo nacrt. Stari blokovi se spajaju. 390/390 testova; Chrome desktop i mobile prošli. Osvežiti aplikaciju ⌘R; server nije menjan.
-- Claude terminal više nema limit od 30 minuta po odgovoru (tools/claude-terminal.py, timeout=None); prekid samo ručno. 389/389 testova.
-- Aktivnosti uživo: uz tekući odgovor prikaz statusa i poslednje tri pokrenute komande/alata (public/live-activity.mjs). To nisu potvrde da sve navedene komande još traju.
-- Claude terminal odobren za sve četove 2026-11-03T17:54Z; podrazumevana vrednost pri slanju, false ostaje izlaz. Svih 75 postojećih četova ažurirano preko API-ja. Server je restartovan 2026-11-04, globalni izbor važi i za nove Claude četove.
-- Probni Claude PTY adapter: tools/claude-terminal.py, podešavanje claudeTerminal po četu. Isti UI/MD, --resume po potezu, blokovi iz transkripta, bez garancije uštede. Živa proba dva poteza sa zapamćenom šifrom prošla. 389/389 testova prošlo; server restartovan, režim uključen samo za čet 6608ffcc-727a-4f99-b0b2-3f222e2e7cb0. Sledeće: korisnička proba na Claude-u i merenje limita.
-- Limit A/B test (tools/limit-ab-test.py, rezultat data/limit-ab/20261102-153622.json): isti posao, Opus, 30 poteza. Agent Desk (-p) 0,27 $ po 1% 5h limita, terminal 0,53 $; oko 2x brže troši 5h. Nedeljni: 1% prema 0%, nedovoljno precizno. Jedan prolaz, limit u celim procentima.
-- Test praga prekinut 2026-11-02 u 19:57: timeout probe. Log daje oko 1,5x 5h razlike; nedeljni ima po jedan pun interval i nije pouzdan. Proces ne radi.
-- Broj istovremenih podagenata je uklonjen. 409 ostaje ako isti podagent već radi ili agent nema limit. Jedan nivo delegiranja ostaje (učitan 2026-11-01).
-- Dugme „Nastavi u novom četu“ pita Da ili Ne.
-- ⌘1 do ⌘9 bira samo glavne četove. Podagent nema taj broj.
-- Putanja u poruci je link, uključujući razmak posle velikog slova ili broja i putanju pod navodnicima. Klik otvara folder, Command-klik fajl.
-- Citat i slika su u polju za unos, na kursoru. Tekst se piše levo i desno. Sledeći korak: osvežiti čet i napisati pored citata.
-- Hosting test u četu e4b6e62e-d56e-4554-8f81-fdcc79fd2c99: kod Agent Deska nije menjan; ovde su sačuvani samo izveštaj i snimci.
-- https://sajt.milev.rs i https://sajt.milev051.mycpanel.rs: potvrđeni HTTPS, PHP, SQLite u memoriji i privremeni upis fajla.
-- cp66: Node 22.23.4 radi na https://proba-node.sajt.milev051.mycpanel.rs; s83 Node proba ostaje errored pri pravljenju kontejnera.
-- Izveštaj: data/prilozi/e4b6e62e-d56e-4554-8f81-fdcc79fd2c99/cp66-s83-test.md. Prethodna provera: npm test, 384/384.
-- Sledeće za hosting: provajder treba da proveri Podman, user namespaces i kvote na s83; uzrok nije potvrđen. Python, veze sa MySQL/PostgreSQL i opterećenje nisu testirani.
+_2026-11-07, čet b7edfcb8_
+- Više Google naloga (google-accounts.mjs): „+ Dodaj Google nalog“, token po nalogu, rute biraju nalog preko `?account=ADRESA`, ime i slika profila (dozvola userinfo.profile). Commit 359d03d, a01051b; server restartovan.
+- GitHub: spisak gh naloga sa slikama, „+ Dodaj GitHub nalog“ (gh auth login) i „Koristi“ (gh auth switch). Pretraga repozitorijuma uklonjena iz podešavanja, API za agente ostaje.
+- Čeka korisnika: glavni nalog milev051 završava prijavu „Dodaj Google dozvole“ (za sliku), zatim dodaje ROOM211 (room211.studio je Google Workspace).
+- Otvoreno: prebaciti Google OAuth aplikaciju iz Testing u In production (prijava sada ističe za 7 dana); Workspace možda traži da se klijent označi kao Trusted (docs/google.md).
+- Red za GPT slike za sve četove (image-queue.mjs, bb35b93). Grok i Gemini nisu u redu dok se ne izmeri preklapanje.
+- Glavni čet ćuti posle izveštaja podčeta dok drugi podčetovi rade (d644eec); plave tačke kad glavni miruje a podčetovi rade (0684067).
+- Agenti sami commituju posle npm test (AGENTS.md pravilo 7). Push samo na zahtev.
+- Arhiva četova 3 dana; istek briše i Claude sesiju (claude-sessions.mjs).
+- Claude četovi sa punim pristupom: isključen plugin cc-plugin-privacy (Allow zbog mejla); most potvrđuje „1. Yes“ i šalje rezervni Enter, dnevnik data/claude-terminal-log/.
+- Tabla projekata (/#tabla): merenje prelaza; sledeće je poređenje posle nedelju dana (od 2026-11-06).
+- Poznato: test „browser: stvarni klik…“ (live-preview) povremeno padne pod opterećenjem, sam prolazi.
+- Iz drugih četova (milev.rs/projektor): otvoreno da li plave linkove uvesti na ceo milev.rs.
