@@ -21,7 +21,7 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
   // Ranije sačuvan privremeni čet nema keepEmpty i mora preživeti stari zahtev klijenta.
   writeFileSync(path.join(temp,'data','chats.json'),JSON.stringify([{id:'legacy-empty',title:'Empty',ephemeral:true,createdAt:Date.now(),updatedAt:Date.now(),settings:{agent:'codex',model:'',access:'full',cwd:temp,instructions:'',effort:''},sessions:{},messages:[]}]));
   const port = 4400 + Math.floor(Math.random() * 600), base = `http://127.0.0.1:${port}`;
-  const server = spawn(process.execPath, ['server.mjs'], { cwd: path.resolve(import.meta.dirname, '..'), env: { ...process.env, PORT: String(port), AGENT_DESK_DISABLE_LIMITS:'1', CODEX_HOME: path.join(temp,'codex'), PATH: `${bin}${path.delimiter}${process.env.PATH}`, AGENT_DESK_CONFIG: path.join(temp, 'config'), AGENT_DESK_DATA: path.join(temp, 'data') }, stdio: ['ignore', 'pipe', 'pipe'] });
+  const server = spawn(process.execPath, ['server.mjs'], { cwd: path.resolve(import.meta.dirname, '..'), env: { ...process.env, PORT: String(port), AGENT_DESK_DISABLE_LIMITS:'1', AGENT_DESK_CHILD_REPORTS:'0', CODEX_HOME: path.join(temp,'codex'), PATH: `${bin}${path.delimiter}${process.env.PATH}`, AGENT_DESK_CONFIG: path.join(temp, 'config'), AGENT_DESK_DATA: path.join(temp, 'data') }, stdio: ['ignore', 'pipe', 'pipe'] });
   try {
     await once(server.stdout, 'data');
     async function call(url, method = 'GET', data, origin = base) { const r = await fetch(base + url, { method, headers: { Origin: origin, 'Content-Type': 'application/json' }, body: data ? JSON.stringify(data) : undefined }); return { status: r.status, data: await r.json() }; }

@@ -40,3 +40,17 @@ test('server: čuvar je vezan za Gmail i ima API',()=>{
  assert.match(s,/\/api\/upwork-watch\/run/);
  assert.match(s,/gmail\.search\(\{q:watchQuery/);
 });
+
+test('upwork čuvar: pretraga u Chrome-u samo u prozoru 14-22 h i najviše na 3 sata',()=>{
+ const dir=temp(),day=new Date(2026,10,7,0,0,0).getTime();let t=day+9*3600000;
+ const w=createUpworkWatch(path.join(dir,'s.json'),{now:()=>t});
+ w.update({project:dir});
+ assert.equal(w.searchDue(),false);
+ t=day+15*3600000;assert.equal(w.searchDue(),true);
+ w.markSearch();t+=2*3600000;assert.equal(w.searchDue(),false);
+ t+=3600000;assert.equal(w.searchDue(),true);
+ t=day+22*3600000+60000;assert.equal(w.searchDue(),false);
+ w.update({search:false});t=day+15*3600000;w.markSearch();t+=4*3600000;assert.equal(w.searchDue(),false);
+ assert.match(upworkPrompt({address:'x',project:'/p',search:true}),/Find work/);
+ assert.doesNotMatch(upworkPrompt({address:'x',project:'/p',ids:['m']}),/Find work/);
+});

@@ -515,3 +515,8 @@
 - Razlog: pet paralelnih GPT podčeta čekalo je po ~20 min na sliku, slalo ~90k tokena po koraku i stalan upload od 6 do 7 Mbit/s; korisnik ne želi da se resursi troše bez koristi.
 - Izvor: čet 3f369728-a996-46e2-afb3-e8537fec4053, 2026-11-07T07:41Z.
 - Dopuna 2026-11-07T07:45Z: ograničenje važi po modelu: najviše jedan generator po modelu (GPT/Codex, Grok, Gemini), različiti modeli rade istovremeno, unutar modela redom. Razlog: Grok je dao 3 slike za oko 9 minuta, a GPT oko 20 minuta po slici, pa paralelni rad različitih modela ne usporava. Korisnik potvrdio u četu 3f369728.
+
+## 2026-11-07, glavni agent ne čeka podčetove
+- Odluka: posle delegiranja glavni agent završava odgovor; Agent Desk ga budi automatskim izveštajem kad podčet završi ili javi grešku (child-report.mjs). Važi za sve agente.
+- Razlog: korisnik hoće da glavni agent ne stoji uključen dok podčetovi rade, da se radi uporedo i ne čeka sve da bude gotovo.
+- Izvor: čet 3f369728-a996-46e2-afb3-e8537fec4053, 2026-11-07T07:53Z.

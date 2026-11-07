@@ -66,3 +66,6 @@ Format: `- **Šta:** … · **Modeli/alati:** … · **Zašto / pouka:** …` po
 
 ## 2026-11-07 · Čuvar Upwork oglasa
 - Dodat `upwork-watch.mjs`: na 3 sata besplatna provera Gmail oznake Upwork; novi mejlovi idu u mali čet „Upwork oglasi“ (Sonnet), koji ocenjuje oglase, briše nepotrebne i piše nacrte. API `/api/upwork-watch`. Gmail oznaka Upwork napravljena; filter pravi korisnik. Povod: korisnik 07:48Z, da ne pokreće skupi glavni čet (113k tokena).
+
+## 2026-11-07 · Podčet sam budi glavnog agenta
+- child-report.mjs + server.mjs: kad podčet završi (gotovo ili greška), izveštaj ide u red glavnog četa i pokreće ga posle 3 s; glavni agent po pravilu ne čeka u petlji nego završava odgovor. Ograničenje 30 izveštaja po glavnom četu za 3 h. Povod: glavni agent u četu ce629ff8 stajao uključen dok GPT podčetovi rade po 20 min. Čet 3f369728, npm test 422/422, važi posle restarta.
