@@ -48,3 +48,12 @@ test('izveštaj ide u nastavak glavnog četa, a ne ide dispečeru ni preko ogran
  assert.equal(queueChildReport(l.a,done,{chats:l.chats,now:6000}),null);
  assert.ok(queueChildReport(l.a,done,{chats:l.chats,now:5000+3*3600000+1}));
 });
+
+test('uz uključeno arhiviranje izveštaj traži da se preuzeti podčetovi arhiviraju',()=>{
+ const {parent,a,chats}=setup();
+ queueChildReport(a,done,{chats,archive:true,address:'http://127.0.0.1:4317'});
+ assert.match(parent.queue[0].text,/arhiviraj podčete koji više nisu potrebni/);
+ assert.match(parent.queue[0].text,/DELETE http:\/\/127\.0\.0\.1:4317\/api\/chats\/ID_PODČETA/);
+ const b=setup();queueChildReport(b.a,done,{chats:b.chats});
+ assert.doesNotMatch(b.parent.queue[0].text,/arhiviraj/);
+});

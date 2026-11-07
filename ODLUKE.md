@@ -520,3 +520,4 @@
 - Odluka: posle delegiranja glavni agent završava odgovor; Agent Desk ga budi automatskim izveštajem kad podčet završi ili javi grešku (child-report.mjs). Važi za sve agente.
 - Razlog: korisnik hoće da glavni agent ne stoji uključen dok podčetovi rade, da se radi uporedo i ne čeka sve da bude gotovo.
 - Izvor: čet 3f369728-a996-46e2-afb3-e8537fec4053, 2026-11-07T07:53Z.
+- Dopuna 2026-11-07T08:03Z: izveštaj podčeta nosi i pravilo arhiviranja: podčet čiji je rezultat preuzet i zabeležen, a više nije potreban, glavni agent arhivira. Korisnik tražio u četu 3f369728.

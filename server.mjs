@@ -515,7 +515,7 @@ async function send(chat, prompt, options={}) {
     }
     // Greška podčeta stiže agentu koji ga je pozvao; ako taj još radi, poruka čeka u redu i nastavlja se čim završi.
     // Podčet koji završi (gotovo ili greška) budi glavnog agenta izveštajem; više izveštaja u kratkom roku stiže zajedno.
-    if(!watchReport && chat.parentChatId && !shuttingDown && process.env.AGENT_DESK_CHILD_REPORTS!=='0'){let report=null;try{report=queueChildReport(chat,reply,{origin:options.origin,silent:options.silent,chats,isRunning:id=>running.has(id),lockedPart});}catch(error){console.error('Izveštaj podčeta:',error.message);}if(report){update();setTimeout(()=>drainQueue(report.parent),3000).unref?.();}}
+    if(!watchReport && chat.parentChatId && !shuttingDown && process.env.AGENT_DESK_CHILD_REPORTS!=='0'){let report=null;try{report=queueChildReport(chat,reply,{origin:options.origin,silent:options.silent,chats,isRunning:id=>running.has(id),lockedPart,archive:notificationSettings.get().autoArchive,address:`http://127.0.0.1:${port}`});}catch(error){console.error('Izveštaj podčeta:',error.message);}if(report){update();setTimeout(()=>drainQueue(report.parent),3000).unref?.();}}
     if(!shuttingDown)restartManager.checkScheduled();
   }
   attach(child,spec.input);
