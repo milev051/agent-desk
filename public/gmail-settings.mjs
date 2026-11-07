@@ -21,7 +21,7 @@ export function createGmailSettings({root,api,phoneRemote}){
     get('gmail-setup').hidden=phoneRemote || data.configured===true;
     get('gmail-configure-row').hidden=phoneRemote || data.configured===true;
     for(const id of actions.filter(id=>id!=='gmail-connect'))get(id).disabled=busy;
-    get('google-add').hidden=phoneRemote || !data.configured || accounts.some(a=>a.state==='connecting');get('google-add').disabled=busy;
+    get('google-add').hidden=true;
     showAccounts();
     if(phoneRemote && !data.connected)status.textContent+=' Povezivanje je dostupno u Agent Desku na računaru.';
   }
@@ -31,7 +31,7 @@ export function createGmailSettings({root,api,phoneRemote}){
       title:a.email || 'Novi nalog: završi prijavu u browseru',avatarUrl:a.avatar?'/api/integrations/google/accounts/'+a.id+'/avatar':'',
       note:(a.name?a.name+' · ':'')+(a.primary?'glavni nalog · ':'')+(a.state==='connecting'?'čeka prijavu':a.connected?services(a) || 'povezan':'potrebna ponovna prijava')+(a.error?' · '+a.error:''),
       actions:phoneRemote?[]:a.state==='connecting'?[{label:'Otkaži prijavu',icon:'cancel',disabled:busy,run:()=>account('POST','/'+a.id+'/cancel')}]:[{label:'Proveri vezu',icon:'check',disabled:busy,run:()=>account('POST','/'+a.id+'/check')},{label:'Ukloni nalog',icon:'remove',disabled:busy,run:()=>account('DELETE','/'+a.id)}]
-    })));
+    })),phoneRemote || !view?.configured || accounts.some(a=>a.state==='connecting')?null:{label:'Dodaj Google nalog',disabled:busy,run:()=>account('POST','')});
   }
   function showApp(app){
     const info=get('google-app-info');info.replaceChildren();if(!app)return;
@@ -60,7 +60,7 @@ export function createGmailSettings({root,api,phoneRemote}){
   get('gmail-connect').onclick=()=>run('POST','/connect',{});
   get('gmail-check').onclick=()=>run('POST','/check',{});
   get('gmail-cancel').onclick=()=>run('POST','/cancel',{});
-  iconButton(get('google-add'),'plus','Dodaj Google nalog');iconButton(get('gmail-connect'),'key','Dodaj Google dozvole glavnom nalogu');
+iconButton(get('gmail-connect'),'key','Dodaj Google dozvole glavnom nalogu');
   get('google-add').onclick=()=>account('POST','');
   get('gmail-disconnect').onclick=()=>run('DELETE','',{});
   return {refresh,pause(){paused=true;clearTimeout(timer);}};

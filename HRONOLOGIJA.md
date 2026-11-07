@@ -80,3 +80,4 @@ Format: `- **Šta:** … · **Modeli/alati:** … · **Zašto / pouka:** …` po
 - **Odluka 2026-11-07:** Google aplikacija objavljena (In production); google-app.json i docs/google.md ažurirani. Čet b7edfcb8.
 - **Izmena 2026-11-07:** jedno dugme „+ Dodaj Google nalog“ (prvi nalog postaje glavni), Proveri/Ukloni u redu svakog naloga; bez glavnog naloga podrazumevano se koristi prvi povezan dodatni. Čet b7edfcb8.
 - **Izmena 2026-11-07:** GitHub kao Google: samo „+“ za dodavanje naloga, u redu naloga ikonice (koristi, proveri, odjavi iz gh); sva dugmad naloga su ikonice sa opisom na prelazu mišem (account-list.mjs). Čet b7edfcb8.
+- **Izmena 2026-11-07:** „+ Dodaj nalog“ je poslednji red u spisku naloga (isprekidan krug sa plusom, poravnat sa slikama), umesto zasebnog dugmeta ispod. Čet b7edfcb8.

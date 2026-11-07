@@ -1033,3 +1033,9 @@ body #chats .folder-row:hover,body #chats .folder-row.open{color:#e6e6e6;backgro
 /* Ikonice umesto teksta na dugmadima naloga. */
 button.icon-action{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;padding:0}
 .account-list button.icon-action{padding:0}
+
+/* Poslednji red spiska: „+ Dodaj nalog“, poravnat sa slikama profila. */
+.account-list .account-add button{display:flex;align-items:center;gap:10px;width:100%;padding:0;border:0;background:none;color:#888;font:inherit;cursor:pointer;text-align:left}
+.account-list .account-add button:hover{color:#ddd}
+.account-list .account-add .account-avatar{background:none;border:1px dashed #555;color:inherit}
+.account-list .account-add button:hover .account-avatar{border-color:#999}
