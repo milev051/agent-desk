@@ -9,7 +9,9 @@ export function createGmailSettings({root,api,phoneRemote}){
     get('google-services-status').textContent=Object.entries(serviceNames).map(([key,name])=>name+': '+(data.services?.[key]?.connected?(data.services[key].canWrite?'čitanje i pisanje':'samo čitanje'):'nije povezan')).join(' · ');
     get('gmail-connect').textContent=data.upgradeRequired?'Dodaj Google dozvole':'Poveži Google';
     const labels={unconfigured:'Google OAuth klijent nije podešen.',disconnected:'Google nije povezan.',connecting:'Završi Google prijavu u browseru na računaru.',connected:'Povezan nalog: '+data.email,reconnect_required:'Potrebna je ponovna Google prijava.'};
-    status.textContent=(labels[data.state] || 'Gmail nije dostupan.')+(data.error?' '+data.error:'');
+    // Povezan nalog se vidi u spisku naloga; status piše samo kad nešto treba uraditi.
+    status.textContent=(data.state==='connected'?'':labels[data.state] || 'Gmail nije dostupan.')+(data.error?' '+data.error:'');
+    get('google-services-status').hidden=data.connected;
     get('gmail-connect').hidden=phoneRemote || data.state==='connecting' || (data.connected && !data.upgradeRequired);
     get('gmail-connect').disabled=busy || !data.configured;
     get('gmail-check').hidden=phoneRemote || !data.connected;

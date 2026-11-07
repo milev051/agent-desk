@@ -1018,3 +1018,6 @@ body #chats .folder-row:hover,body #chats .folder-row.open{color:#e6e6e6;backgro
 .account-list .account-text b{font-weight:500;color:#ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .account-list .account-text span{color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .account-list button{padding:4px 10px;font-size:12px}
+
+/* Prazan status (nalog povezan) ne zauzima mesto. */
+#gmail-status:empty,#github-status:empty{display:none}

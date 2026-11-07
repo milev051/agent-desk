@@ -4,7 +4,7 @@ export function createGithubSettings({root,api,phoneRemote}){
   let paused=true,timer,busy=false,view;
   function render(data){
     view=data;
-    get('status').textContent=(data.connected?'Povezan GitHub nalog: '+data.username+'.':data.state==='connecting'?'Završi GitHub prijavu u Terminalu i browseru, pa proveri vezu.':!data.installed?'GitHub CLI nije instaliran.':'GitHub nije povezan sa Agent Deskom. Možeš da koristiš postojeću gh prijavu.')+(data.error?' '+data.error:'');
+    get('status').textContent=(data.connected?'':data.state==='connecting'?'Završi GitHub prijavu u Terminalu i browseru, pa proveri vezu.':!data.installed?'GitHub CLI nije instaliran.':'GitHub nije povezan sa Agent Deskom. Možeš da koristiš postojeću gh prijavu.')+(data.error?' '+data.error:'');
     get('connect').hidden=phoneRemote || data.connected || data.state==='connecting';
     get('check').hidden=!data.enabled;get('disconnect').hidden=phoneRemote || !data.enabled;
     get('add').hidden=phoneRemote || !data.connected;get('add').disabled=busy;
