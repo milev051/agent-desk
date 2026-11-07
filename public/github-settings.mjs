@@ -12,7 +12,7 @@ export function createGithubSettings({root,api,phoneRemote}){
       note:a.active?'aktivan nalog: agenti rade sa njim':a.ok?'sačuvan u gh prijavi':'prijava nije ispravna',
       actions:phoneRemote?[]:[
         ...(a.active?[{label:'Proveri vezu',icon:'check',disabled:busy,run:()=>action('POST','/check')}]:[{label:'Koristi ovaj nalog',icon:'use',disabled:busy,run:()=>action('POST','/accounts/'+encodeURIComponent(a.login)+'/switch')}]),
-        {label:'Odjavi nalog iz gh',icon:'remove',disabled:busy,run:()=>action('DELETE','/accounts/'+encodeURIComponent(a.login))}]})),phoneRemote || !data.installed || data.state==='connecting'?null:{label:'Dodaj GitHub nalog',disabled:busy,run:()=>action('POST',data.enabled?'/accounts':'/connect')});
+        {label:'Odjavi nalog iz gh',icon:'remove',confirm:'Odjaviti GitHub nalog '+a.login+' iz gh? Prestaće git push i GitHub pristup u svim projektima dok se ponovo ne prijaviš.',disabled:busy,run:()=>action('DELETE','/accounts/'+encodeURIComponent(a.login))}]})),phoneRemote || !data.installed || data.state==='connecting'?null:{label:'Dodaj GitHub nalog',disabled:busy,run:()=>action('POST',data.enabled?'/accounts':'/connect')});
     for(const id of ['connect','check','disconnect'])get(id).disabled=busy;
   }
   async function refresh(){

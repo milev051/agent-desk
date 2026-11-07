@@ -30,7 +30,7 @@ export function createGmailSettings({root,api,phoneRemote}){
     renderAccounts(get('google-accounts'),accounts.filter(a=>a.email || a.state==='connecting').map(a=>({
       title:a.email || 'Novi nalog: završi prijavu u browseru',avatarUrl:a.avatar?'/api/integrations/google/accounts/'+a.id+'/avatar':'',
       note:(a.name?a.name+' · ':'')+(a.primary?'glavni nalog · ':'')+(a.state==='connecting'?'čeka prijavu':a.connected?services(a) || 'povezan':'potrebna ponovna prijava')+(a.error?' · '+a.error:''),
-      actions:phoneRemote?[]:a.state==='connecting'?[{label:'Otkaži prijavu',icon:'cancel',disabled:busy,run:()=>account('POST','/'+a.id+'/cancel')}]:[{label:'Proveri vezu',icon:'check',disabled:busy,run:()=>account('POST','/'+a.id+'/check')},{label:'Ukloni nalog',icon:'remove',disabled:busy,run:()=>account('DELETE','/'+a.id)}]
+      actions:phoneRemote?[]:a.state==='connecting'?[{label:'Otkaži prijavu',icon:'cancel',disabled:busy,run:()=>account('POST','/'+a.id+'/cancel')}]:[{label:'Proveri vezu',icon:'check',disabled:busy,run:()=>account('POST','/'+a.id+'/check')},{label:'Ukloni nalog',icon:'remove',confirm:'Ukloniti Google nalog '+a.email+' iz Agent Deska? Agenti više neće imati pristup njegovoj pošti i Drive-u.',disabled:busy,run:()=>account('DELETE','/'+a.id)}]
     })),phoneRemote || !view?.configured || accounts.some(a=>a.state==='connecting')?null:{label:'Dodaj Google nalog',disabled:busy,run:()=>account('POST','')});
   }
   function showApp(app){

@@ -1,7 +1,7 @@
 # Stanje
 _2026-11-07 19:35, čet b7edfcb8_
 - Više Google naloga (google-accounts.mjs): „+ Dodaj Google nalog“, token po nalogu, rute biraju nalog preko `?account=ADRESA`, ime i slika profila (dozvola userinfo.profile). Commit 359d03d, a01051b; server restartovan.
-- Nalozi (Google i GitHub): samo „+ Dodaj nalog“ kao poslednji red spiska, u redu naloga ikonice (koristi, proveri, ukloni). GitHub kanta radi gh auth logout (41e8643, c071cf0). Predlog: potvrda pre GitHub odjave.
+- Nalozi (Google i GitHub): samo „+ Dodaj nalog“ kao poslednji red spiska, u redu naloga ikonice (koristi, proveri, ukloni). GitHub kanta radi gh auth logout (41e8643, c071cf0). Uklanjanje naloga traži potvrdu Da/Ne.
 - Google: milev051 povezan (glavni); ROOM211 (office@room211.studio) i baubu543 još nisu dodati, poslednji pokušaj dao Google 500.
 - GitHub trenutno nije povezan: gh nema prijavljen nalog (kanta kliknuta 2026-11-07); korisnik treba da završi gh auth login.
 - Google OAuth aplikacija (projekat Default, default-510913) objavljena 2026-11-07 (In production, neverifikovana). Stare prijave iz Testing režima ističu za 7 dana: ponovo povezati svaki nalog. Popup za prekinute veze radi (integration-watch.mjs).
