@@ -612,16 +612,17 @@ const adaptiveTimer=setInterval(reviewAdaptive,10*60000);adaptiveTimer.unref();
 const upworkWatch=createUpworkWatch(path.join(dataDir,'upwork-watch.json'));
 async function reviewUpwork(force=false){
  if(shuttingDown || cliUpdates.view().running || !gmail.status().connected)return {skipped:'nedostupno'};
- if(!force && !upworkWatch.due())return {skipped:'nije vreme'};
- const state=upworkWatch.markCheck();
- const found=await gmail.search({q:watchQuery(state.label),maxResults:50}),ids=upworkWatch.fresh((found.messages||[]).map(m=>m.id));
- if(!ids.length)return {checked:true,new:0};
+ const mailDue=force || upworkWatch.due(),search=upworkWatch.searchDue();
+ if(!mailDue && !search)return {skipped:'nije vreme'};
+ let state=upworkWatch.state(),ids=[];
+ if(mailDue){state=upworkWatch.markCheck();const found=await gmail.search({q:watchQuery(state.label),maxResults:50});ids=upworkWatch.fresh((found.messages||[]).map(m=>m.id));}
+ if(!ids.length && !search)return {checked:true,new:0};
  let chat=chats.find(c=>c.upworkWatch && !lockedPart(c));
  if(chat && (running.has(chat.id) || chat.queue?.length))return {checked:true,new:ids.length,busy:chat.id};
  if(!chat){const models=quickCatalog(binaries),model=models.claude?.models?.find(m=>/sonnet/i.test(m.id))?.id || '';if(!binaries.claude)throw Object.assign(Error('Claude nije dostupan.'),{status:409});const now=Date.now();chat={id:randomUUID(),title:'Upwork oglasi',titleManual:true,upworkWatch:true,createdAt:now,updatedAt:now,settings:validateEffort(models,validate({agent:'claude',model,effort:'low',access:'full',cwd:state.project,instructions:''})),sessions:{},sessionOffsets:{},messages:[]};chats.unshift(chat);update();}
- upworkWatch.markRun(ids,chat.id);
- await send(chat,upworkPrompt({address:`http://127.0.0.1:${port}`,project:state.project,ids}),{origin:'upwork-watch'});
- return {checked:true,new:ids.length,chatId:chat.id};
+ upworkWatch.markRun(ids,chat.id);if(search)upworkWatch.markSearch();
+ await send(chat,upworkPrompt({address:`http://127.0.0.1:${port}`,project:state.project,ids,search}),{origin:'upwork-watch'});
+ return {checked:true,new:ids.length,search,chatId:chat.id};
 }
 const upworkTimer=setInterval(()=>reviewUpwork().catch(error=>console.error('Upwork oglasi:',error.message)),10*60000);upworkTimer.unref();
 const server = http.createServer(async (req, res) => {
