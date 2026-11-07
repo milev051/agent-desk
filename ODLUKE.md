@@ -521,3 +521,8 @@
 - Razlog: korisnik hoće da glavni agent ne stoji uključen dok podčetovi rade, da se radi uporedo i ne čeka sve da bude gotovo.
 - Izvor: čet 3f369728-a996-46e2-afb3-e8537fec4053, 2026-11-07T07:53Z.
 - Dopuna 2026-11-07T08:03Z: izveštaj podčeta nosi i pravilo arhiviranja: podčet čiji je rezultat preuzet i zabeležen, a više nije potreban, glavni agent arhivira. Korisnik tražio u četu 3f369728.
+
+## 2026-11-07, red za GPT slike u serveru
+- Odluka: pravilo „jedan generator slika“ server sprovodi za GPT/Codex, preko svih četova (image-queue.mjs). Grok i Gemini ostaju samo na uputstvu dok se ne izmeri preklapanje.
+- Razlog: pravilo je bilo samo tekst u uputstvu, pa su nezavisni četovi mogli istovremeno da pokrenu GPT generatore; korisnik pitao da li važi samo za ChatGPT.
+- Izvor: čet b7edfcb8-2c8c-4be7-b980-f0660ae86bc8, 2026-11-07T10:11Z.

@@ -1008,3 +1008,6 @@ body #chats .folder-row:hover,body #chats .folder-row.open{color:#e6e6e6;backgro
 #chats .chat-row.children-working .chat-item::after{content:"";flex:none;margin-left:auto;margin-right:12px;width:4px;height:4px;border-radius:50%;background:#6fa8ff;box-shadow:6px 0 #6fa8ff,12px 0 #6fa8ff;animation:children-working-dots 1.2s ease-in-out infinite}
 @keyframes children-working-dots{0%,100%{background:#6fa8ff;box-shadow:6px 0 #6fa8ff44,12px 0 #6fa8ff44}33%{background:#6fa8ff44;box-shadow:6px 0 #6fa8ff,12px 0 #6fa8ff44}66%{background:#6fa8ff44;box-shadow:6px 0 #6fa8ff44,12px 0 #6fa8ff}}
 @media (prefers-reduced-motion:reduce){#chats .chat-row.children-working .chat-item::after{animation:none}}
+
+/* Podčet koji čeka red za GPT slike. */
+#chats .compact-status.image-wait{font-size:12px;line-height:1;opacity:.85}
