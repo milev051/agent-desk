@@ -58,7 +58,7 @@
           <small id="gmail-status" role="status" aria-live="polite">Učitavam status Google veze…</small>
           <small id="google-services-status" role="status"></small>
           <ul id="google-accounts" class="account-list" aria-label="Povezani Google nalozi"></ul>
-          <div class="settings-actions"><button id="gmail-connect" type="button" disabled>Poveži Google</button><button id="gmail-check" type="button" hidden>Proveri vezu</button><button id="gmail-cancel" type="button" hidden>Otkaži prijavu</button><button id="google-add" type="button" hidden>Dodaj Google nalog</button><button id="gmail-disconnect" type="button" hidden>Prekini vezu</button></div>
+          <div class="settings-actions"><button id="gmail-connect" type="button" disabled>Poveži Google</button><button id="gmail-check" type="button" hidden>Proveri vezu</button><button id="gmail-cancel" type="button" hidden>Otkaži prijavu</button><button id="google-add" type="button" hidden>+ Dodaj Google nalog</button><button id="gmail-disconnect" type="button" hidden>Prekini vezu</button></div>
           <small>Agenti mogu da pretražuju i čitaju Gmail, Drive fajlove, Tasks zadatke i Calendar događaje kada to zatražiš. Svi servisi podržavaju i upis na tvoj zahtev: slanje mejlova, fajlove i foldere, zadatke i kalendarske događaje. Pročitani sadržaj ulazi u razgovor sa izabranim agentom.</small>
           <details id="gmail-setup" hidden><summary>Google podešavanje</summary>
             <p>U Google Cloud projektu uključi Gmail API, Google Drive API, Google Tasks API i Google Calendar API. U Google Auth Platform podesi aplikaciju, dodaj svoj nalog kao test korisnika i dozvole <code>gmail.readonly</code>, <code>gmail.modify</code>, <code>gmail.compose</code>, <code>drive.readonly</code>, <code>drive</code>, <code>tasks.readonly</code>, <code>tasks</code>, <code>calendar.readonly</code> i <code>calendar.events</code>. Napravi OAuth klijent tipa <strong>Desktop app</strong> i preuzmi njegov JSON fajl. Za lični Gmail izaberi External publiku.</p>
@@ -71,15 +71,9 @@
         <fieldset class="title-settings" id="github-settings"><legend>GitHub</legend>
           <small id="github-status" role="status" aria-live="polite">Učitavam status GitHub veze…</small>
           <ul id="github-accounts" class="account-list" aria-label="GitHub nalozi"></ul>
-          <div class="settings-actions"><button id="github-connect" type="button">Poveži GitHub</button><button id="github-check" type="button" hidden>Proveri vezu</button><button id="github-add" type="button" hidden>Dodaj GitHub nalog</button><button id="github-disconnect" type="button" hidden>Prekini vezu</button></div>
+          <div class="settings-actions"><button id="github-connect" type="button">Poveži GitHub</button><button id="github-check" type="button" hidden>Proveri vezu</button><button id="github-add" type="button" hidden>+ Dodaj GitHub nalog</button><button id="github-disconnect" type="button" hidden>Prekini vezu</button></div>
           <small>Koristi postojeću GitHub CLI prijavu; ako je nema, prijavu završavaš u Terminalu i browseru na računaru. Agenti dobijaju status veze i pristup pregledu repozitorijuma. Izmene i objavu rade po tvom zahtevu.</small>
           <small>Prekini vezu isključuje GitHub u Agent Desku i zadržava tvoju CLI prijavu.</small>
-          <div id="github-repos" hidden>
-            <label>Pretraga tvojih repozitorijuma <input id="github-query" type="search" maxlength="120" placeholder="Naziv repozitorijuma"></label>
-            <div class="settings-actions"><button id="github-search" type="button">Prikaži repozitorijume</button><button id="github-previous" type="button" disabled>Prethodna</button><button id="github-next" type="button" disabled>Sledeća</button></div>
-            <small id="github-list-status" role="status" aria-live="polite"></small>
-            <ul id="github-list"></ul>
-          </div>
         </fieldset>
         <fieldset class="title-settings" id="webpros-settings"><legend>WebPros · cPanel / Plesk</legend>
           <small id="webpros-status" role="status" aria-live="polite">Učitavam status WebPros veze…</small>

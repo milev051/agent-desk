@@ -18,7 +18,7 @@ export function createGmailSettings({root,api,phoneRemote}){
     get('gmail-setup').hidden=phoneRemote || data.configured===true;
     get('gmail-configure-row').hidden=phoneRemote || data.configured===true;
     for(const id of actions.filter(id=>id!=='gmail-connect'))get(id).disabled=busy;
-    get('google-add').hidden=phoneRemote || !data.connected || accounts.some(a=>a.state==='connecting');get('google-add').disabled=busy;
+    get('google-add').hidden=phoneRemote || !data.configured || accounts.some(a=>!a.primary && a.state==='connecting');get('google-add').disabled=busy;
     showAccounts();
     if(phoneRemote && !data.connected)status.textContent+=' Povezivanje je dostupno u Agent Desku na računaru.';
   }
