@@ -1021,3 +1021,11 @@ body #chats .folder-row:hover,body #chats .folder-row.open{color:#e6e6e6;backgro
 
 /* Prazan status (nalog povezan) ne zauzima mesto. */
 #gmail-status:empty,#github-status:empty{display:none}
+
+/* Popup prekinute veze. */
+#integration-alert-dialog{max-width:420px;padding:20px}
+#integration-alert-dialog h2{margin:0 0 10px;font-size:16px}
+#integration-alert-list{margin:0 0 14px;padding-left:18px;font-size:13px;line-height:1.5}
+#integration-alert-list span{color:#aaa}
+#integration-alert-dialog .settings-actions{display:flex;gap:8px;justify-content:flex-end}
+#google-app-info a{color:inherit}

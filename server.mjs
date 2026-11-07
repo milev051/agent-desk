@@ -15,6 +15,7 @@ import {createGoogleServices} from './google-services.mjs';
 import {createWebpros} from './webpros.mjs';
 import {createGithub} from './github.mjs';
 import {createGoogleAccounts} from './google-accounts.mjs';
+import {createIntegrationWatch} from './integration-watch.mjs';
 import {createGmail,profileScope,driveScope,tasksScope,gmailScope,calendarScope,calendarWriteScope,gmailWriteScope,gmailComposeScope,driveWriteScope,tasksWriteScope} from './gmail.mjs';
 import {createNotificationSettings,desktopNotificationArgs,desktopNotificationRemoveArgs,agentNotifier,workTargets,chromeReuseScript,tabAddresses} from './desktop-notifications.mjs';
 import {createDesktopPresence,replyNotification} from './notification-presence.mjs';
@@ -143,6 +144,8 @@ const makeGmail=options=>createGmail({...options,scopes:[profileScope,gmailScope
   if(process.platform!=='darwin')throw Error('Ova verzija otvara Google prijavu na macOS-u.');
   await new Promise((resolve,reject)=>{const child=spawn('/usr/bin/open',[url],{stdio:'ignore'});child.on('error',()=>reject(Error('Browser nije otvoren. Proveri podrazumevani browser.')));child.on('close',code=>code===0?resolve():reject(Error('Browser nije otvoren.')));});
 }});
+// Podaci o Google OAuth aplikaciji (projekat, režim objave), za prikaz u podešavanjima.
+function googleApp(){try{const v=JSON.parse(fs.readFileSync(path.join(root,'google-app.json'),'utf8'));return {projectId:String(v.projectId||''),projectName:String(v.projectName||''),publishing:v.publishing==='production'?'production':'testing',consoleUrl:/^https:\/\/console\.cloud\.google\.com\//.test(v.consoleUrl)?v.consoleUrl:''};}catch{return null;}}
 const googleAccounts=createGoogleAccounts({configDir:path.dirname(phoneOriginFile),makeGmail,makeServices:gmail=>createGoogleServices(gmail),makeWrite:(gmail,services)=>createGoogleWrite(gmail,services)});
 const gmail=googleAccounts.primary.gmail;
 const webpros=createWebpros({configDir:path.dirname(phoneOriginFile),openBrowser:async url=>{
@@ -615,6 +618,25 @@ function askThoughts(){
  send(chat,due?thoughtsPrompt({...due,dir:thoughts.dir}):improvePrompt({...improve,dir:thoughts.dir}),{origin:due?'thoughts':'thoughts-improve'}).catch(error=>console.error('Misli:',error.message));
 }
 const thoughtsTimer=setInterval(askThoughts,60000);thoughtsTimer.unref();
+// Prekinute veze (Google nalozi, GitHub, WebPros): popup u interfejsu i obaveštenje na Mac i telefon.
+async function integrationChecks(){
+  const out=[];
+  for(const view of googleAccounts.list()){
+    if(!view.email)continue;
+    const account=googleAccounts.get(view.id);
+    if(view.connected){try{await account.gmail.verify();}catch{}}
+    const s=account.gmail.status();
+    out.push({key:'google:'+view.id,label:'Google '+view.email,ok:s.connected,wasConnected:true,message:s.error || 'Google prijava je istekla ili je pristup opozvan. Ponovo poveži nalog.'});
+  }
+  if(github.status().enabled){const s=await github.refresh({force:true});out.push({key:'github',label:'GitHub'+(s.username?' '+s.username:''),ok:s.connected,wasConnected:true,message:'GitHub prijava ne radi. Proveri vezu ili ponovo poveži nalog.'});}
+  const w=webpros.status();out.push({key:'webpros',label:'WebPros (cPanel/Plesk)',ok:w.connected,wasConnected:w.connected || !!w.error,message:w.error || 'WebPros prijava ne radi. Ponovo poveži nalog.'});
+  return out;
+}
+const integrationWatch=createIntegrationWatch({checks:integrationChecks,
+  notify:alert=>{const title='Veza prekinuta: '+alert.label;desktopNotify(title,alert.message,'integracije','codex');void phonePush.notify({title,body:alert.message,tag:'integracije'}).catch(()=>{});},
+  onChange:alerts=>{const payload=`event: integration-alerts\ndata: ${JSON.stringify(alerts)}\n\n`;for(const res of listeners)res.write(payload);}});
+const integrationWatchStart=setTimeout(()=>void integrationWatch.run(),60000);integrationWatchStart.unref();
+const integrationWatchTimer=setInterval(()=>void integrationWatch.run(),15*60000);integrationWatchTimer.unref();
 function createDispatcherChat(){
   const models=quickCatalog(binaries),pick=chooseDispatcher({models,summary:summarizeLimits(limits.snapshot()),connected:agent=>!!binaries[agent]});
   if(!pick)throw Object.assign(Error('Nijedan mali model trenutno nije dostupan. Proveri prijave, modele i limite u podešavanjima.'),{status:409});
@@ -813,9 +835,10 @@ const server = http.createServer(async (req, res) => {
       }
       return json(405,{error:'Nepodržana WebPros radnja.'});
     }
+    if(url.pathname==='/api/integrations/alerts'){if(req.method==='GET')return json(200,{alerts:integrationWatch.view()});if(req.method==='POST'){const b=await body(req);if(b.check)return json(200,{alerts:await integrationWatch.run()});return json(200,{alerts:integrationWatch.dismiss(b.key)});}return json(405,{error:'Podržani su GET i POST.'});}
     if(url.pathname==='/api/integrations/google/accounts' || url.pathname.startsWith('/api/integrations/google/accounts/')){
       const route=url.pathname.slice('/api/integrations/google/accounts'.length),one=route.match(/^\/([a-z0-9]{1,32})(\/(avatar|check|cancel))?$/);
-      if(req.method==='GET' && route==='')return json(200,{accounts:googleAccounts.list()});
+      if(req.method==='GET' && route==='')return json(200,{accounts:googleAccounts.list(),app:googleApp()});
       if(req.method==='GET' && one?.[3]==='avatar'){const data=googleAccounts.get(one[1]).gmail.avatar();if(!data)return json(404,{error:'Slika profila nije sačuvana.'});res.writeHead(200,{'Content-Type':'image/jpeg','Cache-Control':'private, max-age=3600','X-Content-Type-Options':'nosniff'});return res.end(data);}
       if(['POST','DELETE'].includes(req.method)){
         if(!['127.0.0.1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress))return json(403,{error:'Google naloge povezuješ na računaru.'});

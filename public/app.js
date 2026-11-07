@@ -19,6 +19,7 @@ import {createCliUpdatesPanel} from './cli-updates.mjs';
 import {createGmailSettings} from './gmail-settings.mjs';
 import {createWebprosSettings} from './webpros-settings.mjs';
 import {createGithubSettings} from './github-settings.mjs';
+import {createIntegrationAlerts} from './integration-alerts.mjs';
 import {patchMessages} from './message-patch.mjs';
 import {mergeBrowserChats,mergeChatPage} from './chat-cache.mjs';
 import {createChatSearch} from './chat-search.mjs';
@@ -946,6 +947,7 @@ function renderDefaults() {$('#default-agents').innerHTML=meta.agents.map(a=>{co
 const webprosSettings=createWebprosSettings({root:$('#webpros-settings'),api,phoneRemote});
 const githubSettings=createGithubSettings({root:$('#github-settings'),api,phoneRemote});
 const gmailSettings=createGmailSettings({root:$('#gmail-settings'),api,phoneRemote});
+const integrationAlerts=createIntegrationAlerts({dialog:$('#integration-alert-dialog'),list:$('#integration-alert-list'),api,openSettings:()=>showDefaults(true)});void integrationAlerts.refresh();
 function showDefaults(open) {document.body.classList.toggle('settings-view',open);if(open)refreshPhone();$('#defaults').hidden=!open;if(open){void gmailSettings.refresh();void webprosSettings.refresh();void githubSettings.refresh();}else{gmailSettings.pause();webprosSettings.pause();githubSettings.pause();}for(const el of [$('#conversation'),$('.composer-area'),$('#usage-details'),$('#change-column')].filter(Boolean))el.inert=open;if(open){closePanels();if(!mobileNavigation() && !matchMedia('(pointer:coarse)').matches)$('#default-agents select')?.focus();}else focusPrompt();}
 function paintSettings(){renderDefaults();renderWarmup();$('#statistics-open').hidden=phoneRemote;$('#statistics-download').hidden=!phoneRemote;fillTitleSettings();renderKeyboardToggle();menuChat=null;renderPopover();}
 let settingsDirty=false,settingsGeneration=0;
@@ -1472,6 +1474,7 @@ $('#completion-notices').onclick=e=>{const button=e.target.closest('[data-notice
 function connectEvents(initial,failed){
   events?.close();events=new EventSource('/api/events?summary=1'+(active && (document.body.classList.contains('chat-view') || !mobileNavigation())?'&chat='+encodeURIComponent(active):''));if(!appReady)bootProgress('Veza za poruke','povezujem se');events.onopen=()=>{if(!appReady)bootProgress('Veza za poruke','otvorena · čekam istoriju četova');};
   events.onmessage=e=>{const data=JSON.parse(e.data),next=Array.isArray(data)?mergeChatList(data):data.lite?mergeBrowserChats(chats,data):mergeChats(data);connected=true;if(!appReady){bootProgress('Istorija četova',`učitano · ${bootSize(new TextEncoder().encode(e.data).length)} · ${next.length} četova`);bootProgress('Veza za poruke','povezana');chats=next;initial?.(next);return;}const previous=chats;chats=next;announceReplies(previous);for(const chat of chats)clearReadNotifications(chat);void flushDrafts();if(active && !current()){const next=chats.find(c=>c.continuedFrom===active);if(next && document.body.classList.contains('chat-view'))choose(next.id,{replaceHistory:true});else choose(null);}else{render();if(current()?._needsHistory)guard(()=>loadChatHistory(active));}};
+  events.addEventListener('integration-alerts',e=>{try{integrationAlerts.show(JSON.parse(e.data));}catch{}});
   events.addEventListener('folders',e=>{folders=JSON.parse(e.data);pruneOpenFolders();lastSidebar='';if(appReady)renderSidebar();});
   events.addEventListener('reload',()=>{if(!$('#prompt').value.trim() && !document.querySelector('dialog[open]'))location.reload();else toast('Interfejs je izmenjen. Osveži stranicu kad završiš unos.');});
   events.addEventListener('boot',e=>{try{bootTracker.handleBoot(JSON.parse(e.data));void restartStatus.refresh();}catch{}});

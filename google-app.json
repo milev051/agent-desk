@@ -1,0 +1,7 @@
+{
+  "projectId": "default-510913",
+  "projectName": "Default",
+  "publishing": "testing",
+  "note": "Google OAuth aplikacija Agent Deska (Google Auth Platform). U režimu testing prijava ističe posle 7 dana i rade samo upisani test korisnici; objava (production) traži početnu stranicu i politiku privatnosti na proverenom domenu.",
+  "consoleUrl": "https://console.cloud.google.com/auth/audience?project=default-510913"
+}

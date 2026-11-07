@@ -32,7 +32,12 @@ export function createGmailSettings({root,api,phoneRemote}){
       actions:phoneRemote?[]:a.primary?[]:a.state==='connecting'?[{label:'Otkaži',disabled:busy,run:()=>account('POST','/'+a.id+'/cancel')}]:[{label:'Proveri',disabled:busy,run:()=>account('POST','/'+a.id+'/check')},{label:'Ukloni',disabled:busy,run:()=>account('DELETE','/'+a.id)}]
     })));
   }
-  async function loadAccounts(){try{accounts=(await api('/api/integrations/google/accounts')).accounts || [];}catch{accounts=[];}}
+  function showApp(app){
+    const info=get('google-app-info');info.replaceChildren();if(!app)return;
+    info.append((app.projectName?'Google aplikacija: '+app.projectName+' ('+app.projectId+') · ':'')+(app.publishing==='production'?'objavljena':'Testing: prijava ističe posle 7 dana, rade samo test korisnici')+' · ');
+    if(app.consoleUrl){const link=document.createElement('a');link.href=app.consoleUrl;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Google Cloud';info.append(link);}
+  }
+  async function loadAccounts(){try{const data=await api('/api/integrations/google/accounts');accounts=data.accounts || [];showApp(data.app);}catch{accounts=[];}}
   async function account(method,route){
     if(busy)return;busy=true;if(view)render(view);
     try{const data=await api('/api/integrations/google/accounts'+route,method,{});if(data.accounts)accounts=data.accounts;else await loadAccounts();}
