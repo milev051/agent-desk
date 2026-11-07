@@ -82,3 +82,4 @@ Format: `- **Šta:** … · **Modeli/alati:** … · **Zašto / pouka:** …` po
 - **Izmena 2026-11-07:** GitHub kao Google: samo „+“ za dodavanje naloga, u redu naloga ikonice (koristi, proveri, odjavi iz gh); sva dugmad naloga su ikonice sa opisom na prelazu mišem (account-list.mjs). Čet b7edfcb8.
 - **Izmena 2026-11-07:** „+ Dodaj nalog“ je poslednji red u spisku naloga (isprekidan krug sa plusom, poravnat sa slikama), umesto zasebnog dugmeta ispod. Čet b7edfcb8.
 - **Izmena 2026-11-07:** uklanjanje Google ili GitHub naloga traži potvrdu „Da / Ne“ u prozoru aplikacije (confirmAction u account-list.mjs). Čet b7edfcb8.
+- **Izmena 2026-11-07:** WebPros u podešavanjima kao Google i GitHub: red naloga sa ikonicama (proveri, ponovo poveži, ukloni uz Da/Ne) ili „+ Dodaj WebPros nalog“. Čet b7edfcb8.
