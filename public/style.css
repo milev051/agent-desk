@@ -1062,3 +1062,7 @@ dialog.confirm-dialog button.danger{border-color:#a33;color:#f88}
 .resource-row b{font-weight:500;text-align:right;font-variant-numeric:tabular-nums}
 .resource-row[data-chat-id]{cursor:pointer}.resource-row[data-chat-id]:hover{background:#ffffff12}
 .resource-row.top span{color:#eee}.resource-row.desk,.resource-row.shared,.resource-row.waiting{color:#888}
+
+/* Tekst odgovora agenta je beo; boja modela ostaje samo na nazivu modela. */
+.message.assistant .message-body,.message-body .result-main,.message-body .result-full-text,.result-full-text{color:#f2f2f2}
+.message-body .result-next{color:#d8d8d8}

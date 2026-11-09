@@ -85,3 +85,4 @@ Format: `- **Šta:** … · **Modeli/alati:** … · **Zašto / pouka:** …` po
 - **Izmena 2026-11-07:** WebPros u podešavanjima kao Google i GitHub: red naloga sa ikonicama (proveri, ponovo poveži, ukloni uz Da/Ne) ili „+ Dodaj WebPros nalog“. Čet b7edfcb8.
 - **Izmena 2026-11-09:** praćenje opterećenja po četu (resources.mjs, public/resource-monitor.mjs): CPU i RSS po stablu procesa četa na 5 s, deljeni procesi (dev server, headless Chrome) posebno, traka na dnu bočne trake, GET /api/resources, red za podčetove kad je računar preopterećen (resourceWaiting, ⏸). Zahtev iz četa 16e6c21a, urađeno u četu b7edfcb8.
 - **Izmena 2026-11-09:** Claude (Opus) je prvi agent u izboru za nov čet i podrazumevani agent novog četa, ChatGPT/Codex drugi (app.js agentOrder, server.mjs). Čet b7edfcb8.
+- **Izmena 2026-11-09:** tekst odgovora agenta je beo umesto boje modela; boja modela ostaje na nazivu modela (style.css). Čet b7edfcb8.
