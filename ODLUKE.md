@@ -540,3 +540,8 @@
 - Izvor: čet b7edfcb8-2c8c-4be7-b980-f0660ae86bc8, 2026-11-07T18:14Z; potvrdu „Confirm“ kliknuo korisnik 2026-11-07T18:22Z.
 - Dopuna 2026-11-07T18:24–18:32Z: jedini način dodavanja naloga je „+ Dodaj nalog“ (prvi Google nalog postaje glavni), radnje naloga su ikonice; isto za GitHub. Razlog: korisnik ne želi razliku „Poveži“/„Dodaj nalog“ ni tekstualna dugmad.
 - Dopuna 2026-11-07T18:37–18:39Z: uklanjanje naloga traži potvrdu Da/Ne; WebPros dobio isti izgled kao Google i GitHub. Razlog: korisnik tražio potvrdu posle odjave GitHub naloga iz gh jednim klikom.
+
+## 2026-11-09, red podčetova po opterećenju računara
+- Odluka: Agent Desk meri CPU i memoriju po četu (stablo procesa) i kad je računar preopterećen (load ≥ 2 × jezgra, kritičan pritisak memorije, ili swap ≥ 90 % uz pritisak) novi podčetovi čekaju u redu i kreću jedan po jedan na 45 s. Sam pun swap ne blokira, jer na macOS-u ostaje pun i posle rasterećenja.
+- Razlog: na 8 jezgara i 8 GB, 7 do 8 podagenata uz headless Chrome i nuxt dev dizali su load na 38 do 70 i swap na 5,4 od 6 GB, a server se restartovao; broj agenata se određivao ručno.
+- Izvor: zahtev iz četa 16e6c21a, urađeno u četu b7edfcb8-2c8c-4be7-b980-f0660ae86bc8, 2026-11-09T16:18Z.

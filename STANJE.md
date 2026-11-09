@@ -1,5 +1,6 @@
 # Stanje
-_2026-11-07 19:43, čet b7edfcb8_
+_2026-11-09 17:40, čet b7edfcb8_
+- Praćenje opterećenja po četu (resources.mjs): traka na dnu bočne trake, GET /api/resources, podčetovi čekaju (⏸) kad je load ≥ 16 ili memorija kritična. Pragovi u LIMITS; proveriti posle dana rada da li su dobri.
 - Više Google naloga (google-accounts.mjs): „+ Dodaj Google nalog“, token po nalogu, rute biraju nalog preko `?account=ADRESA`, ime i slika profila (dozvola userinfo.profile). Commit 359d03d, a01051b; server restartovan.
 - Nalozi (Google, GitHub, WebPros): samo „+ Dodaj nalog“ kao poslednji red spiska, u redu naloga ikonice (koristi, proveri, ukloni). GitHub kanta radi gh auth logout; WebPros je jedan red sa proveri/ponovo poveži/ukloni (aef09f0). Uklanjanje naloga traži potvrdu Da/Ne.
 - Google: milev051 povezan (glavni); ROOM211 (office@room211.studio) i baubu543 još nisu dodati, poslednji pokušaj dao Google 500.

@@ -1045,3 +1045,20 @@ dialog.confirm-dialog{max-width:380px;padding:18px;border:1px solid #333;backgro
 dialog.confirm-dialog p{margin:0 0 14px;font-size:13px;line-height:1.5}
 dialog.confirm-dialog .settings-actions{display:flex;gap:8px;justify-content:flex-end}
 dialog.confirm-dialog button.danger{border-color:#a33;color:#f88}
+
+/* Opterećenje računara (resource-monitor.mjs): jedan red na dnu bočne trake, klik otvara spisak po četu. */
+.resource-monitor{flex-shrink:0;border-top:1px solid #333;padding-top:8px;font-size:12px;color:#aaa}
+.resource-monitor summary{display:flex;align-items:center;gap:6px;cursor:pointer;list-style:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.resource-monitor summary::-webkit-details-marker{display:none}
+.resource-monitor summary span{overflow:hidden;text-overflow:ellipsis}
+.resource-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:#3fb950}
+.resource-monitor.mid .resource-dot{background:#d29922}
+.resource-monitor.high .resource-dot{background:#f85149}
+.resource-monitor.high summary{color:#f0a8a3}
+.resource-alert{margin:6px 0 0;color:#f0a8a3}
+.resource-monitor ul{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:2px;max-height:200px;overflow:auto}
+.resource-row{display:grid;grid-template-columns:minmax(0,1fr) 48px 56px;gap:6px;padding:3px 4px;border-radius:6px}
+.resource-row span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.resource-row b{font-weight:500;text-align:right;font-variant-numeric:tabular-nums}
+.resource-row[data-chat-id]{cursor:pointer}.resource-row[data-chat-id]:hover{background:#ffffff12}
+.resource-row.top span{color:#eee}.resource-row.desk,.resource-row.shared,.resource-row.waiting{color:#888}

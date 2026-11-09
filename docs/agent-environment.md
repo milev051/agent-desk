@@ -149,3 +149,10 @@ Podešavanja → WebPros · cPanel / Plesk povezuje nalog OAuth prijavom na rač
 ## Upwork oglasi (čuvar mejlova)
 
 `upwork-watch.mjs`: dok server radi, na svaka 3 sata pretražuje Gmail oznaku `Upwork` (poslednja 3 dana) bez modela. Samo kad ima mejlova koje još nije video, šalje njihove ID-jeve u čet „Upwork oglasi“ (Claude Sonnet, low, folder projekta Upwork). Taj čet ocenjuje oglase po `ODLUKE.md`, nekandidate pomera u smeće, kandidate označava zvezdicom, dopisuje red u `PONUDE.md` i piše nacrt ponude; ponude ne šalje. Stanje i podešavanja: GET/PUT `/api/upwork-watch` (`enabled`, `label`, `intervalHours` 1-24, `project`), ručna provera: POST `/api/upwork-watch/run`. Pored mejlova, između 14 i 22 h po lokalnom vremenu najviše jednom na 3 sata isti čet pretražuje Upwork „Find work“ u Chrome-u (do 5 stranica, oglasi mlađi od 3 h); polja `search`, `searchFrom`, `searchTo`, `searchHours`. Stanje se čuva u `data/upwork-watch.json`.
+
+## Opterećenje računara (resources.mjs)
+
+- Server meri na 5 s dok neki čet radi (inače na 30 s): jedan `ps` za sve procese, `sysctl vm.swapusage`, `kern.memorystatus_vm_pressure_level` i `vm_stat`.
+- Po četu: zbir CPU % i RSS za stablo procesa koje je čet pokrenuo (CLI i deca). Dugotrajni deljeni procesi (nuxt/vite/next/astro dev, headless Chrome, `npm run dev`) idu u grupu „deljeno“ sa oznakom ko ih je pokrenuo; ničiji procesi korisnika (roditelj launchd) isto. Server Agent Deska je posebna grupa.
+- `GET /api/resources` vraća `system` (load1, cores, memAvailable, swapUsed, swapTotal, pressure), `overload` (razlozi), `chats`, `desk`, `shared`, `top` i `waiting`. Interfejs ga dobija kao SSE događaj `resources` i prikazuje traku na dnu bočne trake.
+- Preopterećenje: opterećenje (1 min) ≥ 2 × broj jezgara, kritičan pritisak memorije, ili swap ≥ 90 % uz pritisak memorije. Tada `delegate` pravi podčet sa `resourceWaiting` i vraća `resourceQueue`; podčet kreće sam kad opterećenje padne ispod 1,5 × jezgara, najviše jedan na 45 s. Kad nijedan agent ne radi, ne čeka se.
