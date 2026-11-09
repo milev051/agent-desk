@@ -883,7 +883,7 @@ body #composer-joystick[data-agent]{box-shadow:none}
 #conversation .attachment-thumbs img,#archive-preview-content .attachment-thumbs img{width:auto;height:auto;max-width:100%;max-height:280px;object-fit:contain;object-position:left center}
 @media(max-width:650px){#conversation .attachment-thumbs img,#archive-preview-content .attachment-thumbs img{max-height:200px}}
 
-.live-activity{width:100%;max-width:850px;box-sizing:border-box;margin-top:10px;padding:10px 12px;border-left:2px solid #719cce;background:#171d25;color:#b9c9dc}.live-activity .activity{display:block;margin:0;white-space:pre-wrap;max-height:7em;overflow:auto}.live-activity-label{font-size:11px;color:#98aac0;margin-top:8px}.live-activity ol{margin:5px 0 0;padding-left:22px}.live-activity li{margin:5px 0}.live-activity code{font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
+.live-activity{width:100%;max-width:850px;box-sizing:border-box;margin-top:10px;padding:10px 12px;background:#171d25;color:#b9c9dc}.live-activity .activity{display:block;margin:0;white-space:pre-wrap;max-height:7em;overflow:auto}.live-activity-label{font-size:11px;color:#98aac0;margin-top:8px}.live-activity ol{margin:5px 0 0;padding-left:22px}.live-activity li{margin:5px 0}.live-activity code{font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
 
 /* Jedan tok teksta; slike su pregled putanja iz nacrta, bez zasebnih kartica. */
 #composer .prompt-wrap{display:flex;flex-direction:column;align-items:stretch;gap:0;min-width:0}
