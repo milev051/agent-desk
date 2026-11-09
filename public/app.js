@@ -58,7 +58,7 @@ let lastViewportHeight=window.visualViewport?.height || window.innerHeight;
 function revealAboveComposer(extra=0){const view=$('#conversation');if(!view || !matchMedia('(max-width:650px)').matches)return;const nearBottom=view.scrollHeight-view.scrollTop-view.clientHeight<90;requestAnimationFrame(()=>{if(nearBottom)view.scrollTop=view.scrollHeight;else if(extra>0)view.scrollTop+=extra;});}
 const fitViewport=()=>{const vv=window.visualViewport;if(!vv)return;const covered=lastViewportHeight-vv.height;lastViewportHeight=vv.height;document.documentElement.style.setProperty('--app-height',vv.height+'px');document.documentElement.style.setProperty('--vv-top',vv.offsetTop+'px');if(covered>40)revealAboveComposer(covered);};
 window.visualViewport?.addEventListener('resize',fitViewport);window.visualViewport?.addEventListener('scroll',fitViewport);fitViewport();
-let events, defaults = {}, models = {}, meta, chats = [], active = localStorage.getItem('agent-desk-active'), selectedAgent = 'codex', menuChat = null, menuFolder = null, lastMessages = '', connected = true, appReady = false, sawEvents = false;
+let events, defaults = {}, models = {}, meta, chats = [], active = localStorage.getItem('agent-desk-active'), selectedAgent = 'claude', menuChat = null, menuFolder = null, lastMessages = '', connected = true, appReady = false, sawEvents = false;
 const phoneRemote=!['127.0.0.1','localhost'].includes(location.hostname);
 const livePreview=createLivePreview({root:$('#live-preview'),conversation:$('#conversation'),api,phoneRemote,report:error=>console.error(error.message)});
 createAndroidPrompt($('#prompt'));
@@ -317,7 +317,7 @@ function modelLabel(chat) {
   const id=chat.settings.model || (last?.configuredModel===chat.settings.model ? last.model : '');
   return id ? modelName(chat.settings.agent,id) : 'Podrazumevani CLI model';
 }
-const agentOrder=['codex','claude','antigravity','grok'];
+const agentOrder=['claude','codex','antigravity','grok'];
 let limits={},lastNewAgents='';
 function renderNewAgents() {const settings=$('#defaults-open');const html=agentOrder.map(id=>meta.agents.find(a=>a.id===id)).filter(Boolean).map(a=>{const s=limits[a.id],depleted=s?.windows?.length?s.windows.some(w=>Math.round(w.remaining)<=0):false,unavailable=!a.available||depleted;return `<button class="new-agent ${newMenuAgent===a.id?'expanded':''} ${unavailable?'unavailable':''}" data-new-agent="${a.id}" title="Modeli · ${escape(a.name)}" aria-label="Modeli · ${escape(a.name)}" aria-expanded="${newMenuAgent===a.id}" ${!a.available?'disabled':''}><small class="agent-limits ${s?.stale?'limits-stale':''}" title="${escape(limitDescription(a.id))}">${limitDisplay(a.id)}</small></button>`;}).join('');if(html!==lastNewAgents){$('#new-agents').innerHTML=html;$('#new-agents').append(settings);lastNewAgents=html;}}
 let lastSidebar='', paintingSidebar=false,lastSavedOpenFolders;

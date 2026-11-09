@@ -1146,7 +1146,7 @@ const server = http.createServer(async (req, res) => {
     if (folderMatch && req.method === 'DELETE') { folders.remove(folderMatch[1]); for (const chat of chats) if (chat.folderId===folderMatch[1]) delete chat.folderId; update(); broadcastFolders(); return json(200, {ok:true}); }
     if (req.method === 'POST' && url.pathname === '/api/chats') {
       const b = await body(req);
-      const chat = { id: randomUUID(), title: 'Empty', discardOnLeave:true, createdAt: Date.now(), updatedAt: Date.now(), settings: validate({ agent: 'codex', model: '', access: 'full', cwd: root, instructions: '', effort: '', ...defaults[b.settings?.agent || 'codex'], ...b.settings }), sessions: {}, sessionOffsets:{}, messages: [] };
+      const chat = { id: randomUUID(), title: 'Empty', discardOnLeave:true, createdAt: Date.now(), updatedAt: Date.now(), settings: validate({ agent: 'claude', model: '', access: 'full', cwd: root, instructions: '', effort: '', ...defaults[b.settings?.agent || 'claude'], ...b.settings }), sessions: {}, sessionOffsets:{}, messages: [] };
       if(b.folderId!==undefined){if(!folders.has(b.folderId))throw new Error('Folder nije pronađen.');chat.folderId=b.folderId;}
       if(b.settings?.model!==undefined && b.settings.effort===undefined)chat.settings.effort=preferredEffort(quickCatalog(binaries),chat.settings.agent,chat.settings.model);
       validateEffort(quickCatalog(binaries), chat.settings);

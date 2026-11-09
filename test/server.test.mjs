@@ -160,9 +160,9 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     const bad=structuredClone(prefs);bad.claude={model:'haiku',effort:'max'};
     assert.equal((await call('/api/defaults','PUT',bad)).status,400);
     assert.deepEqual((await call('/api/defaults')).data.claude,prefs.claude);
-    const a = (await call('/api/chats', 'POST', { settings: { cwd: temp, instructions: 'Pravila A', access: 'read' } })).data;
-    const b = (await call('/api/chats', 'POST', { settings: { cwd: temp } })).data;
-    const empty=(await call('/api/chats','POST',{settings:{cwd:temp,instructions:'Kontekst projekta'}})).data;
+    const a = (await call('/api/chats', 'POST', { settings: { agent: 'codex', cwd: temp, instructions: 'Pravila A', access: 'read' } })).data;
+    const b = (await call('/api/chats', 'POST', { settings: { agent: 'codex', cwd: temp } })).data;
+    const empty=(await call('/api/chats','POST',{settings:{agent:'codex',cwd:temp,instructions:'Kontekst projekta'}})).data;
     assert.equal((await call(`/api/chats/${empty.id}/count-tokens`,'POST',{})).status,400);
     const measured=(await call(`/api/chats/${empty.id}/count-tokens`,'POST',{consent:true})).data;assert.equal(measured.historyTokenCount.tokens,0);assert.equal(measured.historyTokenCount.model,'gemini-3.5-flash-lite');
     const count=(await call('/api/chats')).data.length;
@@ -302,7 +302,7 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal(handed.transferPending,false);
     assert.equal((await call('/api/coordinations')).status,404);
     assert.equal((await call('/api/coordinations','POST',{})).status,404);
-    const queued=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
+    const queued=(await call('/api/chats','POST',{settings:{agent:'codex',cwd:temp}})).data;
     await call(`/api/chats/${queued.id}/send`,'POST',{text:'SLOW Prva'});
     assert.equal((await call(`/api/chats/${queued.id}/queue`,'POST',{text:'Druga iz reda'})).status,202);
     assert.equal((await call(`/api/chats/${queued.id}/queue`,'POST',{text:'Treća iz reda'})).status,202);
@@ -313,7 +313,7 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.match(JSON.parse(q.messages.at(-1).text).input,/Okruženje: Agent Desk/);
     // Privremeni prekid ne prekida logički odgovor i ne troši red pre oporavka.
     async function waitFor(id,predicate){for(let i=0;i<800;i++){const c=(await call(`/api/chats/${id}`)).data;if(predicate(c))return c;await new Promise(r=>setTimeout(r,25));}throw Error('Oporavak nije završen');}
-    const recovering=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
+    const recovering=(await call('/api/chats','POST',{settings:{agent:'codex',cwd:temp}})).data;
     await call(`/api/chats/${recovering.id}/send`,'POST',{text:'NETWORK_ONCE'});
     await waitFor(recovering.id,c=>c.messages.at(-1)?.connectionRetries===1);
     await call(`/api/chats/${recovering.id}/queue`,'POST',{text:'Poruka posle oporavka'});
@@ -322,24 +322,24 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal(recovery.messages[3].status,'done');assert.equal(recovery.queuePaused,false);
     assert.match(JSON.parse(recovery.messages[1].text).input,/ne ponavljaj završene radnje/);
     assert.ok(JSON.parse(recovery.messages[1].text).args.includes('resume'));
-    const reconnected=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
+    const reconnected=(await call('/api/chats','POST',{settings:{agent:'codex',cwd:temp}})).data;
     await call(`/api/chats/${reconnected.id}/send`,'POST',{text:'RECONNECT_SUCCESS'});
     const successful=await waitFor(reconnected.id,c=>!c.running);
     assert.equal(successful.messages.at(-1).status,'done');assert.equal(successful.messages.at(-1).error,undefined);
-    const persistent=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
+    const persistent=(await call('/api/chats','POST',{settings:{agent:'codex',cwd:temp}})).data;
     await call(`/api/chats/${persistent.id}/send`,'POST',{text:'NETWORK_ALWAYS'});
     await waitFor(persistent.id,c=>c.messages.at(-1)?.connectionRetries===1);
     await call(`/api/chats/${persistent.id}/queue`,'POST',{text:'Nastavi red nakon iscrpljenih pokušaja'});
     const exhausted=await waitFor(persistent.id,c=>!c.running && !c.queue?.length && c.messages.length===4);
     assert.equal(exhausted.messages[1].connectionRetries,3);assert.equal(exhausted.messages[1].status,'error');assert.equal(exhausted.messages[3].status,'done');assert.equal(exhausted.queuePaused,false);
-    const stoppedRetry=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
+    const stoppedRetry=(await call('/api/chats','POST',{settings:{agent:'codex',cwd:temp}})).data;
     await call(`/api/chats/${stoppedRetry.id}/send`,'POST',{text:'NETWORK_ONCE'});
     await waitFor(stoppedRetry.id,c=>c.messages.at(-1)?.connectionRetries===1);
     await call(`/api/chats/${stoppedRetry.id}/queue`,'POST',{text:'Ostaje posle stop'});
     await call(`/api/chats/${stoppedRetry.id}/stop`,'POST',{});
     const stoppedRecovery=await waitFor(stoppedRetry.id,c=>!c.running);
     assert.equal(stoppedRecovery.messages[1].status,'stopped');assert.equal(stoppedRecovery.queuePaused,true);assert.equal(stoppedRecovery.queue.length,1);
-    const failedQueue=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
+    const failedQueue=(await call('/api/chats','POST',{settings:{agent:'codex',cwd:temp}})).data;
     await call(`/api/chats/${failedQueue.id}/send`,'POST',{text:'SLOW početak'});
     await call(`/api/chats/${failedQueue.id}/queue`,'POST',{text:'FAIL_QUEUE'});
     await waitFor(failedQueue.id,c=>c.messages[3]?.status==='error');
@@ -347,7 +347,7 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     const afterFailure=await waitFor(failedQueue.id,c=>!c.running && !c.queue?.length && c.messages.length===6);
     assert.equal(afterFailure.messages[3].status,'error');assert.equal(afterFailure.messages[5].status,'done');
 
-    const urgent=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
+    const urgent=(await call('/api/chats','POST',{settings:{agent:'codex',cwd:temp}})).data;
     await call(`/api/chats/${urgent.id}/send`,'POST',{text:'Dug posao WAIT'});
     await call(`/api/chats/${urgent.id}/queue`,'POST',{text:'Hitna dopuna'});
     assert.equal((await call(`/api/chats/${urgent.id}/queue/now`,'POST',{})).status,200);
@@ -397,7 +397,7 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     const childArchived=await call(`/api/chats/${child.id}`,'DELETE');const parentArchived=await call(`/api/chats/${queued.id}`,'DELETE');assert.equal(childArchived.status,200);assert.equal(parentArchived.status,200);
     assert.equal((await call(`/api/archive/${parentArchived.data.archiveId}/restore`,'POST',{})).status,200);assert.equal((await call(`/api/chats/${child.id}`)).data.parentChatId,queued.id);assert.ok(!(await call('/api/archive')).data.some(r=>r.id===childArchived.data.archiveId));
     // Stari klijent može tražiti privremeni čet i njegovo brisanje pri navigaciji.
-    const discardedEmpty=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
+    const discardedEmpty=(await call('/api/chats','POST',{settings:{agent:'codex',cwd:temp}})).data;
     const archivesBefore=(await call('/api/archive')).data.length;
     assert.equal((await call(`/api/chats/${discardedEmpty.id}/discard-empty`,'POST',{},'https://evil.test')).status,403);
     assert.equal((await call(`/api/chats/${discardedEmpty.id}/discard-empty`,'POST',{})).data.deleted,true);
@@ -405,7 +405,7 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal((await call('/api/chats?summary=1')).data.some(c=>c.id===discardedEmpty.id),false);
     assert.equal((await call('/api/archive')).data.length,archivesBefore);
     assert.equal((await call(`/api/chats/${discardedEmpty.id}/discard-empty`,'POST',{})).status,200);
-    const unused=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
+    const unused=(await call('/api/chats','POST',{settings:{agent:'codex',cwd:temp}})).data;
     await call(`/api/chats/${unused.id}`,'PATCH',{title:'Sačuvan prazan čet'});
     assert.equal((await call(`/api/chats/${unused.id}/discard-empty`,'POST',{})).status,409);
     assert.deepEqual((await call(`/api/chats/${unused.id}`)).data.messages,[]);
@@ -451,8 +451,8 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.equal((await call('/api/open-file','POST',{path:path.join(temp,'preview.html'),reveal:true},'https://example.com')).status,403);
     assert.equal((await call('/api/open-file','POST',{path:'/nepostojeci-fajl.txt'})).status,400);
     assert.equal((await call(`/api/chats/${a.id}`, 'DELETE')).status, 200);
-    const linkedParent=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
-    const linkedChild=(await call('/api/chats','POST',{settings:{cwd:temp}})).data;
+    const linkedParent=(await call('/api/chats','POST',{settings:{agent:'codex',cwd:temp}})).data;
+    const linkedChild=(await call('/api/chats','POST',{settings:{agent:'codex',cwd:temp}})).data;
     const dropped=(await call('/api/chats','POST',{settings:{agent:'codex',model:'',effort:'',cwd:process.cwd()},parentChatId:linkedParent.id}));
     assert.equal(dropped.status,201);assert.equal(dropped.data.parentChatId,linkedParent.id);assert.equal(dropped.data.settings.cwd,temp);
     const beforeInvalidDrop=(await call('/api/chats')).data.length;
@@ -513,7 +513,7 @@ test('lokalni server: izolacija četova, CLI sesije, čuvanje, pristup i zaustav
     assert.match(briefingInput,/Ti si dispečer projekata/);assert.match(briefingInput,/Trenutni pregled/);assert.match(briefingInput,/ne nalozi korisnika/);
     assert.doesNotMatch(briefingInput,/Snimak strukture povezanih četova/);assert.doesNotMatch(briefingInput,/Zajednička grupa agenata|Nove ili izmenjene poruke četa/);
     // Praćenje: dispečer prosleđuje zadatak dok odgovara korisniku i dobija tačno jedan izveštaj.
-    const worker=(await call('/api/chats','POST',{settings:{cwd:temp,access:'read'}})).data;
+    const worker=(await call('/api/chats','POST',{settings:{agent:'codex',cwd:temp,access:'read'}})).data;
     assert.equal((await call(`/api/chats/${worker.id}/send`,'POST',{text:'Bez dispečera koji radi',dispatcherId:coordinator.id})).status,403);
     assert.equal((await call(`/api/chats/${worker.id}/send`,'POST',{text:'Lažni dispečer',dispatcherId:worker.id})).status,400);
     assert.equal((await call(`/api/chats/${coordinator.id}/delegate`,'POST',{agent:'codex',task:'Bez zahteva korisnika'})).status,403);
