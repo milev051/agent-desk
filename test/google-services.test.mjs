@@ -48,3 +48,13 @@ test('Calendar kreira lični događaj i menja samo tražena polja uz ETag',async
   await assert.rejects(services.createEvent('primary',{summary:'X',start:{date:'2026-02-30'},end:{date:'2026-03-03'}}),/datum/);
   const group=createGoogleServices({serviceRequest:async()=>({etag:'"version1"',attendees:[{email:'fake@example.test'}]}),calendarWrite:()=>assert.fail('Ne sme menjati sastanak sa učesnicima')});await assert.rejects(group.updateEvent('primary','event1',{summary:'X'}),/učesnicima/);
 });
+test('Drive download za backup: Docs u Office formatu, obični fajlovi bez limita od 10 MB',async()=>{
+  let mime='application/vnd.google-apps.spreadsheet';const streams=[];
+  const services=createGoogleServices({status:()=>({}),serviceRequest:async()=>({id:'f1',mimeType:mime,size:String(500*1024*1024)}),serviceStream:async(...args)=>{streams.push(args);return {ok:true};}});
+  let r=await services.download('f1');assert.equal(r.extension,'.xlsx');assert.equal(streams[0][0],'/files/f1/export');
+  r=await services.download('f1','pdf');assert.equal(r.mimeType,'application/pdf');
+  mime='video/mp4';r=await services.download('f1');assert.equal(r.extension,'');assert.equal(streams.at(-1)[1].alt,'media');
+  mime='application/vnd.google-apps.form';await assert.rejects(services.download('f1'),/izvoz/);
+  mime='application/vnd.google-apps.folder';await assert.rejects(services.download('f1'),/Folder/);
+  await assert.rejects(services.download('f1','exe'),/format/);await assert.rejects(services.download('../x'));
+});

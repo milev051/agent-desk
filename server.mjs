@@ -809,6 +809,8 @@ const server = http.createServer(async (req, res) => {
       const paging={maxResults:url.searchParams.has('maxResults')?Number(url.searchParams.get('maxResults')):20,pageToken:url.searchParams.get('pageToken') || ''};
       if(service==='drive'){
         if(route==='/files')return json(200,await acct.services.files({...paging,q:url.searchParams.get('q') || ''}));
+        const download=route.match(/^\/files\/([^/]+)\/download$/);
+        if(download){const {file,mimeType,extension,response}=await acct.services.download(download[1],url.searchParams.get('format') || 'office');res.writeHead(200,{'Content-Type':mimeType,'Content-Disposition':'attachment','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','X-Drive-Extension':extension,...(response.headers.get('content-length')?{'Content-Length':response.headers.get('content-length')}:{}),'X-Drive-Modified':file.modifiedTime || ''});const {Readable}=await import('node:stream');const body=Readable.fromWeb(response.body);req.on('close',()=>body.destroy());body.on('error',()=>res.destroy());return body.pipe(res);}
         const match=route.match(/^\/files\/([^/]+)(\/(text|content))?$/);
         if(match){if(match[3]==='text')return json(200,await acct.services.text(match[1]));if(match[3]==='content'){const {data,mimeType}=await acct.services.content(match[1]);res.writeHead(200,{'Content-Type':mimeType,'Content-Disposition':'attachment','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});return res.end(data);}return json(200,await acct.services.file(match[1]));}
       }else if(service==='tasks'){

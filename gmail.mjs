@@ -144,6 +144,18 @@ export function createGmail({configDir,fetchImpl=fetch,now=Date.now,openBrowser=
       if(!config || typeof resource!=='string' || !/^\/(?:[a-zA-Z0-9_@/.-]|%[a-fA-F0-9]{2})+$/.test(resource) || resource.includes('..'))throw Error('Neispravan Google servis ili putanja.');
       const full={drive:driveWriteScope,tasks:tasksWriteScope}[service];return request(resource,params,true,config[0],full && tokens?.scope.split(' ').includes(full)?full:config[1],content);
     },
+    async serviceStream(resource,params={},retry=true){
+      // Preuzimanje velikog Drive fajla bez baferovanja (backup): vraća Response čije telo ruta prosleđuje dalje.
+      if(typeof resource!=='string' || !/^\/files\/[a-zA-Z0-9_-]+(?:\/export)?$/.test(resource))throw Error('Neispravna Drive putanja.');
+      const generation=epoch,access=await refresh();
+      if(!tokens.scope.split(' ').includes(driveScope) && !tokens.scope.split(' ').includes(driveWriteScope))throw Error('Google dozvola za Drive nije odobrena.');
+      const url=new URL('https://www.googleapis.com/drive/v3'+resource);for(const [key,value] of Object.entries(params))if(value!==undefined && value!=='')url.searchParams.set(key,String(value));
+      let response;try{response=await fetchImpl(url,{headers:{Authorization:'Bearer '+access},signal:AbortSignal.timeout(60*60*1000)});}catch{throw Error('Google nije dostupan. Proveri internet vezu i pokušaj ponovo.');}
+      if(generation!==epoch){await response.body?.cancel().catch(()=>{});throw Error('Google veza je promenjena. Pokušaj ponovo.');}
+      if(response.status===401 && retry){await response.body?.cancel().catch(()=>{});await refresh(true);return this.serviceStream(resource,params,false);}
+      if(!response.ok){let message='';try{message=(await response.json())?.error?.message || '';}catch{}throw Error(`Drive preuzimanje nije uspelo (${response.status})${message?': '+message:''}.`);}
+      return response;
+    },
     async serviceWrite(service,resource,data,{method='POST',etag='',params={},raw,contentType}={}){
       const config={gmail:[apiRoot,gmailWriteScope],drive:['https://www.googleapis.com/drive/v3',driveWriteScope],tasks:['https://tasks.googleapis.com/tasks/v1',tasksWriteScope],calendar:['https://www.googleapis.com/calendar/v3',calendarWriteScope]}[service];
       const patterns={gmail:/^\/(?:messages\/import|messages(?:\/[a-f0-9]+(?:\/(?:modify|trash|untrash))?)?|drafts(?:\/[a-zA-Z0-9_-]+(?:\/send)?)?|drafts\/send|messages\/send|labels(?:\/[a-zA-Z0-9_-]+)?)$/i,drive:/^\/files(?:\/[a-zA-Z0-9_-]+(?:\/copy)?)?$/,tasks:/^\/(?:users\/@me\/lists(?:\/[a-zA-Z0-9_@-]+)?|lists\/[a-zA-Z0-9_@-]+\/tasks(?:\/[a-zA-Z0-9_@-]+(?:\/move)?)?)$/,calendar:/^\/calendars\/(?:[a-zA-Z0-9_@.#-]|%[a-fA-F0-9]{2})+\/events(?:\/[a-zA-Z0-9_@-]+)?$/};

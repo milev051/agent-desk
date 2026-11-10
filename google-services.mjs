@@ -53,6 +53,19 @@ export function createGoogleServices(auth,{now=Date.now}={}){
       const data=await request('drive','/files/'+id(fileId)+(exports[file.mimeType]?'/export':''),exports[file.mimeType]?{mimeType}:{alt:'media',supportsAllDrives:true},true);
       return {file,mimeType,data};
     },
+    async download(fileId,format='office'){
+      // Za backup: običan fajl bez ograničenja veličine; Google Docs/Sheets/Slides u Office formatu (format=office) ili PDF (format=pdf).
+      if(!['office','pdf'].includes(format))throw Error('format mora biti office ili pdf.');
+      const file=await this.file(fileId);
+      const office={'application/vnd.google-apps.document':['application/vnd.openxmlformats-officedocument.wordprocessingml.document','.docx'],'application/vnd.google-apps.spreadsheet':['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','.xlsx'],'application/vnd.google-apps.presentation':['application/vnd.openxmlformats-officedocument.presentationml.presentation','.pptx'],'application/vnd.google-apps.drawing':['application/pdf','.pdf'],'application/vnd.google-apps.script':['application/vnd.google-apps.script+json','.json'],'application/vnd.google-apps.jam':['application/pdf','.pdf']};
+      if(file.mimeType==='application/vnd.google-apps.folder' || file.mimeType==='application/vnd.google-apps.shortcut')throw Error('Folder i prečica nemaju sadržaj.');
+      if(file.mimeType?.startsWith('application/vnd.google-apps.')){
+        const target=format==='pdf'?['application/pdf','.pdf']:office[file.mimeType];
+        if(!target)throw Error('Ovaj Google format nema izvoz (npr. Forms, Sites). Otvori webViewLink.');
+        return {file,mimeType:target[0],extension:target[1],response:await auth.serviceStream('/files/'+id(fileId)+'/export',{mimeType:target[0]})};
+      }
+      return {file,mimeType:file.mimeType || 'application/octet-stream',extension:'',response:await auth.serviceStream('/files/'+id(fileId),{alt:'media',supportsAllDrives:true,acknowledgeAbuse:true})};
+    },
     async text(fileId){const {file,mimeType,data}=await this.content(fileId);if(!mimeType.startsWith('text/') && !['application/json','application/xml','application/javascript'].includes(mimeType))throw Error('Ovaj fajl je binaran. Preuzmi ga kroz /content i koristi alat za taj format.');const text=data.toString('utf8');return {file,text:text.slice(0,100000),truncated:text.length>100000,note:file.mimeType==='application/vnd.google-apps.spreadsheet'?'CSV izvoz obuhvata samo prvi list.':''};},
     async lists(paging={}){const result=await request('tasks','/users/@me/lists',page(paging));return {lists:result.items || [],nextPageToken:result.nextPageToken || null};},
     async tasks(listId,{showCompleted=false,...paging}={}){if(typeof showCompleted!=='boolean')throw Error('showCompleted mora biti boolean.');const result=await request('tasks','/lists/'+id(listId)+'/tasks',{...page(paging),showCompleted,showHidden:showCompleted});return {tasks:result.items || [],nextPageToken:result.nextPageToken || null};},
