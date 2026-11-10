@@ -90,3 +90,6 @@ Format: `- **Šta:** … · **Modeli/alati:** … · **Zašto / pouka:** …` po
 
 ## 2026-11-10
 - **Šta:** Lokalni backup Google Drive-a: ruta `GET /api/integrations/drive/files/ID/download` (bez limita od 10 MB, Docs/Sheets/Slides u docx/xlsx/pptx) i `scripts/drive-backup.mjs` (ceo folder sa `--full`, ostatak Drive-a samo dokumenti sa `--docs`, manifest i nastavak). Prvi backup: ROOM 211 ceo + dokumenti, ~14 GB u `~/Drive backup/milev051`. · **Modeli/alati:** Claude Opus 5.5, Node.js, npm test (441/441). · **Zašto / pouka:** Drive ima 121 GB, a disk 29 GB slobodno, pa se ne kopira sve; slike i video van ROOM 211 ostaju samo na Drive-u. ROOM211 Workspace nalog još nije povezan. Izvor: čet 8b4eb015-8bc9-4426-8a1a-879ac94ad218.
+
+## 2026-11-11
+- **Šta:** Drive backup (13 GB, 2005 fajlova, 6 grešaka u `_greske.json`) premešten sa internog diska na eksterni SSD `/Volumes/SSD/Drive backup`. Kopija proverena (isti spisak i veličine), original obrisan, na disku oslobođeno 13 GB.

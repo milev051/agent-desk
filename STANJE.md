@@ -12,6 +12,6 @@ _2026-11-09 17:40, čet b7edfcb8_
 - Arhiva četova 3 dana; istek briše i Claude sesiju (claude-sessions.mjs).
 - Claude četovi sa punim pristupom: isključen plugin cc-plugin-privacy (Allow zbog mejla); most potvrđuje „1. Yes“ i šalje rezervni Enter, dnevnik data/claude-terminal-log/.
 - Tabla projekata (/#tabla): merenje prelaza; sledeće je poređenje posle nedelju dana (od 2026-11-06).
-- Drive backup (2026-11-10, čet 8b4eb015): `scripts/drive-backup.mjs` + ruta `/drive/files/ID/download`; prvi backup ROOM 211 ceo + dokumenti (~14 GB) u `~/Drive backup/milev051`, dnevnik `backup.log`, greške `_greske.json`. Ponovno pokretanje preskače postojeće. ROOM211 Workspace Drive nije obuhvaćen (nalog nije povezan).
+- Drive backup (2026-11-10, čet 8b4eb015): `scripts/drive-backup.mjs` + ruta `/drive/files/ID/download`; prvi backup ROOM 211 ceo + dokumenti (~14 GB) premešten 2026-11-11 na eksterni SSD `/Volumes/SSD/Drive backup/milev051` (exFAT), dnevnik `backup.log`, greške `_greske.json`. Ponovno pokretanje preskače postojeće. ROOM211 Workspace Drive nije obuhvaćen (nalog nije povezan).
 - Poznato: test „browser: stvarni klik…“ (live-preview) povremeno padne pod opterećenjem, sam prolazi.
 - Iz drugih četova (milev.rs/projektor): otvoreno da li plave linkove uvesti na ceo milev.rs.
