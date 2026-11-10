@@ -79,7 +79,7 @@ Prefiks `/api/integrations/drive`:
 | PATCH `/files/ID` | Metapodaci, pomeranje, sadržaj običnog fajla, smeće ili vraćanje |
 | POST `/files/ID/copy` | Kopija, opciono `name` i `parents` |
 
-Novi fajl ima `name`, opciono `description`, `mimeType`, `parents` kao niz ID-jeva i `text` ili `contentBase64`. Folder ima `mimeType: "application/vnd.google-apps.folder"` bez sadržaja. Za pomeranje PATCH prihvata `addParents` i `removeParents` kao nizove. Za smeće `trashed: true`; za vraćanje `trashed: false`. Ne prihvata lokalni `path`, pa API ne čita proizvoljne lokalne fajlove. Otpremanje sadržaja ograničeno je na 10 MB.
+Novi fajl ima `name`, opciono `description`, `mimeType`, `parents` kao niz ID-jeva i `text` ili `contentBase64`. Folder ima `mimeType: "application/vnd.google-apps.folder"` bez sadržaja. Za pomeranje PATCH prihvata `addParents` i `removeParents` kao nizove. Za smeće `trashed: true`; za vraćanje `trashed: false`. Ne prihvata lokalni `path`, pa API ne čita proizvoljne lokalne fajlove. Otpremanje sadržaja ograničeno je na 50 MB po fajlu (telo zahteva do 70 MB zbog base64).
 
 Drive q koristi svoj jezik, npr. `name contains 'Izveštaj'` ili `'FOLDER_ID' in parents`. Pretraga isključuje smeće. Docs i Slides se izvoze u tekst, Sheets u CSV prvog lista, crteži u PDF. Tekst je ograničen na 100.000 znakova. Metapodaci Google Docs/Sheets/Slides mogu da se menjaju, ali zamena njihovog postojećeg sadržaja traži posebne Docs/Sheets/Slides API integracije, koje ovde nisu ugrađene. Trajno brisanje fajlova nije izloženo; koristi smeće.
 

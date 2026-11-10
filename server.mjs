@@ -781,7 +781,7 @@ const server = http.createServer(async (req, res) => {
       const acct=googleAccounts.pick(url.searchParams.get('account'));
       const [,service,route='']=url.pathname.match(/^\/api\/integrations\/(drive|tasks|calendar)(.*)$/);
       if(['POST','PATCH','DELETE'].includes(req.method)){
-        const value=await body(req,service==='drive'?15*1024*1024:200000),method=req.method;
+        const value=await body(req,service==='drive'?70*1024*1024:200000),method=req.method;
         if(service==='drive'){
           if(route==='/files' && method==='POST')return json(201,await acct.write.saveFile(value));
           const file=route.match(/^\/files\/([^/]+)(?:\/(copy))?$/);

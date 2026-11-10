@@ -1,11 +1,11 @@
 import {randomBytes} from 'node:crypto';
-const maxBytes=10*1024*1024,maxImportBytes=50*1024*1024;
+const maxBytes=10*1024*1024,maxImportBytes=50*1024*1024,maxDriveBytes=50*1024*1024;
 function object(value,keys){if(!value || typeof value!=='object' || Array.isArray(value) || Object.keys(value).some(k=>!keys.includes(k)))throw Error('Neispravna polja zahteva.');return {...value};}
 function text(value,max=2000){if(typeof value!=='string' || value.length>max)throw Error('Neispravan tekst ili predugačak sadržaj.');return value;}
 function id(value){if(typeof value!=='string' || !/^[a-zA-Z0-9_@-]{1,250}$/.test(value))throw Error('Neispravan Google ID.');return encodeURIComponent(value);}
 function mailId(value){if(typeof value!=='string' || !/^[a-f0-9]{1,100}$/i.test(value))throw Error('Neispravan Gmail ID.');return value;}
 function requiredConfirmation(value){if(value?.confirmed!==true)throw Error('Ova operacija zahteva confirmed: true i izričit zahtev korisnika.');}
-function base64(value){if(typeof value!=='string' || value.length>Math.ceil(maxBytes/3)*4 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value))throw Error('Neispravan base64 sadržaj ili fajl veći od 10 MB.');const data=Buffer.from(value,'base64');if(data.length>maxBytes)throw Error('Fajl je veći od 10 MB.');return data;}
+function base64(value,limit=maxBytes){if(typeof value!=='string' || value.length>Math.ceil(limit/3)*4 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value))throw Error('Neispravan base64 sadržaj ili fajl veći od '+limit/1024/1024+' MB.');const data=Buffer.from(value,'base64');if(data.length>limit)throw Error('Fajl je veći od '+limit/1024/1024+' MB.');return data;}
 function mime(value){if(typeof value!=='string' || !/^[a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+$/.test(value))throw Error('Neispravan MIME tip.');return value;}
 function recipients(value){const list=typeof value==='string'?[value]:value;if(!Array.isArray(list) || list.length>100 || list.some(v=>typeof v!=='string' || !/^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(v) || v.length>254))throw Error('Unesi mejl adrese kao string ili niz adresa, bez imena i novih redova.');return list;}
 const encodedHeader=value=>'=?UTF-8?B?'+Buffer.from(value).toString('base64')+'?=';
@@ -62,8 +62,8 @@ export function createGoogleWrite(auth,services){
     async saveFile(value,fileId){
       const v=driveData(value,!!fileId),route='/files'+(fileId?'/'+id(fileId):''),params={supportsAllDrives:true,fields:'id,name,mimeType,parents,trashed,webViewLink'};
       for(const key of ['addParents','removeParents'])if(v[key]){params[key]=v[key].map(id).join(',');delete v[key];}
-      const bytes='contentBase64' in v?base64(v.contentBase64):'text' in v?Buffer.from(text(v.text,maxBytes)):null;delete v.contentBase64;delete v.text;
-      if(bytes){if(bytes.length>maxBytes)throw Error('Fajl je veći od 10 MB.');if(v.mimeType==='application/vnd.google-apps.folder')throw Error('Folder nema sadržaj.');if(fileId && (await services.file(fileId)).mimeType?.startsWith('application/vnd.google-apps.'))throw Error('Sadržaj Google Docs, Sheets i Slides menja se njihovim posebnim API-jima. Ovde možeš menjati metapodatke i otpremati obične fajlove.');
+      const bytes='contentBase64' in v?base64(v.contentBase64,maxDriveBytes):'text' in v?Buffer.from(text(v.text,maxBytes)):null;delete v.contentBase64;delete v.text;
+      if(bytes){if(bytes.length>maxDriveBytes)throw Error('Fajl je veći od 50 MB.');if(v.mimeType==='application/vnd.google-apps.folder')throw Error('Folder nema sadržaj.');if(fileId && (await services.file(fileId)).mimeType?.startsWith('application/vnd.google-apps.'))throw Error('Sadržaj Google Docs, Sheets i Slides menja se njihovim posebnim API-jima. Ovde možeš menjati metapodatke i otpremati obične fajlove.');
         const boundary='agentdesk_'+randomBytes(16).toString('hex'),raw=Buffer.concat([Buffer.from('--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(v)+'\r\n--'+boundary+'\r\nContent-Type: '+(v.mimeType?.startsWith('application/vnd.google-apps.')?'text/plain':v.mimeType || 'application/octet-stream')+'\r\n\r\n'),bytes,Buffer.from('\r\n--'+boundary+'--\r\n')]);
         return write('drive',route,undefined,{method:fileId?'PATCH':'POST',params:{...params,uploadType:'multipart'},raw,contentType:'multipart/related; boundary='+boundary});
       }
