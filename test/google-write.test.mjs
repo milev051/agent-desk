@@ -32,6 +32,8 @@ test('Drive otprema bytes na multipart, pomera i vraća iz smeća bez lokalnog �
   await f.writer.saveFile({trashed:false,addParents:['new'],removeParents:['old']},'file1');assert.deepEqual(f.calls.at(-1)[2],{trashed:false});assert.equal(f.calls.at(-1)[3].params.addParents,'new');
   await assert.rejects(f.writer.saveFile({name:'X',path:'/private/secret'}),/polja/);await assert.rejects(f.writer.saveFile({name:'X',mimeType:'text/plain\r\nBad: header',text:'Y'}),/MIME/);
   f.services.file=async()=>({mimeType:'application/vnd.google-apps.document'});await assert.rejects(f.writer.saveFile({text:'Y'},'file1'),/posebnim API/);
+  const big=Buffer.alloc(20*1024*1024,7);await f.writer.saveFile({name:'video.mov',mimeType:'video/quicktime',contentBase64:big.toString('base64')});assert.ok(f.calls.at(-1)[3].raw.length>big.length);
+  await assert.rejects(f.writer.saveFile({name:'X',contentBase64:Buffer.alloc(50*1024*1024+1).toString('base64')}),/50 MB/);await assert.rejects(f.writer.saveFile({name:'X',contentBase64:'QQ=A'}),/base64/);
 });
 test('Calendar pozivnice zahtevaju eksplicitnu odluku, brisanje čuva verziju',async()=>{
   const calls=[];const s=createGoogleServices({serviceRequest:async()=>({etag:'"v1"',attendees:[{email:'test@example.test'}]}),calendarWrite:async(...args)=>{calls.push(args);return {};}});
