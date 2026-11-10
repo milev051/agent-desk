@@ -87,3 +87,6 @@ Format: `- **Šta:** … · **Modeli/alati:** … · **Zašto / pouka:** …` po
 - **Izmena 2026-11-09:** Claude (Opus) je prvi agent u izboru za nov čet i podrazumevani agent novog četa, ChatGPT/Codex drugi (app.js agentOrder, server.mjs). Čet b7edfcb8.
 - **Izmena 2026-11-09:** tekst odgovora agenta je beo umesto boje modela; boja modela ostaje na nazivu modela (style.css). Čet b7edfcb8.
 - **Izmena 2026-11-10:** Drive otpremanje do 50 MB po fajlu (google-write.mjs, telo do 70 MB) i base64 provera bez regex rekurzije, koja je pucala na fajlovima od oko 5 MB („Maximum call stack size exceeded“). Commit 316c32f, 66b05ce. Čet a8a17583.
+
+## 2026-11-10
+- **Šta:** Lokalni backup Google Drive-a: ruta `GET /api/integrations/drive/files/ID/download` (bez limita od 10 MB, Docs/Sheets/Slides u docx/xlsx/pptx) i `scripts/drive-backup.mjs` (ceo folder sa `--full`, ostatak Drive-a samo dokumenti sa `--docs`, manifest i nastavak). Prvi backup: ROOM 211 ceo + dokumenti, ~14 GB u `~/Drive backup/milev051`. · **Modeli/alati:** Claude Opus 5.5, Node.js, npm test (441/441). · **Zašto / pouka:** Drive ima 121 GB, a disk 29 GB slobodno, pa se ne kopira sve; slike i video van ROOM 211 ostaju samo na Drive-u. ROOM211 Workspace nalog još nije povezan. Izvor: čet 8b4eb015-8bc9-4426-8a1a-879ac94ad218.
