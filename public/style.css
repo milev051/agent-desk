@@ -1008,6 +1008,7 @@ body #chats .folder-row:hover,body #chats .folder-row.open{color:#e6e6e6;backgro
 
 /* Podčet koji čeka red za GPT slike. */
 #chats .compact-status.image-wait{font-size:12px;line-height:1;opacity:.85}
+#chats .compact-status.network-wait,#chats .compact-status.network-resumed{font-size:12px;line-height:1;opacity:.85}
 
 /* Povezani nalozi (Google, GitHub): slika profila, adresa, stanje i dugmad u jednom redu. */
 .account-list{list-style:none;margin:10px 0;padding:0;display:flex;flex-direction:column;gap:6px}

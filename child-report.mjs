@@ -13,6 +13,7 @@ export function childReportText(child,reply,running=[],{archive=false,address='h
   ?`Podčet „${child.title}“ (${child.id}) je završio greškom: ${brief.error || 'nepoznata greška'}`
   :`Podčet „${child.title}“ (${child.id}) je završio.`;
  return [`Automatski izveštaj Agent Deska. ${head}`,
+  reply.networkResumed && 'Podčet je bio prekinut zbog pada veze; Agent Desk ga je sam nastavio kad se veza vratila.',
   reply.status!=='error' && `Rezultat po podagentu (nije nezavisno provereno): ${brief.result}`,
   brief.question && `Pitanje podagenta: ${brief.question}`,
   running.length?`Još rade: ${running.map(c=>`„${c.title}“`).join(', ')}. Za njih stiže poseban izveštaj; ne čekaj ih u petlji.`:'Nijedan drugi podčet više ne radi.',

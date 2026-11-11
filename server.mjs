@@ -9,6 +9,7 @@ import {plannerActivity,chatChanges} from './planner-activity.mjs';
 import {createDispatcher,chooseDispatcher,dispatcherContext} from './dispatcher.mjs';
 import {watchAllowed,startWatch,finishWatch,queueOrigin} from './dispatcher-watch.mjs';
 import {queueChildReport,quietParentFinish} from './child-report.mjs';
+import {markNetworkFailure,createNetworkResume,networkResumeOrigin} from './network-resume.mjs';
 import {needsImageSlot,busyImageJob,startWaitingImageJobs} from './image-queue.mjs';
 import {createResourceMonitor,nextResourceWaiting} from './resources.mjs';
 import {createGoogleWrite} from './google-write.mjs';
@@ -315,7 +316,7 @@ async function body(req,limit=200000) {
   let data = ''; for await (const chunk of req) { data += chunk; if (data.length > limit) throw new Error('Poruka je predugačka.'); }
   return JSON.parse(data || '{}');
 }
-function stop(id,{restart=false}={}) { const chat=chats.find(c=>c.id===id);if(!restart && chat?.resourceWaiting){delete chat.resourceWaiting;update();}if(!restart && chat){delete chat.restartResume;const reply=chat.messages.at(-1);if(reply?.status==='running')reply.autoResume=false;}const run = running.get(id); if (run) { run.stopped = true; if(run.cancelRetry){run.cancelRetry();return;} try { process.kill(-run.child.pid, 'SIGTERM'); } catch {} run.killTimer = setTimeout(() => { try { process.kill(-run.child.pid, 'SIGKILL'); } catch {} }, 2000); run.killTimer.unref(); } }
+function stop(id,{restart=false}={}) { const chat=chats.find(c=>c.id===id);if(!restart && chat?.resourceWaiting){delete chat.resourceWaiting;update();}if(!restart && chat){delete chat.restartResume;delete chat.networkResume;const reply=chat.messages.at(-1);if(reply?.status==='running')reply.autoResume=false;}const run = running.get(id); if (run) { run.stopped = true; if(run.cancelRetry){run.cancelRetry();return;} try { process.kill(-run.child.pid, 'SIGTERM'); } catch {} run.killTimer = setTimeout(() => { try { process.kill(-run.child.pid, 'SIGKILL'); } catch {} }, 2000); run.killTimer.unref(); } }
 // Kad agent završi, otvara ono na čemu je radio, dok korisnik to ne isključi u podešavanjima. Sam čet se ne otvara; o njemu javlja obaveštenje.
 function openFinishedWork(chat,reply){
  if(process.platform!=='darwin' || process.env.AGENT_DESK_DISABLE_LIMITS==='1' || !notificationSettings.get().autoOpen)return;
@@ -420,10 +421,15 @@ function scheduleResources(){
 scheduleResources();
 function drainQueue(chat) {
   if(shuttingDown || chat.queuePaused || chat.queueError || running.has(chat.id) || !chat.queue?.length)return;
+  // Dok čet čeka vezu, automatski izveštaji čekaju nastavak; korisnikova poruka iz reda kreće odmah.
+  if(chat.networkResume && chat.queue.every(item=>item.origin==='child-report'))return;
   // Sve poruke koje čekaju idu zajedno, kao jedna poruka, da agent ne počinje poseban odgovor za svaku.
   const batch=chat.queue.splice(0),interrupted=chat.queueInterrupted;delete chat.queueInterrupted;
   send(chat,(interrupted?'(Prethodni odgovor je prekinut da bi ova poruka stigla odmah; nastavi uzimajući je u obzir.)\n\n':'')+batch.map(item=>item.text).join('\n\n'),{createdAt:batch[0].createdAt,origin:queueOrigin(batch)}).catch(error=>{chat.queue.unshift(...batch);chat.queueError=error.message;update();});
 }
+// Čet pao zbog prekida veze nastavlja se sam kad veza proradi; poruke iz reda idu uz nastavak.
+const networkResume=createNetworkResume({chats:()=>chats,isRunning:id=>running.has(id),changed:update,isShuttingDown:()=>shuttingDown,
+  resume:async(chat,prompt,pending)=>{const batch=chat.queuePaused || chat.queueError?[]:(chat.queue || []).splice(0);try{await send(chat,[prompt,...batch.map(item=>item.text)].join('\n\n'),{origin:networkResumeOrigin,resumeFrom:pending.messageId,requestId:'network-'+pending.messageId});}catch(error){chat.queue?.unshift(...batch);throw error;}}});
 // Prethodni deo četa posle nastavka služi samo kao arhiva, dok ga korisnik ne otključa.
 const lockedPart=chat=>!!chat.continuedTo && !chat.continuedUnlocked;
 const lockedError='Ovaj deo je zaključan. Piši u nastavku četa ili ga otključaj.';
@@ -455,14 +461,16 @@ async function send(chat, prompt, options={}) {
   const historyTransferred=prepared.historyTransferred;
   const spec = command(chat,prepared.text,binaries[agent]);
   let child = spawn(spec.executable, spec.args, { cwd: chat.settings.cwd, env: { ...process.env, NO_COLOR: '1' }, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
-  const reply = { id: randomUUID(), role: 'assistant', notificationOrigin:options.origin || 'user', agent, model: chat.settings.model || '', configuredModel: chat.settings.model || '', historyTransferred, usageTracked:true, usageCwd:chat.settings.cwd, text: '', status: 'running', projectDocumentation:options.origin==='project-state', autoResume:!options.minimalContext && chat.resumeAfterRestart!==false, activity: 'Pokrećem agenta…', createdAt: Date.now() };
+  const reply = { id: randomUUID(), role: 'assistant', notificationOrigin:options.origin || 'user', agent, model: chat.settings.model || '', configuredModel: chat.settings.model || '', historyTransferred, usageTracked:true, usageCwd:chat.settings.cwd, text: '', status: 'running', projectDocumentation:options.origin==='project-state', autoResume:!options.minimalContext && chat.resumeAfterRestart!==false, activity: 'Pokrećem agenta…', createdAt: Date.now(), ...(options.origin===networkResumeOrigin?{networkResumed:true}:{}) };
   if(child.pid)reply.cliProcess={pid:child.pid,identity:processIdentity(child.pid)};
   const sessionMark=chat.sessionMark,contextBefore=sessionMark?chat.sessionBefore:0;delete chat.ephemeral;delete chat.sessionReset;delete chat.sessionMark;delete chat.sessionBefore;
   if(!options.minimalContext)chat.riskNote=null;
   const asked={ id: randomUUID(), role: 'user', text: prompt, createdAt,sentAt,origin:options.origin || 'user',...(sessionMark?{sessionMark}:{}),...(contextBefore?{contextBefore}:{}),...(options.requestId?{requestId:options.requestId}:{}),...(options.resumeFrom?{resumeFrom:options.resumeFrom}:{}) };chat.messages.push(asked, reply);
   if (!chat.titleManual && ['Empty','Novi čet'].includes(chat.title)) { chat.title = prompt.slice(0, 52); chat.titleFromPrompt = true; }
   chat.updatedAt = Date.now();
-  delete chat.restartResume;
+  delete chat.restartResume;delete chat.networkResume;
+  // Oznaka „nastavljeno posle prekida veze“ ostaje dok korisnik ne pošalje novu poruku.
+  if(options.origin===networkResumeOrigin)chat.networkResumed={at:Date.now(),messageId:reply.id};else if(!options.origin || options.origin==='user')delete chat.networkResumed;
   if(!options.minimalContext)try{const text=agentVisibleInput(spec,agent);contextSnapshots.write(chat.id,{sentAt,agent,model:chat.settings.model || '',messageId:reply.id,sessionActive:!!previousSession,text,stats:contextTextStats(text)});}catch(error){console.error('Snimak konteksta:',error.message);}
   chat.queuePaused=false;delete chat.queueError;
   const run = { child, stopped: false, reply, projectBefore, origin: options.origin || 'user' }; run.done = new Promise(resolve=>run.resolve=resolve); running.set(chat.id, run); update();
@@ -542,6 +550,9 @@ async function send(chat, prompt, options={}) {
     reply.status = run.restarting ? 'interrupted' : run.stopped ? 'stopped' : code === 0 && !error && !reply.error ? 'done' : 'error';
     if (reply.status === 'error') reply.error ||= error?.message || stderr.trim() || `Agent je završio sa kodom ${code}.`;
     if (!reply.text && reply.status === 'done') { reply.status = 'error'; reply.error = 'Agent je završio bez tekstualnog odgovora. Proveri CLI prijavu.'; }
+    // Prolazna mrežna greška: čet čeka vezu i nastavlja se sam, bez obaveštenja o grešci i izveštaja glavnom četu.
+    const networkWait=!options.minimalContext && markNetworkFailure(chat,reply,{stopped:run.stopped || run.restarting,shuttingDown});
+    if(networkWait)setImmediate(()=>networkResume.schedule());
     if(reply.status==='done'){chat.transferPending=false;if(!options.minimalContext){chat.sharedFolderReads ||= {};chat.sharedFolderReads[agent]={...sharedContext.state,sessionId:chat.sessions[agent] || null};}chat.childReadOffsets ||= {};chat.childReadOffsets[agent]={...chat.childReadOffsets[agent],...linkedUpdates.consumed};}
     if(chat.sessions[agent]){chat.sessionOffsets ||= {};chat.sessionOffsets[agent]=chat.messages.length;}
     if(reply.status==='stopped' && !run.sendQueueNow)chat.queuePaused=true;
@@ -562,7 +573,7 @@ async function send(chat, prompt, options={}) {
     // Završetak podčeta ne prikazuje desktop/push obaveštenje, ni pri grešci ili zaustavljanju.
     // Obaveštenje za misli ne nosi sadržaj, da ga niko ne pročita sa zaključanog ekrana.
     // Čet koji prati dispečer ne javlja se sam; korisnik dobija jedno obaveštenje, od dispečera.
-    if(outcome && !watchReport && !options.silent && !run.sendQueueNow && !chat.parentChatId){
+    if(outcome && chat.networkResume?.messageId!==reply.id && !watchReport && !options.silent && !run.sendQueueNow && !chat.parentChatId){
       if(!chat.thoughts)openFinishedWork(chat,reply);
       // Izveštaj Dispečera o završenom podagentu ostaje u četu, bez drugog završnog popupa.
       if(options.origin!=='dispatcher-watch' && !quietParentFinish(chat,{origin:options.origin,chats,isRunning:id=>running.has(id)})){
@@ -574,7 +585,7 @@ async function send(chat, prompt, options={}) {
     }
     // Greška podčeta stiže agentu koji ga je pozvao; ako taj još radi, poruka čeka u redu i nastavlja se čim završi.
     // Podčet koji završi (gotovo ili greška) budi glavnog agenta izveštajem; više izveštaja u kratkom roku stiže zajedno.
-    if(!watchReport && chat.parentChatId && !shuttingDown && process.env.AGENT_DESK_CHILD_REPORTS!=='0'){let report=null;try{report=queueChildReport(chat,reply,{origin:options.origin,silent:options.silent,chats,isRunning:id=>running.has(id),lockedPart,archive:notificationSettings.get().autoArchive,address:`http://127.0.0.1:${port}`});}catch(error){console.error('Izveštaj podčeta:',error.message);}if(report){update();setTimeout(()=>drainQueue(report.parent),3000).unref?.();}}
+    if(chat.networkResume?.messageId!==reply.id && !watchReport && chat.parentChatId && !shuttingDown && process.env.AGENT_DESK_CHILD_REPORTS!=='0'){let report=null;try{report=queueChildReport(chat,reply,{origin:options.origin,silent:options.silent,chats,isRunning:id=>running.has(id),lockedPart,archive:notificationSettings.get().autoArchive,address:`http://127.0.0.1:${port}`});}catch(error){console.error('Izveštaj podčeta:',error.message);}if(report){update();setTimeout(()=>drainQueue(report.parent),3000).unref?.();}}
     if(!shuttingDown)restartManager.checkScheduled();
   }
   attach(child,spec.input);
@@ -1421,7 +1432,7 @@ return json(200,{ok:true});}
 });
 server.listen(port, '127.0.0.1', () => {phone.start();livePreview.start();
   // Red čekanja prekinut restartom servera nastavlja sam; red pauziran zaustavljanjem ili greškom čeka korisnika.
-  setTimeout(()=>{void resumeRestartChats({chats,isRunning:id=>running.has(id),send,changed:update,drainQueue,isShuttingDown:()=>shuttingDown}).then(()=>{for(const chat of chats)drainQueue(chat);startImageQueue();}).catch(error=>console.error('Nastavak posle restarta:',error.message));},3000).unref();
+  setTimeout(()=>{void resumeRestartChats({chats,isRunning:id=>running.has(id),send,changed:update,drainQueue,isShuttingDown:()=>shuttingDown}).then(()=>{for(const chat of chats){if(chat.networkResume?.status==='starting')chat.networkResume.status='waiting';drainQueue(chat);}startImageQueue();networkResume.schedule();}).catch(error=>console.error('Nastavak posle restarta:',error.message));},3000).unref();
   limits.start();warmup.start();if(process.env.AGENT_DESK_DISABLE_LIMITS!=='1')cliUpdates.start();console.log(`Agent Desk: http://127.0.0.1:${port}`);if(process.platform==='darwin' && !process.env.AGENT_DESK_CONFIG){try{if(installWatchdog({configDir:path.dirname(phoneOriginFile)}))console.log('Čuvar instaliran.');}catch(e){console.error('Čuvar: '+e.message);}}});
 function shutdown() {
  if(shuttingDown)return;shuttingDown=true;
