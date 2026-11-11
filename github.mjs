@@ -10,7 +10,7 @@ function repository(data){
   return {fullName,url:'https://github.com/'+fullName,cloneUrl:'https://github.com/'+fullName+'.git',private:data.private===true,archived:data.archived===true,defaultBranch:typeof data.default_branch==='string'?data.default_branch:'',description:typeof data.description==='string'?data.description.slice(0,500):'',pushedAt:data.pushed_at || null};
 }
 
-export function createGithub({configDir,executable,run=execute,openLogin=async()=>{},now=Date.now,fetchImpl=fetch}={}){
+export function createGithub({configDir,executable,run=execute,openLogin=async()=>{},now=Date.now,fetchImpl=fetch,retryDelay=3000}={}){
   const file=path.join(configDir,'github.json');
   let enabled=false;try{enabled=JSON.parse(fs.readFileSync(file,'utf8')).enabled===true;}catch{}
   let accounts=[],avatars=new Map(),connected=false,username='',error='',checkedAt=null,loginUntil=0,pending=null,connecting=null,epoch=0;
@@ -34,8 +34,9 @@ export function createGithub({configDir,executable,run=execute,openLogin=async()
     const generation=epoch;
     const work=(async()=>{
       try{
-        const user=await api('/user');
-        if(!segment(user?.login))throw Error();
+        // Jedan neuspeo poziv (kratak prekid mreže) ne proglašava prekid veze: proba se još jednom.
+        const check=async()=>{const user=await api('/user');if(!segment(user?.login))throw Error();return user;};
+        let user;try{user=await check();}catch{if(generation!==epoch)return status();await new Promise(resolve=>setTimeout(resolve,retryDelay));if(generation!==epoch)return status();user=await check();}
         if(generation!==epoch)return status();
         username=user.login;connected=true;error='';loginUntil=0;await loadAccounts();
       }catch{

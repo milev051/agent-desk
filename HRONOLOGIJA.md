@@ -94,3 +94,6 @@ Format: `- **Šta:** … · **Modeli/alati:** … · **Zašto / pouka:** …` po
 ## 2026-11-11
 - **Šta:** Drive backup (13 GB, 2005 fajlova, 6 grešaka u `_greske.json`) premešten sa internog diska na eksterni SSD `/Volumes/SSD/Drive backup`. Kopija proverena (isti spisak i veličine), original obrisan, na disku oslobođeno 13 GB.
 - **Šta:** Automatski nastavak četa posle prekida veze (`network-resume.mjs`, af7c00b): prolazne mrežne greške stavljaju čet i podčet u red, server proverava vezu ka dobavljaču (30 s, 1, 2, pa svakih 5 min) i nastavlja isti čet u istoj sesiji; najviše 5 nastavaka za 24 h; oznake ⌁/↻ u bočnoj traci. · **Modeli/alati:** Claude Opus 5.5, npm test (450/450). · **Zašto / pouka:** u četu 16e6c21a podagenti su posle pada interneta tri puta za dva dana stajali u grešci, jednom 6,5 sati preko noći. Izvor: čet a19e7a2e-95f4-4db8-ab61-aa588633cd54.
+
+## 2026-11-11
+- **Šta:** GitHub provera prijave ponavlja poziv posle 3 s pre nego što proglasi prekid veze (github.mjs). · **Modeli/alati:** Claude Opus 5.5, Node.js, npm test (451/451). · **Zašto / pouka:** Popup „GitHub prijava ne radi“ se pojavio dok je gh bio ispravno prijavljen; jedan neuspeo poziv tokom kratkog prekida mreže bio je dovoljan. Izvor: čet 015c5925-280c-49f0-b694-f92017394a91.

@@ -9,7 +9,7 @@ function fixture(){
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'desk-github-')),calls=[];
   let authenticated=true,opened=0,clock=1000,reply;
   const repo={name:'example',owner:{login:'tester'},default_branch:'main',private:true,description:'Untrusted description',pushed_at:'2026-10-29T00:00:00Z',token:'must-not-leak'};
-  const options={configDir:dir,executable:'fake-gh',now:()=>clock,openLogin:async()=>{opened++;},run:async(file,args)=>{
+  const options={configDir:dir,executable:'fake-gh',retryDelay:0,now:()=>clock,openLogin:async()=>{opened++;},run:async(file,args)=>{
     calls.push(args);if(reply)return reply(args);
     if(!authenticated)throw Error('secret stderr must-not-leak');
     const endpoint=args.at(-1);
@@ -61,5 +61,12 @@ test('prekid GitHub veze tokom provere ili čitanja ne vraća nalog i ne otvara 
     f.reply(null);await g.connect();f.reply(()=>new Promise(resolve=>{release=resolve;}));
     const reading=g.repo('tester','example');await new Promise(resolve=>setImmediate(resolve));g.disconnect();release(JSON.stringify(f.repo));
     await assert.rejects(reading,/promenjena/);
+  }finally{f.close();}
+});
+test('jedan neuspeo GitHub poziv ne prekida vezu',async()=>{
+  const f=fixture();try{
+    const g=createGithub(f.options);await g.connect();
+    let failed=0;f.reply(args=>{if(args.at(-1)==='/user' && failed++===0)throw Error('mreža');return JSON.stringify({login:'tester'});});
+    const result=await g.refresh({force:true});assert.equal(result.connected,true);assert.equal(result.error,'');assert.equal(failed,2);
   }finally{f.close();}
 });
