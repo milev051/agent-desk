@@ -1067,3 +1067,9 @@ dialog.confirm-dialog button.danger{border-color:#a33;color:#f88}
 /* Tekst odgovora agenta je beo; boja modela ostaje samo na nazivu modela. */
 .message.assistant .message-body,.message-body .result-main,.message-body .result-full-text,.result-full-text{color:#f2f2f2}
 .message-body .result-next{color:#d8d8d8}
+/* Proteklo vreme tekućeg odgovora u redu četa (elapsed-time.mjs) */
+#chats .chat-row .chat-item>.elapsed-live{flex:none;margin-left:auto;color:#f4c75b;font-size:11px;line-height:16px;font-variant-numeric:tabular-nums;white-space:nowrap}
+#chats .chat-row .chat-item>.elapsed-live~.compact-status.draft{margin-left:6px}
+#chats .chat-row.working .chat-item:has(>.elapsed-live)::after{margin-left:6px}
+.message-meta .work-duration.elapsed-live{color:#f4c75b;font-variant-numeric:tabular-nums}
+@media(max-width:650px){#chats .chat-row .chat-item>.elapsed-live{font-size:10px}}
