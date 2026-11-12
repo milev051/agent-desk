@@ -48,6 +48,7 @@ import {quotaShares} from './quota-share.mjs';
 import {tokenCost,sessionSaving} from './pricing.mjs';
 import {createLimits} from './limits.mjs';
 import {summarizeLimits,limitsLine,exhaustedAgentError} from './limit-summary.mjs';
+import {makeSummary} from './agent-summary.mjs';
 import {createPhoneAccess} from './phone-access.mjs';
 import {createLivePreview} from './live-preview.mjs';
 import fs from 'node:fs';
@@ -602,9 +603,10 @@ async function handoffChat(chat){
  if(chat.continuedTo)throw new Error('Ovaj čet je već nastavljen.');
  const text=historyText(chat.messages.filter(m=>m.text));
  if(!text)throw new Error('Čet nema poruka za sažetak.');
- if(!titleManager.settings().configured)throw new Error('Za sažetak je potreban Google ključ iz podešavanja.');
- let summary;try{summary=cleanSummary(await titleManager.summarize(summaryRequest(clipHistory(text),chat.title)));}catch(e){throw new Error(`Sažetak nije napravljen: ${e.message}`);}
- if(!summary)throw new Error('Gemini nije vratio sažetak.');
+ // Sažetak radi model aktivan u četu (Claude/Codex), inače Claude Opus; Gemini samo kao poslednja rezerva.
+ const usable=a=>!!binaries[a] && summarizeLimits(limits.snapshot())[a]?.availability!=='iscrpljeno';
+ let summary;try{summary=cleanSummary((await makeSummary({request:summaryRequest(clipHistory(text),chat.title),settings:chat.settings,binaries,cwd:chat.settings.cwd,available:usable,gemini:titleManager.settings().configured?r=>titleManager.summarize(r):null})).text);}catch(e){throw new Error(`Sažetak nije napravljen: ${e.message}`);}
+ if(!summary)throw new Error('Model nije vratio sažetak.');
  if(!chats.includes(chat) || chat.continuedTo || running.has(chat.id))throw Object.assign(new Error('Čet je u međuvremenu promenjen. Pokušaj ponovo kada agent završi.'),{status:409});
  const now=Date.now(),settings=structuredClone(chat.settings);
  const next={id:randomUUID(),title:continuationTitle(chat.title),titleManual:true,...(chat.dispatcher?{dispatcher:true}:{}),...(chat.thoughts?{thoughts:true}:{}),...(chat.adaptiveAgent?{adaptiveAgent:chat.adaptiveAgent}:{}),...(chat.adaptivePropose?{adaptivePropose:chat.adaptivePropose}:{}),createdAt:now,updatedAt:now,settings,sessions:{},sessionOffsets:{},messages:[{id:randomUUID(),role:'assistant',agent:settings.agent,model:settings.model||'',status:'done',text:`Sažetak prethodnog četa „${chat.title}“ (${chat.id}):\n${summary}`,createdAt:now,completedAt:now,handoffFrom:chat.id},...carriedMessages(chat.messages,chat.id,randomUUID)],continuedFrom:chat.id,handoffBaseline:{...handoffBaseline(chat,now),rules:adaptive.read('prelazak')}};
