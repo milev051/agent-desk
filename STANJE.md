@@ -1,4 +1,5 @@
 # Stanje
+- 2026-11-12 (čet 56cc8727): sažetak za „Nov čet“ radi aktivni model (Claude/Codex CLI), rezerva Opus pa Gemini (agent-summary.mjs, a5d2efe); server restartovan. Sledeće: proveriti na četu sa 564k konteksta.
 _2026-11-09 17:40, čet b7edfcb8_
 - Praćenje opterećenja po četu (resources.mjs): traka na dnu bočne trake, GET /api/resources, podčetovi čekaju (⏸) kad je load ≥ 16 ili memorija kritična. Pragovi u LIMITS; proveriti posle dana rada da li su dobri.
 - Više Google naloga (google-accounts.mjs): „+ Dodaj Google nalog“, token po nalogu, rute biraju nalog preko `?account=ADRESA`, ime i slika profila (dozvola userinfo.profile). Commit 359d03d, a01051b; server restartovan.
