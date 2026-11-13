@@ -19,6 +19,7 @@ import {noticeTone,chooseNoticeSound} from './notice-sound.mjs';
 import {createCliUpdatesPanel} from './cli-updates.mjs';
 import {createGmailSettings} from './gmail-settings.mjs';
 import {createWebprosSettings} from './webpros-settings.mjs';
+import {compressImage} from './image-compress.mjs';
 import {createGithubSettings} from './github-settings.mjs';
 import {createIntegrationAlerts} from './integration-alerts.mjs';
 import {patchMessages} from './message-patch.mjs';
@@ -1662,6 +1663,7 @@ document.addEventListener('paste',e=>{if((e.target.closest('input,textarea,selec
 // Fajl sa uređaja se kopira na računar, pa ga agent čita kao i svaku drugu povezanu putanju.
 async function uploadFiles(files){
   if(!files.length || uploading)return;
+  files=await Promise.all(files.map(file=>compressImage(file)));
   if(files.some(file=>file.size>25*1024*1024))throw Error('Svaki prilog može imati najviše 25 MB.');
   if((linkedFiles.get(active)||[]).length+files.length>20)throw Error('Najviše 20 priloga u jednoj poruci.');
   uploading=true;const button=$('#files-open');button.disabled=true;button.textContent='Dodajem…';button.setAttribute('aria-label','Dodavanje priloga…');renderComposerControls();

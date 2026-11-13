@@ -99,3 +99,5 @@ Format: `- **Šta:** … · **Modeli/alati:** … · **Zašto / pouka:** …` po
 
 ## 2026-11-12
 - **Šta:** „Nov čet“ (sažetak za nastavak) više ne zavisi od Gemini ključa: sažetak pravi model aktivan u četu (Claude ili Codex CLI, bez alata i bez sesije), za Grok i Antigravity Claude Opus, a Gemini je samo poslednja rezerva (`agent-summary.mjs`). · **Modeli/alati:** Claude Opus 5.5, Node.js, npm test. · **Zašto / pouka:** Sažetak je pao sa „Google trenutno nije dostupan (HTTP 503)“ na četu od 564k konteksta; korisnik traži Opus ili aktivni model. Izvor: čet 56cc8727-3d98-412a-be18-a111933cf795.
+- **Šta:** slike sa telefona se sažimaju u pregledaču pre slanja (WebP 75 %, na iPhone-u JPEG 80 %, najviše 4096 px), modul `public/image-compress.mjs`. Server i dalje pretvara ono što stigne kao PNG/JPG.
+- **Zašto:** korisnik (2026-11-13) primetio da se ceo original šalje preko mobilne mreže, a pretvara tek na računaru.
