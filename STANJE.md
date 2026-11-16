@@ -1,9 +1,8 @@
 # Stanje
 _2026-11-16, čet 8a4e27dd_
 - Codex i Grok isključeni preko `data/agents.json` (agent-switch.mjs, eaaebd5): nema ih u izboru agenta, ruteru, limitima ni delegate. Vraćanje: obrisati iz spiska + restart. Codex je zapravo radio sa gpt-5.6-terra, padao je zbog modela gpt-6.1-sol u ~/.codex/config.toml.
-- Sa dva agenta gornji red bočne trake stalno prikazuje ikonice (Pošalji svima, Restart, Podešavanja, Osveži), ravnomerno u jednom redu (93ce931, f451d9a). Na telefonu ostaje prevlačenje.
+- Sa dva agenta gornjeg reda nema: limiti i baterija skriveni, gore desno samo logotipi Claude/Antigravity (nov čet) i zupčanik; Pošalji svima, Restart i Osveži na vrhu podešavanja (#settings-actions). Telefon bez promene.
 - Aplikacija Limiti (zaseban projekat): bez Codexa, Groka i OpenAI API kartice, prozor na sredini ekrana i pri pokretanju. Otvoreno: da li prozor da iskače pri svakom pokretanju računara.
-- Sledeće: predlog da ikonice u gornjem redu dobiju istu pozadinu kao agenti.
 - Napomena: radni STANJE.md je bio prepisan stanjem projekta titlova (drugi čet); sačuvano u data/STANJE-titlovi-zalutalo-2026-11-16.md.
 - 2026-11-12 (čet 56cc8727): sažetak za „Nov čet“ radi aktivni model (Claude/Codex CLI), rezerva Opus pa Gemini (agent-summary.mjs, a5d2efe); server restartovan. Sledeće: proveriti na četu sa 564k konteksta.
 _2026-11-09 17:40, čet b7edfcb8_

@@ -550,3 +550,4 @@
 - Odluka: Codex i Grok uklonjeni iz Agent Deska i aplikacije Limiti; isključenje ide preko `data/agents.json` ({"disabled":[...]}), pa se agent vraća bez izmene koda. Sa dva agenta ikonice menija logoa stoje stalno u gornjem redu.
 - Razlog: korisnik javio da ne rade („ukloni ih ipak ne rade“). Provera je pokazala da je Grok odgovarao, a Codex padao samo zbog modela gpt-6.1-sol; korisnik je ipak tražio uklanjanje.
 - Izvor: čet 8a4e27dd-da48-4aa6-b4e8-a497dcd8c9fb, 2026-11-16T11:38Z i 11:48Z.
+- Dopuna 2026-11-16T12:00Z: gornji red sa limitima i ikonicama uklonjen iz bočne trake; ostaju tri male ikonice (dva agenta za nov čet, zupčanik), a radnje su u podešavanjima. Razlog: korisnik: „limiti nam ne trebaju jer ih imamo u aplikaciji za limite i u samom chatu“.
