@@ -545,3 +545,8 @@
 - Odluka: Agent Desk meri CPU i memoriju po četu (stablo procesa) i kad je računar preopterećen (load ≥ 2 × jezgra, kritičan pritisak memorije, ili swap ≥ 90 % uz pritisak) novi podčetovi čekaju u redu i kreću jedan po jedan na 45 s. Sam pun swap ne blokira, jer na macOS-u ostaje pun i posle rasterećenja.
 - Razlog: na 8 jezgara i 8 GB, 7 do 8 podagenata uz headless Chrome i nuxt dev dizali su load na 38 do 70 i swap na 5,4 od 6 GB, a server se restartovao; broj agenata se određivao ručno.
 - Izvor: zahtev iz četa 16e6c21a, urađeno u četu b7edfcb8-2c8c-4be7-b980-f0660ae86bc8, 2026-11-09T16:18Z.
+
+## 2026-11-16, Codex i Grok isključeni
+- Odluka: Codex i Grok uklonjeni iz Agent Deska i aplikacije Limiti; isključenje ide preko `data/agents.json` ({"disabled":[...]}), pa se agent vraća bez izmene koda. Sa dva agenta ikonice menija logoa stoje stalno u gornjem redu.
+- Razlog: korisnik javio da ne rade („ukloni ih ipak ne rade“). Provera je pokazala da je Grok odgovarao, a Codex padao samo zbog modela gpt-6.1-sol; korisnik je ipak tražio uklanjanje.
+- Izvor: čet 8a4e27dd-da48-4aa6-b4e8-a497dcd8c9fb, 2026-11-16T11:38Z i 11:48Z.

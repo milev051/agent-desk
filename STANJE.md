@@ -1,4 +1,10 @@
 # Stanje
+_2026-11-16, čet 8a4e27dd_
+- Codex i Grok isključeni preko `data/agents.json` (agent-switch.mjs, eaaebd5): nema ih u izboru agenta, ruteru, limitima ni delegate. Vraćanje: obrisati iz spiska + restart. Codex je zapravo radio sa gpt-5.6-terra, padao je zbog modela gpt-6.1-sol u ~/.codex/config.toml.
+- Sa dva agenta gornji red bočne trake stalno prikazuje ikonice (Pošalji svima, Restart, Podešavanja, Osveži), ravnomerno u jednom redu (93ce931, f451d9a). Na telefonu ostaje prevlačenje.
+- Aplikacija Limiti (zaseban projekat): bez Codexa, Groka i OpenAI API kartice, prozor na sredini ekrana i pri pokretanju. Otvoreno: da li prozor da iskače pri svakom pokretanju računara.
+- Sledeće: predlog da ikonice u gornjem redu dobiju istu pozadinu kao agenti.
+- Napomena: radni STANJE.md je bio prepisan stanjem projekta titlova (drugi čet); sačuvano u data/STANJE-titlovi-zalutalo-2026-11-16.md.
 - 2026-11-12 (čet 56cc8727): sažetak za „Nov čet“ radi aktivni model (Claude/Codex CLI), rezerva Opus pa Gemini (agent-summary.mjs, a5d2efe); server restartovan. Sledeće: proveriti na četu sa 564k konteksta.
 _2026-11-09 17:40, čet b7edfcb8_
 - Praćenje opterećenja po četu (resources.mjs): traka na dnu bočne trake, GET /api/resources, podčetovi čekaju (⏸) kad je load ≥ 16 ili memorija kritična. Pragovi u LIMITS; proveriti posle dana rada da li su dobri.
@@ -13,6 +19,3 @@ _2026-11-09 17:40, čet b7edfcb8_
 - Arhiva četova 3 dana; istek briše i Claude sesiju (claude-sessions.mjs).
 - Claude četovi sa punim pristupom: isključen plugin cc-plugin-privacy (Allow zbog mejla); most potvrđuje „1. Yes“ i šalje rezervni Enter, dnevnik data/claude-terminal-log/.
 - Tabla projekata (/#tabla): merenje prelaza; sledeće je poređenje posle nedelju dana (od 2026-11-06).
-- Drive backup (2026-11-10, čet 8b4eb015): `scripts/drive-backup.mjs` + ruta `/drive/files/ID/download`; prvi backup ROOM 211 ceo + dokumenti (~14 GB) premešten 2026-11-11 na eksterni SSD `/Volumes/SSD/Drive backup/milev051` (exFAT), dnevnik `backup.log`, greške `_greske.json`. Ponovno pokretanje preskače postojeće. ROOM211 Workspace Drive nije obuhvaćen (nalog nije povezan).
-- Poznato: test „browser: stvarni klik…“ (live-preview) povremeno padne pod opterećenjem, sam prolazi.
-- Iz drugih četova (milev.rs/projektor): otvoreno da li plave linkove uvesti na ceo milev.rs.
