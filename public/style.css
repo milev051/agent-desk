@@ -1073,3 +1073,5 @@ dialog.confirm-dialog button.danger{border-color:#a33;color:#f88}
 #chats .chat-row.working .chat-item:has(>.elapsed-live)::after{margin-left:6px}
 .message-meta .work-duration.elapsed-live{color:#f4c75b;font-variant-numeric:tabular-nums}
 @media(max-width:650px){#chats .chat-row .chat-item>.elapsed-live{font-size:10px}}
+/* Sa dva agenta ima mesta: ikonice iz menija logoa stoje stalno u redu, bez prevlačenja (2026-11-16). */
+@media(min-width:651px){.sidebar-actions.inline-tools #new-agents{grid-template-columns:repeat(2,minmax(0,1fr)) auto}.sidebar-actions.inline-tools #logo-swipe-menu{position:static;display:flex;flex:none;inset:auto;gap:0;padding:0;background:none;align-items:center}.sidebar-actions.inline-tools #logo-swipe-menu button{flex:none;width:26px;height:36px;min-height:36px}.sidebar-actions.inline-tools #logo-swipe-menu svg{width:18px;height:18px}}
