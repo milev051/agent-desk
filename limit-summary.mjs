@@ -1,4 +1,7 @@
-const agents=['claude','codex','grok','antigravity'];
+const allAgents=['claude','codex','grok','antigravity'];
+let agents=allAgents;
+// Isključeni agenti (data/agents.json) ne ulaze u sažetak limita ni u red „Limiti“ u uputstvu agentu.
+export function hideLimitAgents(disabled){agents=allAgents.filter(a=>!disabled.has(a));}
 const labels={fiveHour:'5h',weekly:'ned',weeklyOpus:'ned-opus',weeklySonnet:'ned-sonnet'};
 const pad=n=>String(n).padStart(2,'0');
 export function relativeTime(ms,now=Date.now()){

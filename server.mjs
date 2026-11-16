@@ -47,7 +47,7 @@ import {createQuotaHistory} from './quota-history.mjs';
 import {quotaShares} from './quota-share.mjs';
 import {tokenCost,sessionSaving} from './pricing.mjs';
 import {createLimits} from './limits.mjs';
-import {summarizeLimits,limitsLine,exhaustedAgentError} from './limit-summary.mjs';
+import {summarizeLimits,limitsLine,exhaustedAgentError,hideLimitAgents} from './limit-summary.mjs';
 import {makeSummary} from './agent-summary.mjs';
 import {createPhoneAccess} from './phone-access.mjs';
 import {createLivePreview} from './live-preview.mjs';
@@ -59,6 +59,7 @@ import { randomUUID, createHash } from 'node:crypto';
 import { spawn, execFile } from 'node:child_process';
 import zlib from 'node:zlib';
 import { command, parseEvent, names } from './adapters.mjs';
+import {readDisabledAgents,withoutDisabled} from './agent-switch.mjs';
 import { catalog, quickCatalog, validateEffort } from './models.mjs';
 import { transferableMessages, transferPlan, historyText, contextEstimate } from './context.mjs';
 import { createTitleManager,recentTitleSeed,uniqueProjectTitle,keepExistingTitle } from './titles.mjs';
@@ -299,9 +300,11 @@ function locate(name) {
   for (const dir of dirs) { const p = path.join(dir, name); try { fs.accessSync(p, fs.constants.X_OK); return p; } catch {} }
   return null;
 }
-const binaries = { codex: locate('codex'), claude: locate('claude'), grok: locate('grok'), antigravity: locate('agy') };
+const disabledAgents=readDisabledAgents(path.join(dataDir,'agents.json'),Object.keys(names));
+hideLimitAgents(disabledAgents);
+const binaries = withoutDisabled({ codex: locate('codex'), claude: locate('claude'), grok: locate('grok'), antigravity: locate('agy') },disabledAgents);
 const cliUpdates=createCliUpdates(path.join(dataDir,'cli-updates.json'),{binaries,npm:locate('npm'),isBusy:()=>running.size>0 || warmup.view().running || riskNotes.busy()});
-function metadata() { return { cwd: root, messageCommands: true, chatFork: true, limitHistory:true, titleSettings:titleManager.settings(), agents: Object.entries(names).map(([id, name]) => ({ id, name, available: !!binaries[id], detail: binaries[id] ? 'CLI pronađen · koristi postojeću prijavu' : 'CLI nije pronađen' })) }; }
+function metadata() { return { cwd: root, messageCommands: true, chatFork: true, limitHistory:true, titleSettings:titleManager.settings(), agents: Object.entries(names).filter(([id])=>!disabledAgents.has(id)).map(([id, name]) => ({ id, name, available: !!binaries[id], detail: binaries[id] ? 'CLI pronađen · koristi postojeću prijavu' : 'CLI nije pronađen' })) }; }
 function validate(s) {
   if (!Object.hasOwn(names, s.agent)) throw new Error('Nepoznat agent.');
   if (!['full', 'read'].includes(s.access)) throw new Error('Nepoznat pristup.');
@@ -448,7 +451,7 @@ async function send(chat, prompt, options={}) {
   const previousSession=chat.sessions[agent];
   const previousMessage=agent==='codex' && previousSession ? [...chat.messages.slice(0,chat.sessionOffsets?.codex ?? chat.messages.length)].reverse().find(m=>m.agent==='codex' && (m.usageTotal || m.usage?.scope==='session')) : null;
   const baseline=previousSession && chat.usageBaselines?.[agent]?.sessionId===previousSession ? chat.usageBaselines[agent].usage : previousMessage?.usageTotal || previousMessage?.usage;
-  if (!binaries[agent]) throw new Error(metadata().agents.find(a => a.id === agent).detail);
+  if (!binaries[agent]) throw new Error(disabledAgents.has(agent)?`${names[agent]||agent} je isključen u Agent Desku; izaberi drugog agenta.`:'CLI nije pronađen');
   validateEffort(quickCatalog(binaries), validate(chat.settings));
   const sentAt=Date.now(),createdAt=options.createdAt || sentAt;
   if(chat.thoughts && !['thoughts','thoughts-improve'].includes(options.origin))try{thoughts.log({type:'reply'});}catch(error){console.error('Misli:',error.message);}
@@ -951,7 +954,7 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200,headers);fs.createReadStream(p).pipe(res);return;
     }
     if(req.method==='GET' && url.pathname==='/api/limit-history')return json(200,quotaHistory.list());
-    if(req.method==='GET' && url.pathname==='/api/limits')return json(200,limits.snapshot());
+    if(req.method==='GET' && url.pathname==='/api/limits'){const snap=limits.snapshot();return json(200,{...snap,agents:Object.fromEntries(Object.entries(snap.agents||{}).filter(([a])=>!disabledAgents.has(a)))});}
     if(url.pathname==='/api/warmup'){if(req.method==='GET')return json(200,warmup.view());if(req.method==='PUT')return json(200,warmup.configure(await body(req)));}
     if(url.pathname==='/api/risk-note'){if(req.method==='GET')return json(200,riskNotes.view());if(req.method==='PUT')return json(200,riskNotes.configure(await body(req)));return json(405,{error:'Podržani su GET i PUT.'});}
     if(req.method==='POST' && url.pathname==='/api/warmup/run'){if(cliUpdates.view().running)return json(409,{error:'CLI ažuriranje je u toku.'});if(warmup.view().running)return json(409,{error:'Provera agenata je već u toku.'});void warmup.run().catch(error=>console.error('Provera agenata:',error.message));return json(202,warmup.view());}

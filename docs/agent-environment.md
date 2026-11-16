@@ -93,6 +93,9 @@ Link `/#folder=ID` otvara grupu četova u interfejsu. Agent koji dobije takav li
 
 Običan folder organizuje četove. Kada je uključena opcija zajedničkog konteksta, server uz sledeću korisničku poruku dostavlja agentu članove grupe i nove završene poruke drugih članova. To ne pokreće agente automatski. Radni folder na disku i CLI sesija ostaju podešeni zasebno za svaki čet.
 
+## Isključeni agenti
+`data/agents.json` sa `{"disabled":["codex","grok"]}` isključuje agente (npr. istekla pretplata). Isključen agent se ponaša kao da CLI nije instaliran: nema ga u interfejsu, ruteru, limitima ni u delegate. Vraća se brisanjem iz spiska i restartom servera (agent-switch.mjs).
+
 ## Limiti agenata
 
 `GET /api/environment` ima blok `limits`: po agentu `availability` (`ok`, `nisko` ispod 25%, `iscrpljeno` na 0% kad podatak nije stale, `nepoznato`), prozore sa `remaining` %, `resetAt` (ISO) i `resetIn` ("za 3 h"), te `stale` i `error`. Ista kratka linija ("Limiti (preostalo): ...") ide u kontekst svake poruke. Za podagente ne biraj iscrpljenog agenta, a niskog samo ako je neophodno. `delegate` za iscrpljenog agenta vraća 409 sa porukom na srpskom i predlogom drugog agenta.
