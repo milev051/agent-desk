@@ -1,4 +1,6 @@
 # Stanje
+_2026-11-17, čet 8a4e27dd_
+- Glavni čet samo upravlja: pravilo `managerRule` u server.mjs šalje se svakom glavnom četu (svi agenti); izvršni posao ide podagentima. Važi posle restarta servera. Sledeće: posmatrati da li agenti delegiraju i sitne izmene previše.
 _2026-11-17, čet 926912ef_
 - 143 zaostala stub procesa (~540 MB) ugašena; curio ih je test/restart-resume-api.test.mjs pri svakom npm testu. Stub se sad sam gasi bez roditelja ili posle 2 min, test na kraju radi pkill (3255255). Posle npm testa 0 zaostalih.
 _2026-11-16, čet 8a4e27dd_

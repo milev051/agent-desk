@@ -93,6 +93,9 @@ Link `/#folder=ID` otvara grupu četova u interfejsu. Agent koji dobije takav li
 
 Običan folder organizuje četove. Kada je uključena opcija zajedničkog konteksta, server uz sledeću korisničku poruku dostavlja agentu članove grupe i nove završene poruke drugih članova. To ne pokreće agente automatski. Radni folder na disku i CLI sesija ostaju podešeni zasebno za svaki čet.
 
+## Glavni čet upravlja, podagenti rade
+Svaki glavni čet (bez roditelja), za sve agente, dobija pravilo `managerRule` u `server.mjs`: izvršni posao (kod, testovi, build, objava, instalacija, istraživanje, pregledač) daje podagentu preko delegate i odmah završava odgovor, pa ostaje slobodan za razgovor. Sam radi samo kratke provere, plan, objedinjavanje i beleške. Izuzetak: korisnik izričito traži da radi sam, ili je odgovor samo informacija. Podčetovi pravilo ne dobijaju.
+
 ## Isključeni agenti
 `data/agents.json` sa `{"disabled":["codex","grok"]}` isključuje agente (npr. istekla pretplata). Isključen agent se ponaša kao da CLI nije instaliran: nema ga u interfejsu, ruteru, limitima ni u delegate. Vraća se brisanjem iz spiska i restartom servera (agent-switch.mjs).
 

@@ -551,3 +551,8 @@
 - Razlog: korisnik javio da ne rade („ukloni ih ipak ne rade“). Provera je pokazala da je Grok odgovarao, a Codex padao samo zbog modela gpt-6.1-sol; korisnik je ipak tražio uklanjanje.
 - Izvor: čet 8a4e27dd-da48-4aa6-b4e8-a497dcd8c9fb, 2026-11-16T11:38Z i 11:48Z.
 - Dopuna 2026-11-16T12:00Z: gornji red sa limitima i ikonicama uklonjen iz bočne trake; ostaju tri male ikonice (dva agenta za nov čet, zupčanik), a radnje su u podešavanjima. Razlog: korisnik: „limiti nam ne trebaju jer ih imamo u aplikaciji za limite i u samom chatu“.
+
+## 2026-11-17, glavni čet samo upravlja
+- Odluka: u svim četovima Agent Deska glavni agent izvršni posao (kod, testovi, objava, instalacija, istraživanje, pregledač) daje podagentu i odmah završava odgovor; sam radi samo kratke provere, plan, objedinjavanje i beleške. Izuzetak: izričit zahtev korisnika da radi sam, ili čisto informativan odgovor. Pravilo je u uputstvu koje server šalje svakom glavnom četu (`managerRule`), za sve agente.
+- Razlog: korisnik hoće da glavni čet ostane slobodan za upravljanje i rad na projektu bez ometanja procesa koji rade.
+- Izvor: čet 8a4e27dd-da48-4aa6-b4e8-a497dcd8c9fb, 2026-11-17T12:12Z.
