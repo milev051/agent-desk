@@ -1,4 +1,6 @@
 # Stanje
+_2026-11-17, čet 926912ef_
+- 143 zaostala stub procesa (~540 MB) ugašena; curio ih je test/restart-resume-api.test.mjs pri svakom npm testu. Stub se sad sam gasi bez roditelja ili posle 2 min, test na kraju radi pkill (3255255). Posle npm testa 0 zaostalih.
 _2026-11-16, čet 8a4e27dd_
 - Codex i Grok isključeni preko `data/agents.json` (agent-switch.mjs, eaaebd5): nema ih u izboru agenta, ruteru, limitima ni delegate. Vraćanje: obrisati iz spiska + restart. Codex je zapravo radio sa gpt-5.6-terra, padao je zbog modela gpt-6.1-sol u ~/.codex/config.toml.
 - Sa dva agenta gornjeg reda nema: limiti i baterija skriveni, gore desno samo logotipi Claude/Antigravity (nov čet) i zupčanik; Pošalji svima, Restart i Osveži na vrhu podešavanja (#settings-actions). Telefon bez promene.
@@ -16,5 +18,3 @@ _2026-11-09 17:40, čet b7edfcb8_
 - Glavni čet ćuti posle izveštaja podčeta dok drugi podčetovi rade (d644eec); plave tačke kad glavni miruje a podčetovi rade (0684067).
 - Agenti sami commituju posle npm test (AGENTS.md pravilo 7). Push samo na zahtev.
 - Arhiva četova 3 dana; istek briše i Claude sesiju (claude-sessions.mjs).
-- Claude četovi sa punim pristupom: isključen plugin cc-plugin-privacy (Allow zbog mejla); most potvrđuje „1. Yes“ i šalje rezervni Enter, dnevnik data/claude-terminal-log/.
-- Tabla projekata (/#tabla): merenje prelaza; sledeće je poređenje posle nedelju dana (od 2026-11-06).
