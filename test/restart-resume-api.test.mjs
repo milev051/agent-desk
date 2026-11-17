@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import net from 'node:net';
-import {spawn} from 'node:child_process';
+import {spawn,spawnSync} from 'node:child_process';
 import {once} from 'node:events';
 
 test('stvarno gašenje i ponovno podizanje nastavlja sva četiri CLI adaptera u istim sesijama',async()=>{
@@ -19,7 +19,7 @@ const session='session-'+agent,text=JSON.stringify({args,automatic});
 if(agent==='codex')console.log(JSON.stringify({type:'thread.started',thread_id:session}));
 else if(agent==='agy')console.log(JSON.stringify({conversation_id:session}));
 else console.log(JSON.stringify({type:'system',session_id:session}));
-if(!automatic){process.on('SIGTERM',()=>process.exit(0));setInterval(()=>{},1000);return;}
+if(!automatic){process.on('SIGTERM',()=>process.exit(0));const born=Date.now();setInterval(()=>{if(process.ppid===1 || Date.now()-born>120000)process.exit(0);},500);return;}
 if(agent==='codex'){console.log(JSON.stringify({type:'item.completed',item:{type:'agent_message',text}}));console.log(JSON.stringify({type:'turn.completed'}));}
 else if(agent==='agy')console.log(JSON.stringify({event:'result',result:{status:'SUCCESS',response:text,conversation_id:session}}));
 else console.log(JSON.stringify({type:'result',result:text,session_id:session}));
@@ -69,5 +69,5 @@ if(agent==='grok'){input=args[args.indexOf('-p')+1] || '';go();}else{process.std
   await start();
   await waitFor(async()=>{const c=await get(crashed.id);return c.messages.some(m=>m.origin==='restart') && !c.running && c.messages.at(-1).status==='done';});
 
- }finally{if(server){server.kill('SIGKILL');await once(server,'exit');}fs.rmSync(dir,{recursive:true,force:true});}
+ }finally{if(server){server.kill('SIGKILL');await once(server,'exit');}spawnSync('pkill',['-f',dir]);fs.rmSync(dir,{recursive:true,force:true});}
 });
