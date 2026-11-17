@@ -112,3 +112,4 @@ Format: `- **Šta:** … · **Modeli/alati:** … · **Zašto / pouka:** …` po
 
 ## 2026-11-17
 - **Šta:** Svaki glavni čet, za sve agente, dobija pravilo da izvršni posao daje podagentu i ostaje slobodan za upravljanje (`managerRule` u server.mjs, test/manager-rule.test.mjs). · **Zašto / pouka:** Korisnik hoće da radi na projektu u glavnom četu bez ometanja procesa koji rade.
+- **Šta:** Delegate sa `childId` i `name` preimenuje postojeći podčet (server.mjs); uputstvo glavnom četu traži `name` uz svaki delegate, test u test/server.test.mjs. · **Modeli/alati:** Claude Opus 5.5, Node.js, npm test. · **Zašto / pouka:** Korisnik hoće da naslov podčeta uvek prati trenutni zadatak. Izvor: čet 8a4e27dd-da48-4aa6-b4e8-a497dcd8c9fb.

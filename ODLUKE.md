@@ -556,3 +556,8 @@
 - Odluka: u svim četovima Agent Deska glavni agent izvršni posao (kod, testovi, objava, instalacija, istraživanje, pregledač) daje podagentu i odmah završava odgovor; sam radi samo kratke provere, plan, objedinjavanje i beleške. Izuzetak: izričit zahtev korisnika da radi sam, ili čisto informativan odgovor. Pravilo je u uputstvu koje server šalje svakom glavnom četu (`managerRule`), za sve agente.
 - Razlog: korisnik hoće da glavni čet ostane slobodan za upravljanje i rad na projektu bez ometanja procesa koji rade.
 - Izvor: čet 8a4e27dd-da48-4aa6-b4e8-a497dcd8c9fb, 2026-11-17T12:12Z.
+
+## 2026-11-17, glavni agent uvek imenuje podagenta
+- Odluka: uz svaki delegate (nov podčet i nastavak preko childId) glavni agent šalje `name` sa kratkim nazivom trenutnog zadatka; server tim imenom preimenuje postojeći podčet. Važi za sve četove i agente.
+- Razlog: korisnik 2026-11-17T12:54Z: „neka agent preimenuje podagente sam uvek kad im daje sta da rade“.
+- Izvor: čet 8a4e27dd-da48-4aa6-b4e8-a497dcd8c9fb, urađeno u podčetu d801cdc0-5c09-4b59-be9f-c59683064d67.

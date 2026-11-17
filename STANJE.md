@@ -1,4 +1,6 @@
 # Stanje
+_2026-11-17, čet d801cdc0_
+- Delegate sa `childId` i `name` preimenuje postojeći podčet; uputstvo glavnom četu traži `name` (2 do 5 reči) uz svaki delegate. Važi posle restarta servera.
 _2026-11-17, čet 8a4e27dd_
 - Glavni čet samo upravlja: pravilo `managerRule` u server.mjs šalje se svakom glavnom četu (svi agenti); izvršni posao ide podagentima. Važi posle restarta servera. Sledeće: posmatrati da li agenti delegiraju i sitne izmene previše.
 _2026-11-17, čet 926912ef_

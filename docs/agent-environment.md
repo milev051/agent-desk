@@ -96,6 +96,8 @@ Običan folder organizuje četove. Kada je uključena opcija zajedničkog kontek
 ## Glavni čet upravlja, podagenti rade
 Svaki glavni čet (bez roditelja), za sve agente, dobija pravilo `managerRule` u `server.mjs`: izvršni posao (kod, testovi, build, objava, instalacija, istraživanje, pregledač) daje podagentu preko delegate i odmah završava odgovor, pa ostaje slobodan za razgovor. Sam radi samo kratke provere, plan, objedinjavanje i beleške. Izuzetak: korisnik izričito traži da radi sam, ili je odgovor samo informacija. Podčetovi pravilo ne dobijaju.
 
+Uz svaki delegate, i za nov podčet i za nastavak preko `childId`, glavni agent šalje `name`: kratak naziv (2 do 5 reči) trenutnog zadatka. Kod nastavka server tim imenom preimenuje postojeći podčet (`title`, `agentRole`, `titleManual`), pa ga automatsko imenovanje ne pregazi; bez `name` naslov ostaje.
+
 ## Isključeni agenti
 `data/agents.json` sa `{"disabled":["codex","grok"]}` isključuje agente (npr. istekla pretplata). Isključen agent se ponaša kao da CLI nije instaliran: nema ga u interfejsu, ruteru, limitima ni u delegate. Vraća se brisanjem iz spiska i restartom servera (agent-switch.mjs).
 
