@@ -100,6 +100,10 @@ Za Claude glavni čet pravilo je i tehnička zabrana (`adapters.mjs`, `manager-g
 
 Delegate sa `childId` za podčet koji radi ili čeka red ne vraća 409, nego stavlja zadatak u red podčeta i odmah vraća 202 sa `queued:true`. Pun red (10 zadataka) vraća 409.
 
+Delegate sa `childId` i `interrupt:true` prekida podčet koji radi: deo odgovora ostaje sačuvan sa statusom `stopped`, sesija ostaje ista, a nova poruka kreće odmah, zajedno sa zadacima koji su već bili u redu, kao jedna poruka. Odgovor je 202 sa `interrupted:true`. Prekid ne šalje izveštaj roditelju i ne pokreće automatski nastavak starog zadatka; izveštaj stiže kad završi novi odgovor. Ako podčet ne radi, poziv je običan nastavak (`interrupted:false`). Ako podčet još čeka red za slike ili resurse, informacija se dodaje zadatku koji čeka (`waitingUpdated:true`). `interrupt` bez `childId` ili sa vrednošću koja nije logička vraća 400.
+
+Glavni agent prvo proveri čime se podčet bavi (GET `/api/chats/ID`). Prekida samo kad bi nastavak bio uzaludan posao (pogrešan pravac, novi uslov, posao više nije potreban). Dopuna ili nedoumica ide u red bez prekida, a informacija koja se ne tiče podčeta ga ne dira. Korisniku kaže da li je podčet prekinuo ili mu je samo prosledio informaciju.
+
 Uz svaki delegate, i za nov podčet i za nastavak preko `childId`, glavni agent šalje `name`: kratak naziv (2 do 5 reči) trenutnog zadatka. Kod nastavka server tim imenom preimenuje postojeći podčet (`title`, `agentRole`, `titleManual`), pa ga automatsko imenovanje ne pregazi; bez `name` naslov ostaje.
 
 ## Isključeni agenti

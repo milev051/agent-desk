@@ -25,6 +25,15 @@ test('pravilo više nema izuzetak za izričit zahtev korisnika', ()=>{
   assert.match(rule,/nikad ne čekaj podčet/);
 });
 
+test('pravilo uči glavni čet kada da prekine podčet, a kada da ga ne dira', ()=>{
+  const rule=src.match(/const managerRule=parent\?'':`([^`]*)`/)[1];
+  assert.match(rule,/prvo proveri čime se podčet bavi \(GET /);
+  assert.match(rule,/nastavak bio uzaludan, pošalji delegate sa childId, name, task i interrupt:true/);
+  assert.match(rule,/ili nisi siguran, pošalji delegate bez interrupt/);
+  assert.match(rule,/ako se ne tiče podčeta, ne diraj ga/);
+  assert.match(rule,/da li si podčet prekinuo ili si mu samo prosledio informaciju/);
+});
+
 test('glavni Claude čet dobija zabranu alata i hook', ()=>{
   const args=argsOf(chat());
   assert.equal(valueOf(args,'--disallowedTools'),MANAGER_DENIED_TOOLS);
@@ -73,7 +82,7 @@ test('duge komande, pozadina i dug timeout su odbijeni', ()=>{
 
 test('delegate, kratke provere i tekst zadatka prolaze', ()=>{
   const body=`python3 - "$S" <<'EOF'\nimport json\nt={"task":"pokreni npm test, sleep 20, pa git push"}\nEOF\ncurl -s -X POST http://127.0.0.1:4317/api/chats/ID/delegate -H 'Origin: http://127.0.0.1:4317' -d @$S/e.json`;
-  for(const command of [body,`curl -s -X POST http://127.0.0.1:4317/api/chats/ID/delegate -d '{"task":"npm test pa sleep 5"}'`,'git -C repo status --short','curl -s http://127.0.0.1:4317/api/chats/ID','for f in a b; do wc -l $f; done'])assert.equal(bash(command),null,command);
+  for(const command of [body,`curl -s -X POST http://127.0.0.1:4317/api/chats/ID/delegate -d '{"task":"npm test pa sleep 5"}'`,`curl -s -X POST http://127.0.0.1:4317/api/chats/ID/delegate -H 'Origin: http://127.0.0.1:4317' -d '{"childId":"C","name":"Nov pravac","task":"Stani i uradi drugo","interrupt":true}'`,'git -C repo status --short','curl -s http://127.0.0.1:4317/api/chats/ID','for f in a b; do wc -l $f; done'])assert.equal(bash(command),null,command);
   assert.doesNotMatch(shellCode(`echo 'npm test'`),/npm/);
 });
 

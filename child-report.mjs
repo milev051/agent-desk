@@ -32,6 +32,14 @@ export function queueChildTask(child,task,now=Date.now()){
  return item;
 }
 
+// Prekid podčeta: red odlazi odmah kao jedna poruka, pa ograničenje dužine reda ovde ne važi.
+export function interruptChildTask(child,task,now=Date.now()){
+ child.queue ||= [];
+ const item={id:randomUUID(),text:task,createdAt:now,origin:'delegate'};
+ child.queue.push(item);child.queuePaused=false;delete child.queueError;child.queueInterrupted=true;
+ return item;
+}
+
 // Vraća {parent,item} kad izveštaj uđe u red glavnog četa, inače null.
 export function queueChildReport(child,reply,{origin,silent,chats,isRunning=()=>false,lockedPart=()=>false,archive=false,address,now=Date.now()}={}){
  if(!child?.parentChatId || silent || origin==='project-state' || !reported.has(reply?.status))return null;

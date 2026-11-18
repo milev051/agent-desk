@@ -568,3 +568,9 @@
 - Ograničenje: Antigravity CLI ne prihvata spisak zabranjenih alata kroz `--settings`, pa tamo važi samo pravilo. Bash upis fajla (npr. kroz python) hook ne prepoznaje.
 - Razlog: korisnik: „nikad, cak iako mu kazem 'uradi to i to' on treba uvek da dodeli task“. Čet Newsmax Balkan je 9,5 minuta čekao u Bash petlji jer je delegate vraćao 409 dok podčet radi.
 - Izvor: čet 8a4e27dd-da48-4aa6-b4e8-a497dcd8c9fb, 2026-11-18T09:30Z.
+
+## 2026-11-18, glavni čet sam procenjuje prekid podčeta
+- Odluka: kad korisnik javi nešto što se tiče podčeta koji radi, glavni agent proveri čime se podčet bavi i prekida ga (`interrupt:true` na delegate) samo kad bi nastavak bio uzaludan posao. Dopuna ili nedoumica ide u red bez prekida, a informacija koja se ne tiče podčeta ga ne dira. Korisniku kaže šta je uradio.
+- Tehnički: prekid koristi postojeći red podčeta, pa zadaci iz reda odlaze zajedno sa novom porukom, jednom. Prekinut odgovor ostaje sa statusom `stopped`, bez izveštaja roditelju i dispečeru i bez automatskog nastavka.
+- Razlog: korisnik: „ako se desi slucaj da agentu prosledim nesto sto je vezano za podagenta neka ga slobodno stopira i prosledi tu informaciju da ne bi radio bezveze“.
+- Izvor: čet 8a4e27dd-da48-4aa6-b4e8-a497dcd8c9fb, urađeno u podčetu 6bd3230e-bc27-460d-abf1-c87fbccd1611, 2026-11-18T11:49Z.
