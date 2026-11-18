@@ -94,7 +94,11 @@ Link `/#folder=ID` otvara grupu četova u interfejsu. Agent koji dobije takav li
 Običan folder organizuje četove. Kada je uključena opcija zajedničkog konteksta, server uz sledeću korisničku poruku dostavlja agentu članove grupe i nove završene poruke drugih članova. To ne pokreće agente automatski. Radni folder na disku i CLI sesija ostaju podešeni zasebno za svaki čet.
 
 ## Glavni čet upravlja, podagenti rade
-Svaki glavni čet (bez roditelja), za sve agente, dobija pravilo `managerRule` u `server.mjs`: izvršni posao (kod, testovi, build, objava, instalacija, istraživanje, pregledač) daje podagentu preko delegate i odmah završava odgovor, pa ostaje slobodan za razgovor. Sam radi samo kratke provere, plan, objedinjavanje i beleške. Izuzetak: korisnik izričito traži da radi sam, ili je odgovor samo informacija. Podčetovi pravilo ne dobijaju.
+Svaki glavni čet (bez roditelja), za sve agente, dobija pravilo `managerRule` u `server.mjs`: izvršni posao (kod, testovi, build, objava, instalacija, istraživanje, pregledač) daje podagentu preko delegate i odmah završava odgovor, pa ostaje slobodan za razgovor. Sam radi samo kratke provere, plan, objedinjavanje i beleške. Poruka „uradi to i to“ znači dodeli podagentu; jedini izuzetak je odgovor koji je čista informacija bez izmena. Podčetovi pravilo ne dobijaju i ne gube nijedan alat.
+
+Za Claude glavni čet pravilo je i tehnička zabrana (`adapters.mjs`, `manager-guard.mjs`): `--disallowedTools` isključuje Agent, Task, Workflow i NotebookEdit, a PreToolUse hook odbija Edit i Write van beležaka (STANJE.md, ODLUKE.md, HRONOLOGIJA.md, projekti.md, memorija i scratchpad), pozadinske komande, `sleep` i petlje čekanja, testove, build, instalaciju i objavu. Bash komanda traje najviše 30 s. Tekst u navodnicima i heredoc-u se ne proverava, pa telo delegate poziva sme da pominje bilo koju komandu. Antigravity nema ovu zabranu: njegov `--settings` ne prihvata spisak zabranjenih alata, pa tamo važi samo pravilo.
+
+Delegate sa `childId` za podčet koji radi ili čeka red ne vraća 409, nego stavlja zadatak u red podčeta i odmah vraća 202 sa `queued:true`. Pun red (10 zadataka) vraća 409.
 
 Uz svaki delegate, i za nov podčet i za nastavak preko `childId`, glavni agent šalje `name`: kratak naziv (2 do 5 reči) trenutnog zadatka. Kod nastavka server tim imenom preimenuje postojeći podčet (`title`, `agentRole`, `titleManual`), pa ga automatsko imenovanje ne pregazi; bez `name` naslov ostaje.
 

@@ -1,9 +1,21 @@
 import { fileURLToPath } from 'node:url';
 import { shortDiff } from './public/desk-modes.mjs';
+import { MANAGER_BASH_TIMEOUT_MS } from './manager-guard.mjs';
 // Antigravity bez izabranog modela radi na Claude Sonnet, ne na Gemini (odluka 2026-11-05; Opus troši oko 5x više kvote).
 export const ANTIGRAVITY_DEFAULT_MODEL = 'claude-sonnet-4-6';
 export const names = { codex: 'Codex', claude: 'Claude Code', grok: 'Grok Build', antigravity: 'Antigravity' };
 export const CLAUDE_FULL_SETTINGS = JSON.stringify({ enabledPlugins: { 'cc-plugin-privacy@builtin': false } });
+// Glavni čet upravlja: ugrađeni podagenti su zabranjeni jer podagenti moraju kroz delegate da bi bili vidljivi u interfejsu.
+export const MANAGER_DENIED_TOOLS = 'Agent,Task,Workflow,NotebookEdit';
+export const isManagerChat = chat => !!chat.id && !chat.parentChatId && !chat.thoughts && chat.settings.agent === 'claude' && chat.settings.access === 'full';
+export function claudeManagerSettings(node = process.execPath) {
+  const guard = fileURLToPath(new URL('./manager-guard.mjs', import.meta.url));
+  return JSON.stringify({
+    ...JSON.parse(CLAUDE_FULL_SETTINGS),
+    env: { BASH_DEFAULT_TIMEOUT_MS: String(MANAGER_BASH_TIMEOUT_MS), BASH_MAX_TIMEOUT_MS: String(MANAGER_BASH_TIMEOUT_MS) },
+    hooks: { PreToolUse: [{ matcher: 'Bash|Edit|Write|MultiEdit', hooks: [{ type: 'command', command: `"${node}" "${guard}"`, timeout: 10 }] }] },
+  });
+}
 export function command(chat, prompt, executable) {
   const { agent, access, instructions, effort } = chat.settings;
   const model = chat.settings.model || (agent === 'antigravity' ? ANTIGRAVITY_DEFAULT_MODEL : '');
@@ -18,7 +30,8 @@ export function command(chat, prompt, executable) {
     args = ['-p', '--output-format', 'stream-json', '--verbose', '--include-partial-messages', '--permission-prompts', 'none'];
     if (session) args.push('--resume', session);
     // Ugrađeni plugin cc-plugin-privacy pita i uz pun pristup kad komanda sadrži mejl naloga, pa terminal staje na „Allow“.
-    if (access === 'full') args.push('--dangerously-skip-permissions', '--settings', CLAUDE_FULL_SETTINGS);
+    if (access === 'full' && isManagerChat(chat)) args.push('--dangerously-skip-permissions', '--settings', claudeManagerSettings(), '--disallowedTools', MANAGER_DENIED_TOOLS);
+    else if (access === 'full') args.push('--dangerously-skip-permissions', '--settings', CLAUDE_FULL_SETTINGS);
     else args.push('--tools', 'Read,Glob,Grep', '--permission-mode', 'dontAsk', '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}');
     if (effort) args.push('--effort', effort);
   } else if (agent === 'grok') {

@@ -23,6 +23,15 @@ export function childReportText(child,reply,running=[],{archive=false,address='h
   archive && `Kad rezultat preuzmeš i zabeležiš (fajl, beleške ili odgovor korisniku), arhiviraj podčete koji više nisu potrebni, ovaj i ranije završene: DELETE ${address}/api/chats/ID_PODČETA sa header Origin: ${address}. Ne arhiviraj podčet koji radi, koji ćeš nastaviti ili čiji rezultat korisnik tek treba da pregleda.`].filter(Boolean).join('\n');
 }
 
+// Zadatak za zauzet podčet čeka u njegovom redu, da glavni čet ne bi čekao ni ponavljao delegate. Pun red vraća null.
+export function queueChildTask(child,task,now=Date.now()){
+ child.queue ||= [];
+ if(child.queue.length>=10)return null;
+ const item={id:randomUUID(),text:task,createdAt:now,origin:'delegate'};
+ child.queue.push(item);child.queuePaused=false;delete child.queueError;
+ return item;
+}
+
 // Vraća {parent,item} kad izveštaj uđe u red glavnog četa, inače null.
 export function queueChildReport(child,reply,{origin,silent,chats,isRunning=()=>false,lockedPart=()=>false,archive=false,address,now=Date.now()}={}){
  if(!child?.parentChatId || silent || origin==='project-state' || !reported.has(reply?.status))return null;

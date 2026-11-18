@@ -1,4 +1,6 @@
 # Stanje
+_2026-11-18, čet cf58755d_
+- Glavni čet uvek slobodan: za Claude glavni čet važi tehnička zabrana (`manager-guard.mjs`, `--disallowedTools`, Bash do 30 s), a delegate zauzetom podčetu stavlja zadatak u njegov red (202, `queued:true`). Važi posle restarta servera i za nove odgovore. Antigravity: samo pravilo, jer CLI nema spisak zabranjenih alata. Sledeće: posmatrati da li hook odbija neku korisnu kratku proveru.
 _2026-11-17, čet d801cdc0_
 - Delegate sa `childId` i `name` preimenuje postojeći podčet; uputstvo glavnom četu traži `name` (2 do 5 reči) uz svaki delegate. Važi posle restarta servera.
 _2026-11-17, čet 8a4e27dd_

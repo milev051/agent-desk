@@ -561,3 +561,10 @@
 - Odluka: uz svaki delegate (nov podčet i nastavak preko childId) glavni agent šalje `name` sa kratkim nazivom trenutnog zadatka; server tim imenom preimenuje postojeći podčet. Važi za sve četove i agente.
 - Razlog: korisnik 2026-11-17T12:54Z: „neka agent preimenuje podagente sam uvek kad im daje sta da rade“.
 - Izvor: čet 8a4e27dd-da48-4aa6-b4e8-a497dcd8c9fb, urađeno u podčetu d801cdc0-5c09-4b59-be9f-c59683064d67.
+
+## 2026-11-18, glavni čet nikad ne radi sam
+- Odluka: zamenjuje izuzetak iz odluke od 2026-11-17. Glavni čet nikad ne izvršava posao sam, ni kad korisnik napiše „uradi to i to“; takva poruka znači dodeli podagentu. Dozvoljen je samo odgovor koji je čista informacija bez izmena, kratke provere, plan, objedinjavanje i beleške projekta.
+- Tehnički: Claude glavni čet dobija `--disallowedTools Agent,Task,Workflow,NotebookEdit`, PreToolUse hook `manager-guard.mjs` i Bash ograničenje od 30 s. Beleške (STANJE.md, ODLUKE.md, HRONOLOGIJA.md, projekti.md, memorija) i scratchpad ostaju dozvoljeni za Write i Edit, zato Write i Edit nisu potpuno zabranjeni. Podčetovi ne gube nijedan alat. Delegate za zauzet podčet stavlja zadatak u red podčeta umesto 409.
+- Ograničenje: Antigravity CLI ne prihvata spisak zabranjenih alata kroz `--settings`, pa tamo važi samo pravilo. Bash upis fajla (npr. kroz python) hook ne prepoznaje.
+- Razlog: korisnik: „nikad, cak iako mu kazem 'uradi to i to' on treba uvek da dodeli task“. Čet Newsmax Balkan je 9,5 minuta čekao u Bash petlji jer je delegate vraćao 409 dok podčet radi.
+- Izvor: čet 8a4e27dd-da48-4aa6-b4e8-a497dcd8c9fb, 2026-11-18T09:30Z.
