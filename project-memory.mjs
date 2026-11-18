@@ -29,7 +29,7 @@ function snapshot(dir,maxFiles=10000){
   if(depth>12){complete=false;return;}
   let entries;try{entries=fs.readdirSync(folder,{withFileTypes:true});}catch{complete=false;return;}
   for(const entry of entries){
-   if(entry.name.startsWith('.') || ignored.has(entry.name) || !relative && memoryFiles.has(entry.name))continue;
+   if(entry.name.startsWith('.') || ignored.has(entry.name) || !relative && (memoryFiles.has(entry.name) || entry.name==='iteracije'))continue;
    if(++count>maxFiles){complete=false;return;}
    const full=path.join(folder,entry.name),name=path.join(relative,entry.name);
    if(entry.isDirectory())walk(full,name,depth+1);
@@ -39,6 +39,7 @@ function snapshot(dir,maxFiles=10000){
  }
  walk(dir);return {files,complete};
 }
+export const projectSnapshot=snapshot;
 export function createProjectMemory(file,{now=()=>Date.now(),maxFiles=10000,onStateUpdated=()=>{}}={}){
  let projects={};try{projects=JSON.parse(fs.readFileSync(file,'utf8')).projects || {};}catch(error){if(error.code!=='ENOENT')throw error;}
  const save=()=>{fs.mkdirSync(path.dirname(file),{recursive:true,mode:0o700});fs.writeFileSync(file+'.tmp',JSON.stringify({projects},null,2),{mode:0o600});fs.renameSync(file+'.tmp',file);};
@@ -53,7 +54,7 @@ export function createProjectMemory(file,{now=()=>Date.now(),maxFiles=10000,onSt
   for(const action of reply.actions || []){
    if(action.kind!=='file' || !action.change || !action.text)continue;
    const full=path.resolve(before.dir,action.text),relative=path.relative(before.dir,full);
-   if(relative && !relative.startsWith('..'+path.sep) && !path.isAbsolute(relative) && !memoryFiles.has(relative) && !changed.includes(relative))changed.push(relative);
+   if(relative && !relative.startsWith('..'+path.sep) && !path.isAbsolute(relative) && !memoryFiles.has(relative) && !relative.startsWith('iteracije'+path.sep) && !changed.includes(relative))changed.push(relative);
   }
   const brief=replyBrief(reply),project=projects[before.dir] ||= {records:{}};
   project.questions ||= {};project.decisions ||= {};
@@ -72,7 +73,7 @@ export function createProjectMemory(file,{now=()=>Date.now(),maxFiles=10000,onSt
   if(stateUpdated)onStateUpdated(before.dir,state.text,now());
   project.checkedAt=now();save();
   const record=project.records[chat.id];
-  return {record,needsReminder:!documentation && changed.length>0 && record?.needsUpdate && !record.concurrent && !chat.parentChatId,decisionsUpdated:decisions.hash!==before.decisions.hash};
+  return {record,changed,needsReminder:!documentation && changed.length>0 && record?.needsUpdate && !record.concurrent && !chat.parentChatId,decisionsUpdated:decisions.hash!==before.decisions.hash};
  }
  function view(chat){
   const dir=directory(chat);if(!dir || chat.dispatcher)return {warnings:[],records:[]};

@@ -1,4 +1,6 @@
 # Stanje
+_2026-11-18, čet 57b0ca1d_
+- Automatski zapis iteracija (`iteration-log.mjs`, uputstvo `docs/zapis-iteracija.md`): poruke, pravilo agentima, jedan podsetnik agentu, dugme u četu, podsetnik korisniku posle 7 dana. Važi posle restarta servera. Sledeće: posle restarta proveriti na pravom projektu da li agenti dopisuju unose.
 _2026-11-18, čet 6bd3230e_
 - Prekid podčeta novom informacijom: delegate sa `childId` i `interrupt:true` prekida tekući odgovor i nastavlja istu sesiju; bez lažnog izveštaja roditelju. Važi posle restarta servera. Sledeće: posmatrati na živom četu da li glavni agent prekida samo kad treba.
 _2026-11-18, čet cf58755d_

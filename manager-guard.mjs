@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 
 export const MANAGER_BASH_TIMEOUT_MS = 30000;
 const assign = 'Glavni čet ostaje slobodan za razgovor: ovaj posao daj podagentu preko POST /api/chats/ID/delegate i odmah završi odgovor.';
-const notes = new Set(['STANJE.md', 'ODLUKE.md', 'HRONOLOGIJA.md', 'projekti.md']);
+const notes = new Set(['STANJE.md', 'ODLUKE.md', 'HRONOLOGIJA.md', 'ITERACIJE.md', 'projekti.md']);
 const noteFile = file => notes.has(basename(file)) || /\/\.claude\/projects\/[^/]+\/memory\//.test(file) || /^(\/private)?\/tmp\/claude-\d+\//.test(file);
 
 // Tekst zadatka u heredoc-u ili navodnicima nije komanda: „pokreni npm test“ u telu delegate poziva sme da prođe.

@@ -41,6 +41,8 @@ installVolumeZoom();
 import { sidebarGroups, placedChats, mergeDraft, latestPart, lockedPart, handoffChain, shortcutChats } from '/sidebar-groups.mjs';
 import DOMPurify from '/purify.js';
 import { createBootTracker, createRestartStatus } from './restart-notice.mjs';
+import { createIterationLogView } from './iteration-log.mjs';
+let iterationLogView=null;
 import { handoffOffer, sessionMarkText, cacheStatus } from './handoff-advice.mjs';
 import { linkLocalPaths } from './path-links.mjs';
 import { getAgentColor } from './agent-icons.mjs';
@@ -371,6 +373,7 @@ function closeDeleteDialog(){pendingFolderDelete=null;pendingReset=null;$('#dele
 function restoreQueued(text){const input=$('#prompt'),draft=input.value,next=draft.trim()?`${text}\n\n${draft}`:text;input.value=next;recordDraft(active,next);resizePrompt();input.focus();const cursor=draft.trim()?text.length:next.length;try{input.setSelectionRange(cursor,cursor);}catch{}}
 function renderChatNavigation() {
   const chat=current();
+  iterationLogView?.sync(chat);
   $('#chat-parent').hidden=!chats.some(c=>c.id===chat?.parentChatId);
   document.body.classList.toggle('locked-part',lockedPart(chat));
   $('#chat-title').textContent=chat?.title || '';$('#chat-title').title=chat?.project?.name?`Projekat: ${chat.project.name}\n${chat.project.dir}`:'';$('#chat-title').classList.toggle('generating-title',!!chat && generatingTitles.has(chat.id));
@@ -1482,6 +1485,7 @@ function connectEvents(initial,failed){
   events?.close();events=new EventSource('/api/events?summary=1'+(active && (document.body.classList.contains('chat-view') || !mobileNavigation())?'&chat='+encodeURIComponent(active):''));if(!appReady)bootProgress('Veza za poruke','povezujem se');events.onopen=()=>{if(!appReady)bootProgress('Veza za poruke','otvorena · čekam istoriju četova');};
   events.onmessage=e=>{const data=JSON.parse(e.data),next=Array.isArray(data)?mergeChatList(data):data.lite?mergeBrowserChats(chats,data):mergeChats(data);connected=true;if(!appReady){bootProgress('Istorija četova',`učitano · ${bootSize(new TextEncoder().encode(e.data).length)} · ${next.length} četova`);bootProgress('Veza za poruke','povezana');chats=next;initial?.(next);return;}const previous=chats;chats=next;announceReplies(previous);for(const chat of chats)clearReadNotifications(chat);void flushDrafts();if(active && !current()){const next=chats.find(c=>c.continuedFrom===active);if(next && document.body.classList.contains('chat-view'))choose(next.id,{replaceHistory:true});else choose(null);}else{render();if(current()?._needsHistory)guard(()=>loadChatHistory(active));}};
   events.addEventListener('resources',e=>{try{resourceMonitor.update(JSON.parse(e.data));}catch{}});
+  events.addEventListener('iteration-reminders',e=>{try{iterationLogView?.update(JSON.parse(e.data));}catch{}});
   events.addEventListener('integration-alerts',e=>{try{integrationAlerts.show(JSON.parse(e.data));}catch{}});
   events.addEventListener('folders',e=>{folders=JSON.parse(e.data);pruneOpenFolders();lastSidebar='';if(appReady)renderSidebar();});
   events.addEventListener('reload',()=>{if(!$('#prompt').value.trim() && !document.querySelector('dialog[open]'))location.reload();else toast('Interfejs je izmenjen. Osveži stranicu kad završiš unos.');});
@@ -1514,6 +1518,7 @@ async function proposeAdaptive(project){
 createThoughtsPanel({input:$('#sidebar-thoughts input'),api,onError:error=>toast(error.message,'error')});
 const projectBoard=createProjectBoard({api,openChat:id=>{if(chats.some(c=>c.id===id))choose(id);else location.hash='chat='+encodeURIComponent(id);},onError:error=>toast(error.message,'error')});
 $('#sidebar-board').onclick=()=>projectBoard.open();
+iterationLogView=createIterationLogView({api,render:text=>DOMPurify.sanitize(marked.parse(text)),onError:error=>toast(error.message,'error')});iterationLogView.sync(current());
 if(new URLSearchParams(location.hash.slice(1)).has('tabla'))projectBoard.open();
 function closePanels(){chatSearch.close();$('#record-panel').hidden=true;$('#projects-panel').hidden=true;$('#capabilities-panel').hidden=true;for(const el of [$('#conversation'),$('.composer-area'),$('#usage-details'),$('#change-column')].filter(Boolean))el.inert=!$('#defaults').hidden;}
 for(const button of document.querySelectorAll('[data-close-panel]'))button.onclick=closePanels;
