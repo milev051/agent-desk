@@ -30,3 +30,26 @@ test('neuspešno otvaranje ne ostavlja izvršiv fajl i ne pokušava ponovo',asyn
  await assert.rejects(run({chat:{settings:{cwd:dir},messages:[{id:'a',role:'assistant',text:'```sh\nls\n```'}]},messageId:'a',command:'ls',confirmed:true}));
  assert.equal(calls,1);assert.deepEqual(fs.readdirSync(path.join(dir,'command-runs')),[]);
 });
+test('sudo i višeredni shell blokovi dobijaju dugme, a ostali jezici ne',()=>{
+ const block='sudo rm -rf /Applications/Karabiner-Elements.app\nsudo tar -C /Applications -xf "/Library/Application Support/org.pqrs/Karabiner-Elements/Karabiner-Elements.app.tar.gz"';
+ assert.ok(isShellCommand(block));
+ assert.ok(isShellCommand('# komentar\nls -la \\\n  --color\necho ok'));
+ assert.ok(isShellCommand('nepoznata-komanda --x','bash'));
+ assert.ok(isShellCommand('ls','bash title=x'));
+ assert.equal(isShellCommand('ls\nnije komanda'),false);
+ assert.equal(isShellCommand('sudo rm -rf /','python'),false);
+ const text='Pokreni:\n\n```\n'+block+'\n```\n\ni ```bash\nmojalat --sync\n```';
+ assert.ok(allowedMessageCommand({role:'assistant',text},block));
+ assert.ok(allowedMessageCommand({role:'assistant',text:'```bash\nmojalat --sync\n```'},'mojalat --sync'));
+ assert.equal(allowedMessageCommand({role:'assistant',text:'```\nmojalat --sync\n```'},'mojalat --sync'),false);
+});
+test('skript skida „$ “ sa svakog reda i komande ne izvršava server',async t=>{
+ const dir=fs.mkdtempSync(path.resolve('data','command-test-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
+ let opened;const run=createMessageCommandRunner({dataDir:dir,open:async file=>opened=file});
+ const command="$ echo 'a\"b' && touch ran.txt\n$ sudo ls";
+ await run({chat:{settings:{cwd:dir},messages:[{id:'a',role:'assistant',text:'```console\n'+command+'\n```'}]},messageId:'a',command,confirmed:true});
+ const script=fs.readFileSync(opened,'utf8');
+ assert.ok(script.includes("echo 'a\"b' && touch ran.txt\nsudo ls\n"));
+ assert.equal(fs.existsSync(path.join(dir,'ran.txt')),false);
+ fs.rmSync(opened,{force:true});
+});

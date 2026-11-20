@@ -12,14 +12,15 @@ export function iconSvg(name){return `<svg width="16" height="16" viewBox="0 0 2
 export function iconButton(button,name,label){button.innerHTML=iconSvg(name);button.classList.add('icon-action');button.setAttribute('aria-label',label);button.title=label;return button;}
 // add: {label, run, disabled} dodaje poslednji red „+ Dodaj nalog“ u istom poravnanju kao nalozi.
 // Potvrda „Da / Ne“ u prozoru aplikacije; vraća true samo kad korisnik izabere Da.
-export function confirmAction(text){
+// detail (opciono) se prikazuje ispod pitanja kao blok koda, npr. komande pre pokretanja; yesLabel menja tekst dugmeta Da.
+export function confirmAction(text,{detail='',yesLabel='Da'}={}){
   return new Promise(resolve=>{
     const dialog=document.createElement('dialog'),message=document.createElement('p'),actions=document.createElement('div'),no=document.createElement('button'),yes=document.createElement('button');
     dialog.className='confirm-dialog';message.textContent=text;actions.className='settings-actions';
-    no.type='button';no.textContent='Ne';yes.type='button';yes.textContent='Da';yes.className='danger';
+    no.type='button';no.textContent='Ne';yes.type='button';yes.textContent=yesLabel;yes.className='danger';
     const done=value=>{dialog.close();dialog.remove();resolve(value);};
     no.onclick=()=>done(false);yes.onclick=()=>done(true);dialog.oncancel=event=>{event.preventDefault();done(false);};
-    actions.append(no,yes);dialog.append(message,actions);document.body.append(dialog);dialog.showModal();no.focus();
+    actions.append(no,yes);dialog.append(message);if(detail){const pre=document.createElement('pre');pre.className='confirm-detail';pre.textContent=detail;dialog.append(pre);}dialog.append(actions);document.body.append(dialog);dialog.showModal();no.focus();
   });
 }
 export function renderAccounts(list,items,add=null){

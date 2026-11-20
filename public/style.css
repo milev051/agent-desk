@@ -1105,3 +1105,6 @@ dialog.confirm-dialog button.danger{border-color:#a33;color:#f88}
 .iteration-projects label{display:flex;align-items:center;gap:5px;margin:0;white-space:nowrap}
 .iteration-projects button{padding:5px 8px;font-size:12px}
 @media(max-width:650px){#iteration-reminder{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 120px);left:16px;right:16px;width:auto}.iteration-reminder-row{flex-wrap:wrap}.iteration-projects li{flex-wrap:wrap}.iteration-projects li>span{flex-basis:100%}}
+/* Dugi redovi u blokovima koda se prelamaju umesto horizontalnog skrola. */
+.message-body pre code{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
+dialog.confirm-dialog pre.confirm-detail{max-width:min(640px,80vw);max-height:40vh;overflow:auto;margin:0 0 12px;padding:10px;border:1px solid #333;border-radius:var(--r-sm);background:#111;color:#ddd;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}

@@ -1,4 +1,6 @@
 # Stanje
+_2026-11-20, čet c0a6f350_
+- „▶ Pokreni u Terminalu“ radi i za `sudo` i višeredne shell blokove, uz potvrdu Ne/Pokreni sa prikazom komandi; na telefonu skriveno; blokovi koda prelamaju duge redove. Serverska provera (message-commands.mjs) važi posle restarta.
 _2026-11-18, čet 57b0ca1d_
 - Automatski zapis iteracija (`iteration-log.mjs`, uputstvo `docs/zapis-iteracija.md`): poruke, pravilo agentima, jedan podsetnik agentu, dugme u četu, podsetnik korisniku posle 7 dana. Važi posle restarta servera. Sledeće: posle restarta proveriti na pravom projektu da li agenti dopisuju unose.
 _2026-11-18, čet 6bd3230e_
