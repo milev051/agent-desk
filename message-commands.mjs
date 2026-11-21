@@ -2,13 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {marked} from 'marked';
-import {isShellCommand,codeLanguage} from './public/command-buttons.mjs';
+import {isRunnableBlock} from './public/command-buttons.mjs';
 const quote=value=>"'"+String(value).replaceAll("'","'\\''")+"'";
 export function allowedMessageCommand(message,command){
  if(message?.role!=='assistant' || typeof command!=='string' || !command.trim() || command.length>20000 || /\0/.test(command))return false;
  let allowed=false;
  marked.walkTokens(marked.lexer(message.text || ''),token=>{
-  if((token.type==='code' || token.type==='codespan') && token.text.trim()===command.trim() && isShellCommand(token.text,codeLanguage(token.lang)))allowed=true;
+  if(token.type==='code' && token.text.trim()===command.trim() && isRunnableBlock(token.text,token.lang))allowed=true;
  });
  return allowed;
 }

@@ -1,4 +1,4 @@
-import {addCommandButtons} from './command-buttons.mjs';
+import {addCommandButtons,terminalCodeExtension} from './command-buttons.mjs';
 import {confirmAction} from './account-list.mjs';
 import {liveActivityHtml} from './live-activity.mjs';
 import {createLivePreview} from './live-preview.mjs';
@@ -38,6 +38,7 @@ import {shareLabel,chatShare} from './limit-share.mjs';
 import { marked } from '/marked.js';
 import {colorExtension} from './color-markup.mjs';
 marked.use({extensions:[colorExtension]});
+marked.use(terminalCodeExtension);
 installVolumeZoom();
 import { sidebarGroups, placedChats, mergeDraft, latestPart, lockedPart, handoffChain, shortcutChats } from '/sidebar-groups.mjs';
 import DOMPurify from '/purify.js';
