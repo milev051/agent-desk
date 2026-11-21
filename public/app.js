@@ -18,6 +18,7 @@ import {attachmentViewMode} from './page-preview.mjs';
 import {startNotificationPresence} from './notification-presence.mjs';
 import {noticeTone,chooseNoticeSound} from './notice-sound.mjs';
 import {createCliUpdatesPanel} from './cli-updates.mjs';
+import {createAppUpdate} from './app-update.mjs';
 import {createGmailSettings} from './gmail-settings.mjs';
 import {createWebprosSettings} from './webpros-settings.mjs';
 import {compressImage} from './image-compress.mjs';
@@ -198,6 +199,7 @@ try{
 }catch{}
 createCliUpdatesPanel({api});
 function completion(chat) {const m=chat.latestReply || [...chat.messages].reverse().find(m=>m.role==='assistant');return m && ['done','stopped','error','interrupted'].includes(m.status) ? {token:`${m.id}:${m.status}`,messageId:m.id,status:m.status} : null;}
+createAppUpdate({api,toast:message=>toast(message)});
 async function sendNotificationRead(data){
  try{
   const worker=navigator.serviceWorker?.controller || (await navigator.serviceWorker?.getRegistration())?.active;
@@ -325,7 +327,7 @@ function modelLabel(chat) {
 }
 const agentOrder=['claude','codex','antigravity','grok'];
 let limits={},lastNewAgents='';
-function renderNewAgents() {const settings=$('#defaults-open'),compactTop=meta.agents.length<=2;const html=agentOrder.map(id=>meta.agents.find(a=>a.id===id)).filter(Boolean).map(a=>{const s=limits[a.id],depleted=s?.windows?.length?s.windows.some(w=>Math.round(w.remaining)<=0):false,unavailable=!a.available||depleted;return `<button class="new-agent ${newMenuAgent===a.id?'expanded':''} ${unavailable?'unavailable':''}" data-new-agent="${a.id}" title="Modeli · ${escape(a.name)}" aria-label="Modeli · ${escape(a.name)}" aria-expanded="${newMenuAgent===a.id}" ${!a.available?'disabled':''}>${compactTop?`<img class="compact-agent-logo" src="${agentLogos[a.id]}" alt="" width="18" height="18">`:`<small class="agent-limits ${s?.stale?'limits-stale':''}" title="${escape(limitDescription(a.id))}">${limitDisplay(a.id)}</small>`}</button>`;}).join('');if(html!==lastNewAgents){$('#new-agents').innerHTML=html;$('#new-agents').append(settings);lastNewAgents=html;}$('.sidebar-actions')?.classList.toggle('inline-tools',compactTop);}
+function renderNewAgents() {const settings=$('#defaults-open'),update=$('#app-update-open'),compactTop=meta.agents.length<=2;const html=agentOrder.map(id=>meta.agents.find(a=>a.id===id)).filter(Boolean).map(a=>{const s=limits[a.id],depleted=s?.windows?.length?s.windows.some(w=>Math.round(w.remaining)<=0):false,unavailable=!a.available||depleted;return `<button class="new-agent ${newMenuAgent===a.id?'expanded':''} ${unavailable?'unavailable':''}" data-new-agent="${a.id}" title="Modeli · ${escape(a.name)}" aria-label="Modeli · ${escape(a.name)}" aria-expanded="${newMenuAgent===a.id}" ${!a.available?'disabled':''}>${compactTop?`<img class="compact-agent-logo" src="${agentLogos[a.id]}" alt="" width="18" height="18">`:`<small class="agent-limits ${s?.stale?'limits-stale':''}" title="${escape(limitDescription(a.id))}">${limitDisplay(a.id)}</small>`}</button>`;}).join('');if(html!==lastNewAgents){$('#new-agents').innerHTML=html;$('#new-agents').append(...[update].filter(Boolean),settings);lastNewAgents=html;}$('.sidebar-actions')?.classList.toggle('inline-tools',compactTop);}
 let lastSidebar='', paintingSidebar=false,lastSavedOpenFolders;
 function saveOpenFolders(){const saved=JSON.stringify([...openFolders]);if(saved===lastSavedOpenFolders)return;try{localStorage.setItem('agent-desk-open-folders',saved);localStorage.removeItem('agent-desk-folder');lastSavedOpenFolders=saved;}catch{}}
 function pruneOpenFolders(){for(const id of openFolders)if(id!==adaptiveFolderId && !folders.some(folder=>folder.id===id))openFolders.delete(id);saveOpenFolders();}

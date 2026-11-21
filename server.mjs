@@ -7,6 +7,7 @@ import {terminalGuide} from './public/command-buttons.mjs';
 import {createRestartManager} from './server-restart.mjs';
 import {createCliUpdates} from './cli-updates.mjs';
 import {plannerActivity,chatChanges} from './planner-activity.mjs';
+import {createAppUpdates} from './app-update.mjs';
 import {createDispatcher,chooseDispatcher,dispatcherContext} from './dispatcher.mjs';
 import {watchAllowed,startWatch,finishWatch,queueOrigin} from './dispatcher-watch.mjs';
 import {interruptChildTask,queueChildReport,queueChildTask,quietParentFinish} from './child-report.mjs';
@@ -308,6 +309,7 @@ hideLimitAgents(disabledAgents);
 const binaries = withoutDisabled({ codex: locate('codex'), claude: locate('claude'), grok: locate('grok'), antigravity: locate('agy') },disabledAgents);
 const cliUpdates=createCliUpdates(path.join(dataDir,'cli-updates.json'),{binaries,npm:locate('npm'),isBusy:()=>running.size>0 || warmup.view().running || riskNotes.busy()});
 function metadata() { return { cwd: root, messageCommands: true, chatFork: true, limitHistory:true, titleSettings:titleManager.settings(), agents: Object.entries(names).filter(([id])=>!disabledAgents.has(id)).map(([id, name]) => ({ id, name, available: !!binaries[id], detail: binaries[id] ? 'CLI pronađen · koristi postojeću prijavu' : 'CLI nije pronađen' })) }; }
+const appUpdates=createAppUpdates({dir:root,git:locate('git')||'git',npm:locate('npm')||'npm',restart:()=>restartManager.request({whenIdle:true})});
 function validate(s) {
   if (!Object.hasOwn(names, s.agent)) throw new Error('Nepoznat agent.');
   if (!['full', 'read'].includes(s.access)) throw new Error('Nepoznat pristup.');
@@ -802,6 +804,9 @@ const server = http.createServer(async (req, res) => {
       if(chatId && !chat)return json(404,{error:'Čet nije pronađen.'});
       return json(200,appEnvironment(chat));
     }
+    if(url.pathname==='/api/app-update'){if(req.method==='GET')return json(200,appUpdates.view());return json(405,{error:'Podržan je GET.'});}
+    if(req.method==='POST' && url.pathname==='/api/app-update/check')return json(200,await appUpdates.check());
+    if(req.method==='POST' && url.pathname==='/api/app-update/run'){if(appUpdates.view().updating)return json(409,{error:'Ažuriranje je već u toku.'});return json(200,await appUpdates.update());}
     if(url.pathname==='/api/restart'){
       if(!['127.0.0.1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress))return json(403,{error:'Samo lokalni pristup.'});
       if(req.method==='GET')return json(200,restartManager.status());
@@ -1460,11 +1465,11 @@ return json(200,{ok:true});}
 server.listen(port, '127.0.0.1', () => {phone.start();livePreview.start();
   // Red čekanja prekinut restartom servera nastavlja sam; red pauziran zaustavljanjem ili greškom čeka korisnika.
   setTimeout(()=>{void resumeRestartChats({chats,isRunning:id=>running.has(id),send,changed:update,drainQueue,isShuttingDown:()=>shuttingDown}).then(()=>{for(const chat of chats){if(chat.networkResume?.status==='starting')chat.networkResume.status='waiting';drainQueue(chat);}startImageQueue();networkResume.schedule();}).catch(error=>console.error('Nastavak posle restarta:',error.message));},3000).unref();
-  limits.start();warmup.start();if(process.env.AGENT_DESK_DISABLE_LIMITS!=='1')cliUpdates.start();console.log(`Agent Desk: http://127.0.0.1:${port}`);if(process.platform==='darwin' && !process.env.AGENT_DESK_CONFIG){try{if(installWatchdog({configDir:path.dirname(phoneOriginFile)}))console.log('Čuvar instaliran.');}catch(e){console.error('Čuvar: '+e.message);}}});
+  limits.start();warmup.start();if(process.env.AGENT_DESK_DISABLE_LIMITS!=='1'){cliUpdates.start();appUpdates.start();}console.log(`Agent Desk: http://127.0.0.1:${port}`);if(process.platform==='darwin' && !process.env.AGENT_DESK_CONFIG){try{if(installWatchdog({configDir:path.dirname(phoneOriginFile)}))console.log('Čuvar instaliran.');}catch(e){console.error('Čuvar: '+e.message);}}});
 function shutdown() {
  if(shuttingDown)return;shuttingDown=true;
  rememberRunningChats(chats,running);save();
- stopRiskCli();cliUpdates.close();clearInterval(folderNameTimer);syncChatFiles();clearInterval(archiveCleanup);limits.close();warmup.stop();livePreview.close();phone.close();gmail.close();webpros.close();titleManager.close();
+ stopRiskCli();cliUpdates.close();appUpdates.close();clearInterval(folderNameTimer);syncChatFiles();clearInterval(archiveCleanup);limits.close();warmup.stop();livePreview.close();phone.close();gmail.close();webpros.close();titleManager.close();
  for(const [id,run] of running){run.restarting=!!chats.find(c=>c.id===id)?.restartResume;stop(id,{restart:true});}
  setTimeout(()=>process.exit(0),2200);server.close();
 }

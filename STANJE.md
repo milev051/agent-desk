@@ -1,4 +1,6 @@
 # Stanje
+_2026-11-21, čet d8279741_
+- Ikonica „Novo ažuriranje“ levo od zupčanika kad je lokalna kopija iza GitHub-a; Da radi pull --ff-only, npm install po potrebi i restart kad agenti miruju (`app-update.mjs`, `public/app-update.mjs`). Važi posle restarta. Istorija repoa skenirana na tajne: čisto. Sledeće: posmatrati na drugom računaru koji je klonirao repo.
 _2026-11-21, čet 48cb07bc_
 - „▶ Pokreni u Terminalu“ samo na blokovima ```` ```sh terminal ```` (oznaka u info stringu, ne prikazuje se); ostali blokovi samo kopiranje. Agenti po pravilu `terminalGuide` sami pokreću komande bez lozinke. Važi posle restarta. Sledeće: proveriti da agenti označavaju samo sudo/interaktivne komande.
 _2026-11-18, čet 57b0ca1d_

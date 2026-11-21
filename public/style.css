@@ -1108,3 +1108,11 @@ dialog.confirm-dialog button.danger{border-color:#a33;color:#f88}
 /* Dugi redovi u blokovima koda se prelamaju umesto horizontalnog skrola. */
 .message-body pre code{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
 dialog.confirm-dialog pre.confirm-detail{max-width:min(640px,80vw);max-height:40vh;overflow:auto;margin:0 0 12px;padding:10px;border:1px solid #333;border-radius:var(--r-sm);background:#111;color:#ddd;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+
+/* Ikonica novog ažuriranja aplikacije, levo od zupčanika. */
+.sidebar-actions #new-agents #app-update-open{min-height:38px;padding:5px 3px;border:1px solid #4ade80;border-radius:var(--r-sm);background:none;color:#4ade80;display:flex;align-items:center;justify-content:center}
+.sidebar-actions #new-agents #app-update-open[hidden]{display:none}
+.sidebar-actions #new-agents #app-update-open:hover{background:#4ade8018}
+#app-update-commits{max-height:40dvh;overflow:auto;padding-left:18px;margin:8px 0;font-size:13px;line-height:1.5}
+#app-update-message:empty{display:none}
+#app-update-message{color:#facc15}
